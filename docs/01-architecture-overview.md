@@ -1,0 +1,411 @@
+# Architecture Overview
+
+**Version:** 1.0.0  
+**Last Updated:** November 18, 2025  
+**Status:** Draft
+
+## Introduction
+
+This document provides a comprehensive overview of the enterprise MCP (Model Context Protocol) server architecture. It establishes the foundational patterns and components that enable secure, scalable, and maintainable agentic services.
+
+## Enterprise MCP Architecture Layers
+
+The enterprise MCP architecture is organized into five primary layers, each serving distinct responsibilities while maintaining clear boundaries and interfaces.
+
+```mermaid
+flowchart TB
+subgraph Gateway["MCP Gateway Layer"]
+    A[Auth & Routing]
+    B[Load Balancer]
+    C[Failover Manager]
+end
+
+subgraph Servers["MCP Server Layer"]
+    S1[File Access MCP Server]
+    S2[Database MCP Server]
+    S3[ERP Integration MCP Server]
+end
+
+subgraph Security["Security Layer"]
+    SEC1[OAuth 2.0 / JWT]
+    SEC2[TLS Encryption]
+    SEC3[RBAC / Capability ACL]
+end
+
+subgraph Observability["Observability & Governance"]
+    O1[Centralized Logging]
+    O2[Metrics & Tracing]
+    O3[MCP Repository & Policy-as-Code]
+end
+
+subgraph Integration["Enterprise Integration"]
+    I1[ERP Systems]
+    I2[Legacy APIs]
+    I3[Workflow Orchestration]
+end
+
+Gateway --> Servers
+Servers --> Observability
+Servers --> Security
+Servers --> Integration
+```
+
+### Layer Descriptions
+
+#### 1. MCP Gateway Layer
+
+The gateway layer serves as the entry point for all MCP requests, providing:
+
+- **Authentication & Routing**: Validates credentials and routes requests to appropriate servers
+- **Load Balancing**: Distributes traffic across multiple server instances
+- **Failover Management**: Handles server failures and maintains high availability
+
+**Key Responsibilities:**
+- TLS termination
+- Request validation
+- Rate limiting (global tier)
+- Request correlation ID generation
+- Circuit breaker coordination
+
+#### 2. MCP Server Layer
+
+Individual MCP servers expose tools, resources, and prompts for specific domains:
+
+- **Specialized Servers**: Each server focuses on a specific integration or capability
+- **Tool Handlers**: Implement the business logic for MCP tools
+- **Resource Providers**: Expose data and content through resource URIs
+- **Prompt Systems**: Provide reusable prompt templates for LLM interactions
+
+**Common Server Types:**
+- File system access servers
+- Database query servers
+- API integration servers
+- Workflow orchestration servers
+- Analytics and reporting servers
+
+#### 3. Security Layer
+
+Cross-cutting security controls applied to all requests:
+
+- **OAuth 2.0 / JWT**: Token-based authentication
+- **TLS Encryption**: End-to-end encryption in transit
+- **RBAC**: Role-based access control for tools and resources
+- **Capability ACL**: Fine-grained permissions per operation
+
+#### 4. Observability & Governance
+
+Monitoring, logging, and policy enforcement:
+
+- **Centralized Logging**: Structured logs aggregated from all servers
+- **Metrics & Tracing**: Performance monitoring and distributed tracing
+- **MCP Repository**: Catalog of available servers, tools, and resources
+- **Policy-as-Code**: Automated enforcement of governance policies
+
+#### 5. Enterprise Integration
+
+Connections to backend systems:
+
+- **ERP Systems**: Integration with enterprise resource planning
+- **Legacy APIs**: Adapters for existing internal APIs
+- **Workflow Orchestration**: Coordination across multiple systems
+
+## Request Flow Pattern
+
+The standard request flow through the enterprise MCP architecture follows this sequence:
+
+```mermaid
+sequenceDiagram
+    participant Client as AI Client
+    participant Gateway as MCP Gateway
+    participant Server as MCP Server
+    participant Security as Security Layer
+    participant Observability as Observability Layer
+    participant Integration as Enterprise System
+
+    Client->>Gateway: Request (Tool Invocation)
+    Gateway->>Security: Validate Auth (OAuth/JWT)
+    Security-->>Gateway: Auth OK
+    Gateway->>Server: Forward Request
+    Server->>Integration: Fetch Data / Execute Action
+    Integration-->>Server: Response Data
+    Server->>Observability: Log Metrics & Trace
+    Server-->>Gateway: Response
+    Gateway-->>Client: Return Result
+```
+
+### Flow Steps
+
+1. **Client Request**: AI client invokes an MCP tool with parameters
+2. **Gateway Authentication**: Gateway validates JWT token and extracts claims
+3. **Authorization Check**: Security layer verifies user permissions for the requested tool
+4. **Request Forwarding**: Gateway routes to appropriate MCP server instance
+5. **Business Logic Execution**: Server executes tool handler logic
+6. **Backend Integration**: Server calls enterprise systems as needed
+7. **Observability Recording**: Metrics, logs, and traces are captured
+8. **Response Return**: Result flows back through gateway to client
+
+## FastMCP Integration Pattern
+
+FastMCP serves as the framework for implementing individual MCP servers, providing built-in support for enterprise features.
+
+### Architecture Components
+
+```mermaid
+flowchart LR
+    subgraph Client["AI Client (Host)"]
+        C1[Tool Invocation]
+    end
+    subgraph Gateway["MCP Gateway"]
+        G1[OAuth 2.0 Auth]
+    end
+    subgraph MCPServer["MCP Server (FastMCP)"]
+        M1[Tool Handler]
+        M2[FastMCP Adapter]
+    end
+    subgraph RESTService["External REST Service"]
+        R1[REST API Endpoint]
+        E1[Auth]
+    end
+    C1 --|JSON-RPC over HTTP|--> Gateway
+    Gateway --|Validated Request|--> M1
+    M1 --|Invoke Tool|--> M2
+    M2 --|HTTP Request (GET/POST)|--> R1
+    M2 --|Result|--> M1
+    R1 --|Auth Check|--> E1
+    E1 --|Auth Result|--> R1
+    R1 --|JSON Response|--> M2
+    M2 --> M1
+    M1 --|Response to Client|--> Gateway
+    Gateway --> C1
+```
+
+### FastMCP Key Features
+
+**Built-in Enterprise Capabilities:**
+
+- **Rate Limiting**: Token bucket algorithm with configurable limits
+- **Caching**: Multi-tier LRU/TTL cache with statistics
+- **Metrics**: OpenTelemetry-compatible metrics collection
+- **Error Recovery**: Exponential backoff and retry logic
+- **Authentication**: Multi-provider auth support (JWT, OAuth, WorkOS)
+- **Health Checks**: Standardized health and readiness endpoints
+
+**Configuration-Driven:**
+
+```python
+FASTMCP_CONFIG = {
+    # Authentication
+    "auth_enabled": True,
+    "auth_provider": "jwt",
+    
+    # Rate Limiting
+    "rate_limit_enabled": True,
+    "rate_limit_requests_per_minute": 60,
+    "rate_limit_burst_size": 10,
+    
+    # Caching
+    "cache_enabled": True,
+    "cache_max_size": 1000,
+    "cache_default_ttl": 300,
+    
+    # Monitoring
+    "monitoring_enabled": True,
+    "metrics_enabled": True,
+}
+```
+
+## Communication Protocols
+
+### JSON-RPC over HTTP
+
+MCP servers communicate using JSON-RPC 2.0 over HTTP/HTTPS:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "create_assignment",
+    "arguments": {
+      "title": "Implement feature X",
+      "assignee": "engineer@example.com"
+    }
+  },
+  "id": 1
+}
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Assignment created successfully with ID: 12345"
+      }
+    ]
+  },
+  "id": 1
+}
+```
+
+### Server-Sent Events (SSE)
+
+For streaming responses and real-time updates:
+
+```
+data: {"type": "progress", "value": 25, "message": "Processing..."}
+
+data: {"type": "progress", "value": 50, "message": "Halfway there..."}
+
+data: {"type": "complete", "result": {...}}
+```
+
+## Deployment Models
+
+### Centralized Gateway
+
+All MCP servers behind a single gateway:
+
+```
+┌─────────────┐
+│  AI Client  │
+└──────┬──────┘
+       │
+┌──────▼──────┐
+│ MCP Gateway │ (Authentication, Rate Limiting, Routing)
+└──────┬──────┘
+       │
+   ┌───┴───┬───────┬──────┐
+   │       │       │      │
+┌──▼──┐ ┌─▼──┐ ┌──▼─┐ ┌─▼──┐
+│Srv1 │ │Srv2│ │Srv3│ │SrvN│
+└─────┘ └────┘ └────┘ └────┘
+```
+
+**Benefits:**
+- Centralized security and monitoring
+- Consistent authentication
+- Simplified client configuration
+- Unified rate limiting
+
+### Federated Servers
+
+Independent MCP servers with individual authentication:
+
+```
+┌─────────────┐
+│  AI Client  │
+└─┬──────┬──┬─┘
+  │      │  │
+┌─▼──┐ ┌─▼──┐ ┌─▼──┐
+│Srv1│ │Srv2│ │Srv3│
+└────┘ └────┘ └────┘
+```
+
+**Benefits:**
+- Independent deployment cycles
+- Domain-specific security policies
+- Simplified architecture
+- Direct client connections
+
+## Scalability Patterns
+
+### Horizontal Scaling
+
+MCP servers scale horizontally behind load balancers:
+
+- **Stateless Design**: No server-side session state
+- **Distributed Cache**: Redis/Memcached for shared caching
+- **Load Balancing**: Round-robin or least-connections
+- **Auto-scaling**: Based on CPU, memory, or request rate
+
+### Vertical Scaling
+
+Individual server instances can be scaled up:
+
+- **Resource Limits**: CPU and memory allocation
+- **Connection Pools**: Database and API connection management
+- **Thread/Process Pools**: Concurrent request handling
+- **Cache Sizing**: Larger in-memory caches
+
+## High Availability
+
+### Redundancy
+
+- **Multiple Instances**: At least 3 instances per server type
+- **Multi-AZ Deployment**: Across availability zones
+- **Geographic Distribution**: Optional cross-region deployment
+
+### Health Monitoring
+
+```python
+@app.get("/health")
+async def health_check():
+    """Basic liveness check."""
+    return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+@app.get("/ready")
+async def readiness_check():
+    """Check if ready to serve traffic."""
+    # Verify database connection
+    # Check backend API availability
+    # Validate cache connectivity
+    return {"status": "ready", "checks": {...}}
+```
+
+### Graceful Degradation
+
+When backend systems fail:
+
+1. **Circuit Breakers**: Stop calling failed services
+2. **Fallback Responses**: Return cached or default data
+3. **Partial Results**: Return available data with warnings
+4. **Error Context**: Provide actionable error messages
+
+## Security Boundaries
+
+### Trust Zones
+
+```
+┌─────────────────────────────────────┐
+│  Internet (Untrusted)               │
+└─────────────┬───────────────────────┘
+              │ TLS
+┌─────────────▼───────────────────────┐
+│  DMZ: Gateway (TLS Termination)     │
+└─────────────┬───────────────────────┘
+              │ mTLS
+┌─────────────▼───────────────────────┐
+│  Internal: MCP Servers              │
+└─────────────┬───────────────────────┘
+              │ VPC/Internal Network
+┌─────────────▼───────────────────────┐
+│  Backend: Enterprise Systems        │
+└─────────────────────────────────────┘
+```
+
+### Network Policies
+
+- **Gateway**: Public internet access with TLS
+- **MCP Servers**: Internal network only
+- **Backend Systems**: Restricted network access
+- **Observability**: Dedicated monitoring network
+
+## Summary
+
+The enterprise MCP architecture provides:
+
+- **Layered Security**: Defense in depth with multiple security controls
+- **Scalable Design**: Horizontal and vertical scaling capabilities
+- **High Availability**: Redundancy and failover mechanisms
+- **Comprehensive Observability**: Logging, metrics, and tracing
+- **Flexible Integration**: Support for various backend systems
+- **Consistent Patterns**: Standardized approaches across all servers
+
+---
+
+**Next**: Review [Security Architecture](02-security-architecture.md) for detailed security implementation patterns.
