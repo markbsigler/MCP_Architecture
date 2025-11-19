@@ -13,6 +13,7 @@ Operational runbooks provide standardized procedures for troubleshooting, incide
 ### Service Not Responding
 
 **Symptoms:**
+
 - Health check endpoints returning 503 or timing out
 - No response from service
 - Kubernetes pods in CrashLoopBackOff
@@ -39,7 +40,7 @@ kubectl describe pod -n mcp <pod-name>
 **Common Causes & Resolutions:**
 
 | Cause | Resolution |
-|-------|-----------|
+|-------|------------|
 | Database connection failure | Check DB credentials, connectivity, and connection limits |
 | Out of memory | Increase memory limits or optimize memory usage |
 | Configuration error | Validate ConfigMap and Secret values |
@@ -74,6 +75,7 @@ kubectl get endpoints -n $NAMESPACE $APP
 ### High Error Rate
 
 **Symptoms:**
+
 - Elevated 500 errors in logs
 - Increased error metrics
 - Alerts firing for error rate
@@ -152,6 +154,7 @@ if __name__ == "__main__":
 **Resolution:**
 
 1. **Database Issues:**
+
    ```bash
    # Check database connections
    kubectl exec -n mcp postgres-0 -- \
@@ -163,6 +166,7 @@ if __name__ == "__main__":
    ```
 
 2. **External Service Failures:**
+
    ```bash
    # Check circuit breaker status
    kubectl exec -n mcp deployment/mcp-server -- \
@@ -174,6 +178,7 @@ if __name__ == "__main__":
    ```
 
 3. **Application Restart:**
+
    ```bash
    # Rolling restart
    kubectl rollout restart deployment/mcp-server -n mcp
@@ -183,6 +188,7 @@ if __name__ == "__main__":
 ### High Latency
 
 **Symptoms:**
+
 - P99 latency above 1000ms
 - Slow response times
 - Timeout errors
@@ -245,6 +251,7 @@ if __name__ == "__main__":
 **Resolution:**
 
 1. **Database Optimization:**
+
    ```sql
    -- Add missing indexes
    CREATE INDEX CONCURRENTLY idx_assignments_assignee ON assignments(assignee);
@@ -262,6 +269,7 @@ if __name__ == "__main__":
    ```
 
 2. **Cache Tuning:**
+
    ```python
    # Increase cache TTL for frequently accessed data
    cache.set("assignments:user:123", data, ttl=3600)
@@ -271,6 +279,7 @@ if __name__ == "__main__":
    ```
 
 3. **Connection Pooling:**
+
    ```python
    # Increase connection pool size
    engine = create_async_engine(
@@ -283,6 +292,7 @@ if __name__ == "__main__":
 ### Memory Leak
 
 **Symptoms:**
+
 - Gradually increasing memory usage
 - OOMKilled pods
 - Slow memory growth over time
@@ -344,6 +354,7 @@ if __name__ == "__main__":
 **Resolution:**
 
 1. **Identify Leak Source:**
+
    ```python
    # Add explicit cleanup
    async def create_assignment(title: str, assignee: str):
@@ -357,6 +368,7 @@ if __name__ == "__main__":
    ```
 
 2. **Fix Connection Leaks:**
+
    ```python
    # Use context managers
    async with httpx.AsyncClient() as client:
@@ -371,6 +383,7 @@ if __name__ == "__main__":
    ```
 
 3. **Restart Pods:**
+
    ```bash
    kubectl delete pod -n mcp -l app=mcp-server
    ```
@@ -379,7 +392,7 @@ if __name__ == "__main__":
 
 ### Incident Response Process
 
-```
+```text
 1. DETECT
    ├─ Alert fires
    ├─ User reports issue

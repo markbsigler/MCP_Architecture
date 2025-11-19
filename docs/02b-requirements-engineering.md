@@ -320,7 +320,7 @@ So that I can audit actions and investigate incidents.
 4. **Technical Notes**: Implementation guidance
 5. **Definition of Done**: Completion checklist
 
-**Example: Complete Story**
+### Example: Complete Story
 
 ```markdown
 ## [STORY-123] File Upload Tool with Progress
@@ -433,7 +433,7 @@ The file_tool shall restrict access to user-owned files only.
 
 ### Complete Acceptance Criteria Example
 
-**Story: Database Query Tool**
+### Story: Database Query Tool
 
 ```markdown
 ### Acceptance Criteria
@@ -493,7 +493,7 @@ Brief description of what the tool does and why it exists.
 [Testable conditions using Given/When/Then format]
 ```
 
-**Example: create_issue Tool**
+### Example: create_issue Tool
 
 ```markdown
 ## Tool: create_issue
@@ -643,11 +643,13 @@ def test_create_issue_success():
 ### 1. Requirements Elicitation
 
 **Stakeholder Interviews:**
+
 - Identify user roles and needs
 - Document use cases
 - Capture business objectives
 
 **Requirements Workshops:**
+
 - Collaborative story writing
 - Acceptance criteria definition
 - Priority ranking
@@ -655,11 +657,13 @@ def test_create_issue_success():
 ### 2. Requirements Analysis
 
 **EARS Conversion:**
+
 - Convert natural language to EARS syntax
 - Identify requirement patterns
 - Ensure verifiability
 
 **Quality Checks:**
+
 - Verify completeness
 - Check for ambiguity
 - Validate against quality characteristics
@@ -667,6 +671,7 @@ def test_create_issue_success():
 ### 3. Requirements Documentation
 
 **Story Documentation:**
+
 ```markdown
 # Epic: [Epic Name]
 
@@ -715,11 +720,13 @@ Links to architecture, design, tests
 ### 5. Requirements Baseline
 
 **Version Control:**
+
 - Store requirements in Git with code
 - Tag releases with requirement versions
 - Maintain change history
 
 **Change Management:**
+
 - Document requirement changes
 - Impact analysis for changes
 - Update traceability links
@@ -873,4 +880,3 @@ Effective requirements engineering for MCP servers combines:
 - [Agile Alliance - User Stories](https://www.agilealliance.org/glossary/user-stories/)
 - [Tool Implementation Standards](03-tool-implementation.md)
 - [Testing Strategy](04-testing-strategy.md)
-

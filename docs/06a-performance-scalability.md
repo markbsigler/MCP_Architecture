@@ -51,12 +51,14 @@ async def process_large_dataset(data: list) -> dict:
 ### Async Best Practices
 
 **DO:**
+
 - Use `async`/`await` for I/O operations (network, disk, database)
 - Use `asyncio.gather()` for concurrent independent operations
 - Set timeouts on all external calls
 - Use connection pooling for frequently accessed resources
 
 **DON'T:**
+
 - Use `async` for CPU-intensive computations
 - Block the event loop with `time.sleep()` (use `asyncio.sleep()`)
 - Create unbounded concurrent tasks (use semaphores)
@@ -320,6 +322,7 @@ async def get_org_structure() -> dict:
 ### When to Cache
 
 **✅ Cache These:**
+
 - Static resources (documentation, schemas)
 - Slow-changing data (org structure, configuration)
 - Expensive queries with TTL tolerance
@@ -327,6 +330,7 @@ async def get_org_structure() -> dict:
 - Computed aggregations (reports, summaries)
 
 **❌ Don't Cache These:**
+
 - Real-time data (live metrics, current status)
 - User-specific sensitive data (PII)
 - Transaction-critical operations

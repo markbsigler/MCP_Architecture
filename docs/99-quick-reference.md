@@ -505,4 +505,3 @@ docker logs -f container_id
 ---
 
 **Need more detail?** Each pattern and standard has a comprehensive guide in the full documentation. Use this quick reference as a starting point, then dive into specific sections for in-depth information.
-

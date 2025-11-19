@@ -28,6 +28,7 @@ Each ADR follows this structure:
 ### Context
 
 MCP servers can be implemented using either:
+
 - FastMCP framework (high-level abstraction)
 - Native MCP Python SDK (low-level protocol implementation)
 
@@ -84,6 +85,7 @@ Use FastMCP framework as the standard implementation approach.
 ### Context
 
 Enterprise MCP servers require strong authentication. Two primary approaches:
+
 - JWT tokens with JWKS validation (token-based)
 - Mutual TLS (certificate-based)
 
@@ -394,6 +396,7 @@ Use **HTTP + SSE** as primary transport with WebSocket as opt-in for specific us
 ### When to Create an ADR
 
 Create an ADR for decisions that:
+
 - Impact multiple teams or components
 - Are difficult or expensive to reverse
 - Have significant tradeoffs
@@ -412,6 +415,7 @@ Create an ADR for decisions that:
 ### Updating ADRs
 
 ADRs are immutable once accepted. To change a decision:
+
 1. Create new ADR superseding the old one
 2. Link from old ADR to new one
 3. Mark old ADR as "Superseded"

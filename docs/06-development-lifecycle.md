@@ -12,7 +12,7 @@ Establishing a consistent development lifecycle ensures maintainability, collabo
 
 ### Standard Directory Layout
 
-```
+```text
 mcp-server/
 ├── .github/
 │   └── workflows/
@@ -574,7 +574,7 @@ fail_under = 80
 
 ### Git Workflow
 
-```
+```text
 main (production)
   │
   ├── develop (staging)
@@ -872,41 +872,41 @@ repos:
 .PHONY: help install test lint format clean run
 
 help:  ## Show this help message
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+ @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install:  ## Install dependencies
-	pip install -r requirements.txt -r requirements-dev.txt
+ pip install -r requirements.txt -r requirements-dev.txt
 
 test:  ## Run tests
-	pytest tests/ -v --cov=mcp_server
+ pytest tests/ -v --cov=mcp_server
 
 test-unit:  ## Run unit tests only
-	pytest tests/unit -v
+ pytest tests/unit -v
 
 test-integration:  ## Run integration tests
-	pytest tests/integration -v
+ pytest tests/integration -v
 
 lint:  ## Run linters
-	ruff check src/ tests/
-	mypy src/
+ ruff check src/ tests/
+ mypy src/
 
 format:  ## Format code
-	black src/ tests/
-	ruff check --fix src/ tests/
+ black src/ tests/
+ ruff check --fix src/ tests/
 
 clean:  ## Clean build artifacts
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type f -name '*.pyc' -delete
-	rm -rf .pytest_cache .mypy_cache .coverage htmlcov dist build *.egg-info
+ find . -type d -name __pycache__ -exec rm -rf {} +
+ find . -type f -name '*.pyc' -delete
+ rm -rf .pytest_cache .mypy_cache .coverage htmlcov dist build *.egg-info
 
 run:  ## Run server locally
-	uvicorn mcp_server.server:app --reload --log-level debug
+ uvicorn mcp_server.server:app --reload --log-level debug
 
 docker-build:  ## Build Docker image
-	docker build -t mcp-server:latest .
+ docker build -t mcp-server:latest .
 
 docker-run:  ## Run Docker container
-	docker run -p 8000:8000 mcp-server:latest
+ docker run -p 8000:8000 mcp-server:latest
 ```
 
 ## Summary

@@ -145,7 +145,7 @@ Summary:"""
 
 Build context with multiple messages:
 
-```python
+````python
 @mcp.tool()
 async def analyze_code_quality(
     code: str,
@@ -173,7 +173,7 @@ Provide a brief overall assessment (2-3 sentences):"""
         max_tokens=150,
         temperature=0.2
     )
-    
+
     # Second: Get detailed analysis for each focus area
     detailed_results = {}
     for area in focus_areas:
@@ -213,12 +213,13 @@ Provide a brief overall assessment (2-3 sentences):"""
             temperature=0.2
         )
         detailed_results[area] = detail.content.text
-    
+
     return {
         "overall": initial_analysis.content.text,
         "details": detailed_results
     }
-```
+
+````
 
 ### System Messages for Behavior Control
 
@@ -857,7 +858,7 @@ Now classify the following ticket:"""
 
 Guide reasoning for complex tasks:
 
-```python
+````python
 @mcp.tool()
 async def debug_code_issue(
     code: str,
@@ -891,14 +892,15 @@ Debug this issue step by step:"""
         temperature=0.3,
         max_tokens=1000
     )
-    
+
     # Parse structured reasoning
     text = completion.content.text
     return {
         "reasoning": text,
         "confidence": "high" if "definitely" in text.lower() else "medium"
     }
-```
+
+````
 
 ### Role Playing
 
@@ -943,9 +945,10 @@ Provide detailed feedback with specific recommendations."""
         temperature=0.4,
         max_tokens=1500
     )
-    
+
     return completion.content.text
-```
+
+```text
 
 ---
 

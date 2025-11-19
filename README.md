@@ -33,12 +33,14 @@ These guidelines are designed to help engineering teams:
 ### Core Architecture
 
 **[Architecture Overview](docs/01-architecture-overview.md)**
+
 - Enterprise MCP architecture layers
 - Request flow patterns
 - Component interactions
 - FastMCP integration patterns
 
 **[Architecture Decision Records](docs/01b-architecture-decisions.md)**
+
 - ADR format and templates
 - Key architectural decisions
 - Technology selection rationale

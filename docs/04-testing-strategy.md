@@ -10,7 +10,7 @@ Comprehensive testing is essential for reliable MCP servers. This document estab
 
 ## Testing Pyramid
 
-```
+```mermaid
          /\
         /E2E\         <- Few (Critical user journeys)
        /------\
@@ -849,7 +849,7 @@ pytest --cov=mcp_server \
 
 ### Directory Structure
 
-```
+```text
 tests/
 ├── unit/
 │   ├── test_tools.py
