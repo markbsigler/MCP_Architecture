@@ -449,30 +449,113 @@ When backend systems fail:
 
 ### Trust Zones
 
-```text
-┌─────────────────────────────────────┐
-│  Internet (Untrusted)               │
-└─────────────┬───────────────────────┘
-              │ TLS
-┌─────────────▼───────────────────────┐
-│  DMZ: Gateway (TLS Termination)     │
-└─────────────┬───────────────────────┘
-              │ mTLS
-┌─────────────▼───────────────────────┐
-│  Internal: MCP Servers              │
-└─────────────┬───────────────────────┘
-              │ VPC/Internal Network
-┌─────────────▼───────────────────────┐
-│  Backend: Enterprise Systems        │
-└─────────────────────────────────────┘
+The architecture implements multiple trust zones with progressive security controls:
+
+```mermaid
+graph TB
+    subgraph Internet["🌐 Internet Zone (Untrusted)"]
+        Client[AI Clients<br/>External Users]
+    end
+    
+    subgraph DMZ["🛡️ DMZ Zone (Perimeter)"]
+        WAF[Web Application<br/>Firewall]
+        LB[Load Balancer<br/>TLS Termination]
+        Gateway[MCP Gateway<br/>Auth & Routing]
+    end
+    
+    subgraph Internal["🔒 Internal Zone (Trusted)"]
+        direction LR
+        Server1[MCP Server 1<br/>File Access]
+        Server2[MCP Server 2<br/>Database]
+        Server3[MCP Server 3<br/>ERP Integration]
+        Cache[(Redis Cache<br/>Session Store)]
+    end
+    
+    subgraph Backend["🏢 Backend Zone (Highly Restricted)"]
+        DB[(Production<br/>Database)]
+        ERP[ERP Systems]
+        API[Legacy APIs]
+    end
+    
+    subgraph Monitoring["📊 Observability Zone (Isolated)"]
+        Logs[Log Aggregation<br/>Splunk/ELK]
+        Metrics[Metrics Store<br/>Prometheus]
+        Traces[Trace Backend<br/>Jaeger]
+    end
+    
+    Client -->|TLS 1.3<br/>Port 443| WAF
+    WAF -->|Validated Traffic| LB
+    LB -->|Internal TLS| Gateway
+    Gateway -->|mTLS<br/>JWT Auth| Server1
+    Gateway -->|mTLS<br/>JWT Auth| Server2
+    Gateway -->|mTLS<br/>JWT Auth| Server3
+    
+    Server1 -.->|Read Only| Cache
+    Server2 -.->|Read Only| Cache
+    Server3 -.->|Read Only| Cache
+    
+    Server1 -->|VPC Internal<br/>Private Network| DB
+    Server2 -->|VPC Internal<br/>Private Network| DB
+    Server3 -->|API Gateway<br/>Private Link| ERP
+    Server3 -->|VPN Tunnel| API
+    
+    Server1 -.->|Async Push<br/>UDP/TCP| Logs
+    Server2 -.->|Async Push<br/>UDP/TCP| Metrics
+    Server3 -.->|Async Push<br/>UDP/TCP| Traces
+    
+    classDef untrusted fill:#ffcccc,stroke:#cc0000,stroke-width:2px
+    classDef dmz fill:#fff4cc,stroke:#cc9900,stroke-width:2px
+    classDef trusted fill:#ccffcc,stroke:#00cc00,stroke-width:2px
+    classDef backend fill:#cce5ff,stroke:#0066cc,stroke-width:2px
+    classDef monitoring fill:#e5ccff,stroke:#9900cc,stroke-width:2px
+    
+    class Client untrusted
+    class WAF,LB,Gateway dmz
+    class Server1,Server2,Server3,Cache trusted
+    class DB,ERP,API backend
+    class Logs,Metrics,Traces monitoring
 ```
 
 ### Network Policies
 
-- **Gateway**: Public internet access with TLS
-- **MCP Servers**: Internal network only
-- **Backend Systems**: Restricted network access
-- **Observability**: Dedicated monitoring network
+**Internet Zone (Untrusted):**
+
+- Public internet access
+- No direct server access
+- DDoS protection enabled
+- Rate limiting at edge
+
+**DMZ Zone (Perimeter):**
+
+- TLS 1.3 enforcement
+- Certificate pinning
+- Web Application Firewall (WAF)
+- Network ingress only on ports 80/443
+- No direct backend access
+
+**Internal Zone (Trusted):**
+
+- Private VPC network
+- mTLS between components
+- No public IP addresses
+- Security group restrictions
+- Network policies enforce least privilege
+
+**Backend Zone (Highly Restricted):**
+
+- No internet access (egress blocked)
+- Database access via private endpoints only
+- API access through API Gateway or VPN
+- Encryption at rest and in transit
+- Network segmentation per service
+
+**Observability Zone (Isolated):**
+
+- Dedicated monitoring network
+- One-way data flow (servers → monitoring)
+- No access back to production systems
+- Separate authentication realm
+- Audit log immutability
 
 ## Summary
 
