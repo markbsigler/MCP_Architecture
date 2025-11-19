@@ -10,27 +10,204 @@ Comprehensive observability enables effective monitoring, debugging, and perform
 
 ## Three Pillars of Observability
 
+The observability system integrates logs, metrics, and traces for comprehensive system visibility:
+
+```mermaid
+graph TB
+    subgraph Sources["📡 Data Sources"]
+        direction LR
+        MCP1[MCP Server 1]
+        MCP2[MCP Server 2]
+        MCP3[MCP Server 3]
+        Gateway[MCP Gateway]
+        K8s[Kubernetes<br/>Control Plane]
+    end
+    
+    subgraph Collection["🔄 Collection Layer"]
+        direction TB
+        
+        subgraph LogPipeline["Log Pipeline"]
+            Fluent[Fluentd/Fluent Bit<br/>Log Forwarder]
+            LogBuffer[(Buffer<br/>Kafka/Redis)]
+        end
+        
+        subgraph MetricPipeline["Metrics Pipeline"]
+            Prometheus[Prometheus<br/>Scraper]
+            StatsdExp[StatsD Exporter<br/>Push Gateway]
+        end
+        
+        subgraph TracePipeline["Trace Pipeline"]
+            OTel[OpenTelemetry<br/>Collector]
+            TraceBuffer[(Sampling<br/>Buffer)]
+        end
+    end
+    
+    subgraph Storage["💾 Storage Layer"]
+        direction TB
+        
+        subgraph LogStorage["Log Storage"]
+            Loki[(Loki<br/>LogQL)]
+            ES[(Elasticsearch<br/>Full-text Search)]
+            S3Log[(S3/GCS<br/>Long-term Archive)]
+        end
+        
+        subgraph MetricStorage["Metrics Storage"]
+            PromStorage[(Prometheus TSDB<br/>15d retention)]
+            Thanos[(Thanos<br/>Long-term Storage)]
+            M3[(M3DB<br/>High Cardinality)]
+        end
+        
+        subgraph TraceStorage["Trace Storage"]
+            Jaeger[(Jaeger<br/>Cassandra/ES)]
+            Tempo[(Grafana Tempo<br/>S3/GCS)]
+        end
+    end
+    
+    subgraph Analysis["🔍 Analysis & Visualization"]
+        direction LR
+        Grafana[Grafana<br/>Unified Dashboards]
+        Kibana[Kibana<br/>Log Analysis]
+        Jaeger_UI[Jaeger UI<br/>Trace Explorer]
+    end
+    
+    subgraph Alerting["🚨 Alerting & Response"]
+        direction TB
+        AlertMgr[Alert Manager<br/>Routing & Dedup]
+        PagerDuty[PagerDuty<br/>On-call]
+        Slack[Slack<br/>Notifications]
+        Email[Email<br/>Reports]
+    end
+    
+    subgraph Intelligence["🤖 AIOps (Optional)"]
+        Anomaly[Anomaly Detection<br/>ML Models]
+        Forecast[Capacity Forecasting<br/>Prophet/ARIMA]
+        RCA[Root Cause Analysis<br/>Graph Analysis]
+    end
+    
+    %% Log Flow
+    MCP1 -->|stdout/stderr| Fluent
+    MCP2 -->|stdout/stderr| Fluent
+    MCP3 -->|stdout/stderr| Fluent
+    Gateway -->|JSON logs| Fluent
+    K8s -->|Events| Fluent
+    
+    Fluent -->|Parse & Enrich| LogBuffer
+    LogBuffer -->|Indexed| Loki
+    LogBuffer -->|Full-text| ES
+    Loki -->|Cold Storage| S3Log
+    
+    %% Metrics Flow
+    MCP1 -->|/metrics| Prometheus
+    MCP2 -->|/metrics| Prometheus
+    MCP3 -->|/metrics| Prometheus
+    Gateway -->|StatsD| StatsdExp
+    K8s -->|kube-state-metrics| Prometheus
+    
+    StatsdExp -->|Expose| Prometheus
+    Prometheus -->|Federate| PromStorage
+    PromStorage -->|Downsample| Thanos
+    Prometheus -->|High Card| M3
+    
+    %% Trace Flow
+    MCP1 -->|OTLP| OTel
+    MCP2 -->|OTLP| OTel
+    MCP3 -->|OTLP| OTel
+    Gateway -->|Zipkin| OTel
+    
+    OTel -->|Sample & Batch| TraceBuffer
+    TraceBuffer -->|Spans| Jaeger
+    TraceBuffer -->|Spans| Tempo
+    
+    %% Visualization
+    Loki -->|LogQL| Grafana
+    ES -->|Query| Kibana
+    PromStorage -->|PromQL| Grafana
+    Thanos -->|PromQL| Grafana
+    Jaeger -->|Query| Jaeger_UI
+    Tempo -->|TraceQL| Grafana
+    
+    %% Correlation
+    Grafana -.->|trace_id| Jaeger_UI
+    Grafana -.->|correlation_id| Kibana
+    Jaeger_UI -.->|log correlation| Loki
+    
+    %% Alerting
+    Prometheus -->|Alert Rules| AlertMgr
+    Loki -->|Alert Rules| AlertMgr
+    AlertMgr -->|On-call| PagerDuty
+    AlertMgr -->|Notify| Slack
+    AlertMgr -->|Digest| Email
+    
+    %% AIOps
+    PromStorage -.->|Time Series| Anomaly
+    Loki -.->|Error Patterns| RCA
+    PromStorage -.->|Historical| Forecast
+    
+    Anomaly -->|Anomaly Alerts| AlertMgr
+    RCA -.->|Context| Grafana
+    Forecast -.->|Predictions| Grafana
+    
+    %% Styling
+    classDef sources fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef collection fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef storage fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef analysis fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef alerting fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef aiops fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class MCP1,MCP2,MCP3,Gateway,K8s sources
+    class Fluent,LogBuffer,Prometheus,StatsdExp,OTel,TraceBuffer collection
+    class Loki,ES,S3Log,PromStorage,Thanos,M3,Jaeger,Tempo storage
+    class Grafana,Kibana,Jaeger_UI analysis
+    class AlertMgr,PagerDuty,Slack,Email alerting
+    class Anomaly,Forecast,RCA aiops
 ```
-┌─────────────────────────────────────────────────────┐
-│              OBSERVABILITY SYSTEM                    │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐     │
-│  │  LOGS    │    │ METRICS  │    │  TRACES  │     │
-│  │          │    │          │    │          │     │
-│  │ Structured│   │ Time     │    │ Request  │     │
-│  │ Events   │    │ Series   │    │ Flows    │     │
-│  │          │    │ Data     │    │          │     │
-│  └────┬─────┘    └────┬─────┘    └────┬─────┘     │
-│       │               │               │            │
-│       └───────────────┴───────────────┘            │
-│                       │                            │
-│              ┌────────▼────────┐                   │
-│              │  Correlation    │                   │
-│              │  & Analysis     │                   │
-│              └─────────────────┘                   │
-└─────────────────────────────────────────────────────┘
-```
+
+### Observability Stack Components
+
+**Data Sources:**
+
+- MCP servers emit logs, metrics, and traces
+- Gateway provides centralized telemetry
+- Kubernetes control plane metrics and events
+
+**Collection Layer:**
+
+- **Logs**: Fluentd/Fluent Bit for log forwarding with parsing
+- **Metrics**: Prometheus pull-based scraping, StatsD push
+- **Traces**: OpenTelemetry Collector with sampling and batching
+
+**Storage Layer:**
+
+- **Logs**: Loki (efficient), Elasticsearch (full-text), S3 (archive)
+- **Metrics**: Prometheus (15d), Thanos (long-term), M3DB (high cardinality)
+- **Traces**: Jaeger (Cassandra/ES), Tempo (object storage)
+
+**Analysis & Visualization:**
+
+- Grafana for unified dashboards (logs, metrics, traces)
+- Kibana for advanced log analysis
+- Jaeger UI for trace exploration
+
+**Alerting:**
+
+- Alert Manager for routing and deduplication
+- PagerDuty for on-call escalation
+- Slack and email for notifications
+
+**AIOps (Optional):**
+
+- Anomaly detection with ML models
+- Capacity forecasting (Prophet/ARIMA)
+- Root cause analysis via graph analysis
+
+**Key Features:**
+
+- **Correlation**: Link traces to logs via correlation_id
+- **Cardinality Management**: M3DB for high-cardinality metrics
+- **Long-term Retention**: Thanos and S3 for cost-effective storage
+- **Sampling**: Intelligent trace sampling to reduce volume
+- **Federation**: Multi-cluster Prometheus aggregation
 
 ## Structured Logging
 
