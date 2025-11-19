@@ -181,6 +181,7 @@ Date: 2025-11-18
     - [Story Format](#story-format)
     - [MCP-Specific Story Examples](#mcp-specific-story-examples)
     - [Story Structure Best Practices](#story-structure-best-practices)
+    - [Example: Complete Story](#example-complete-story)
   - [[STORY-123] File Upload Tool with Progress](#story-123-file-upload-tool-with-progress)
     - [Acceptance Criteria](#acceptance-criteria)
     - [Technical Notes](#technical-notes)
@@ -189,6 +190,7 @@ Date: 2025-11-18
     - [Acceptance Criteria Standards](#acceptance-criteria-standards)
     - [Acceptance Criteria Templates](#acceptance-criteria-templates)
     - [Complete Acceptance Criteria Example](#complete-acceptance-criteria-example)
+    - [Story: Database Query Tool](#story-database-query-tool)
     - [Acceptance Criteria](#acceptance-criteria)
   - [Requirements for MCP Primitives](#requirements-for-mcp-primitives)
     - [Tool Requirements Pattern](#tool-requirements-pattern)
@@ -199,6 +201,7 @@ Date: 2025-11-18
     - [Output Requirements](#output-requirements)
     - [Non-Functional Requirements](#non-functional-requirements)
     - [Acceptance Criteria](#acceptance-criteria)
+    - [Example: create_issue Tool](#example-createissue-tool)
   - [Tool: create_issue](#tool-createissue)
     - [Purpose](#purpose)
     - [Functional Requirements (EARS)](#functional-requirements-ears)
@@ -545,6 +548,7 @@ Date: 2025-11-18
 - [Observability](#observability)
   - [Introduction](#introduction)
   - [Three Pillars of Observability](#three-pillars-of-observability)
+    - [Observability Stack Components](#observability-stack-components)
   - [Structured Logging](#structured-logging)
     - [Logging Configuration](#logging-configuration)
 - [Initialize at startup](#initialize-at-startup)
@@ -727,6 +731,9 @@ Date: 2025-11-18
 - [Run with reload](#run-with-reload)
     - [Docker Compose for Production](#docker-compose-for-production)
 - [docker-compose.prod.yml](#docker-composeprodyml)
+  - [Production Architecture](#production-architecture)
+    - [Complete Deployment Diagram](#complete-deployment-diagram)
+    - [Architecture Components](#architecture-components)
   - [Kubernetes Deployment](#kubernetes-deployment)
     - [Deployment Manifest](#deployment-manifest)
 - [k8s/deployment.yaml](#k8sdeploymentyaml)
@@ -1144,15 +1151,30 @@ sequenceDiagram
     participant Observability as Observability Layer
     participant Integration as Enterprise System
 
-    Client->>Gateway: Request (Tool Invocation)
-    Gateway->>Security: Validate Auth (OAuth/JWT)
+    Note over Client,Integration: Total Request Time: ~200-500ms
+    
+    Client->>Gateway: 1. Request (Tool Invocation)
+    Note right of Gateway: 10-20ms
+    Gateway->>Security: 2. Validate Auth (OAuth/JWT)
+    Note right of Security: 5-15ms<br/>(cached JWKS)
     Security-->>Gateway: Auth OK
-    Gateway->>Server: Forward Request
-    Server->>Integration: Fetch Data / Execute Action
+    
+    Gateway->>Server: 3. Forward Request
+    Note right of Server: 50-150ms
+    Server->>Integration: 4. Fetch Data / Execute Action
+    Note right of Integration: 100-300ms<br/>(backend latency)
     Integration-->>Server: Response Data
-    Server->>Observability: Log Metrics & Trace
-    Server-->>Gateway: Response
-    Gateway-->>Client: Return Result
+    
+    par Async Operations
+        Server->>Observability: 5a. Log Metrics & Trace
+        Note right of Observability: 5-10ms<br/>(async)
+    and Response Path
+        Server-->>Gateway: 5b. Response
+        Note right of Gateway: 5-10ms
+        Gateway-->>Client: 6. Return Result
+    end
+    
+    Note over Client,Integration: P50: 200ms | P95: 400ms | P99: 500ms
 ```
 
 ### Flow Steps
@@ -1394,30 +1416,113 @@ When backend systems fail:
 
 ### Trust Zones
 
-```text
-┌─────────────────────────────────────┐
-│  Internet (Untrusted)               │
-└─────────────┬───────────────────────┘
-              │ TLS
-┌─────────────▼───────────────────────┐
-│  DMZ: Gateway (TLS Termination)     │
-└─────────────┬───────────────────────┘
-              │ mTLS
-┌─────────────▼───────────────────────┐
-│  Internal: MCP Servers              │
-└─────────────┬───────────────────────┘
-              │ VPC/Internal Network
-┌─────────────▼───────────────────────┐
-│  Backend: Enterprise Systems        │
-└─────────────────────────────────────┘
+The architecture implements multiple trust zones with progressive security controls:
+
+```mermaid
+graph TB
+    subgraph Internet["🌐 Internet Zone (Untrusted)"]
+        Client[AI Clients<br/>External Users]
+    end
+    
+    subgraph DMZ["🛡️ DMZ Zone (Perimeter)"]
+        WAF[Web Application<br/>Firewall]
+        LB[Load Balancer<br/>TLS Termination]
+        Gateway[MCP Gateway<br/>Auth & Routing]
+    end
+    
+    subgraph Internal["🔒 Internal Zone (Trusted)"]
+        direction LR
+        Server1[MCP Server 1<br/>File Access]
+        Server2[MCP Server 2<br/>Database]
+        Server3[MCP Server 3<br/>ERP Integration]
+        Cache[(Redis Cache<br/>Session Store)]
+    end
+    
+    subgraph Backend["🏢 Backend Zone (Highly Restricted)"]
+        DB[(Production<br/>Database)]
+        ERP[ERP Systems]
+        API[Legacy APIs]
+    end
+    
+    subgraph Monitoring["📊 Observability Zone (Isolated)"]
+        Logs[Log Aggregation<br/>Splunk/ELK]
+        Metrics[Metrics Store<br/>Prometheus]
+        Traces[Trace Backend<br/>Jaeger]
+    end
+    
+    Client -->|TLS 1.3<br/>Port 443| WAF
+    WAF -->|Validated Traffic| LB
+    LB -->|Internal TLS| Gateway
+    Gateway -->|mTLS<br/>JWT Auth| Server1
+    Gateway -->|mTLS<br/>JWT Auth| Server2
+    Gateway -->|mTLS<br/>JWT Auth| Server3
+    
+    Server1 -.->|Read Only| Cache
+    Server2 -.->|Read Only| Cache
+    Server3 -.->|Read Only| Cache
+    
+    Server1 -->|VPC Internal<br/>Private Network| DB
+    Server2 -->|VPC Internal<br/>Private Network| DB
+    Server3 -->|API Gateway<br/>Private Link| ERP
+    Server3 -->|VPN Tunnel| API
+    
+    Server1 -.->|Async Push<br/>UDP/TCP| Logs
+    Server2 -.->|Async Push<br/>UDP/TCP| Metrics
+    Server3 -.->|Async Push<br/>UDP/TCP| Traces
+    
+    classDef untrusted fill:#ffcccc,stroke:#cc0000,stroke-width:2px
+    classDef dmz fill:#fff4cc,stroke:#cc9900,stroke-width:2px
+    classDef trusted fill:#ccffcc,stroke:#00cc00,stroke-width:2px
+    classDef backend fill:#cce5ff,stroke:#0066cc,stroke-width:2px
+    classDef monitoring fill:#e5ccff,stroke:#9900cc,stroke-width:2px
+    
+    class Client untrusted
+    class WAF,LB,Gateway dmz
+    class Server1,Server2,Server3,Cache trusted
+    class DB,ERP,API backend
+    class Logs,Metrics,Traces monitoring
 ```
 
 ### Network Policies
 
-- **Gateway**: Public internet access with TLS
-- **MCP Servers**: Internal network only
-- **Backend Systems**: Restricted network access
-- **Observability**: Dedicated monitoring network
+**Internet Zone (Untrusted):**
+
+- Public internet access
+- No direct server access
+- DDoS protection enabled
+- Rate limiting at edge
+
+**DMZ Zone (Perimeter):**
+
+- TLS 1.3 enforcement
+- Certificate pinning
+- Web Application Firewall (WAF)
+- Network ingress only on ports 80/443
+- No direct backend access
+
+**Internal Zone (Trusted):**
+
+- Private VPC network
+- mTLS between components
+- No public IP addresses
+- Security group restrictions
+- Network policies enforce least privilege
+
+**Backend Zone (Highly Restricted):**
+
+- No internet access (egress blocked)
+- Database access via private endpoints only
+- API access through API Gateway or VPN
+- Encryption at rest and in transit
+- Network segmentation per service
+
+**Observability Zone (Isolated):**
+
+- Dedicated monitoring network
+- One-way data flow (servers → monitoring)
+- No access back to production systems
+- Separate authentication realm
+- Audit log immutability
 
 ## Summary
 
@@ -1464,6 +1569,7 @@ Each ADR follows this structure:
 ### Context
 
 MCP servers can be implemented using either:
+
 - FastMCP framework (high-level abstraction)
 - Native MCP Python SDK (low-level protocol implementation)
 
@@ -1520,6 +1626,7 @@ Use FastMCP framework as the standard implementation approach.
 ### Context
 
 Enterprise MCP servers require strong authentication. Two primary approaches:
+
 - JWT tokens with JWKS validation (token-based)
 - Mutual TLS (certificate-based)
 
@@ -1830,6 +1937,7 @@ Use **HTTP + SSE** as primary transport with WebSocket as opt-in for specific us
 ### When to Create an ADR
 
 Create an ADR for decisions that:
+
 - Impact multiple teams or components
 - Are difficult or expensive to reverse
 - Have significant tradeoffs
@@ -1848,6 +1956,7 @@ Create an ADR for decisions that:
 ### Updating ADRs
 
 ADRs are immutable once accepted. To change a decision:
+
 1. Create new ADR superseding the old one
 2. Link from old ADR to new one
 3. Mark old ADR as "Superseded"
@@ -3844,7 +3953,7 @@ So that I can audit actions and investigate incidents.
 4. **Technical Notes**: Implementation guidance
 5. **Definition of Done**: Completion checklist
 
-**Example: Complete Story**
+### Example: Complete Story
 
 ```markdown
 ## [STORY-123] File Upload Tool with Progress
@@ -3957,7 +4066,7 @@ The file_tool shall restrict access to user-owned files only.
 
 ### Complete Acceptance Criteria Example
 
-**Story: Database Query Tool**
+### Story: Database Query Tool
 
 ```markdown
 ### Acceptance Criteria
@@ -4017,7 +4126,7 @@ Brief description of what the tool does and why it exists.
 [Testable conditions using Given/When/Then format]
 ```
 
-**Example: create_issue Tool**
+### Example: create_issue Tool
 
 ```markdown
 ## Tool: create_issue
@@ -4167,11 +4276,13 @@ def test_create_issue_success():
 ### 1. Requirements Elicitation
 
 **Stakeholder Interviews:**
+
 - Identify user roles and needs
 - Document use cases
 - Capture business objectives
 
 **Requirements Workshops:**
+
 - Collaborative story writing
 - Acceptance criteria definition
 - Priority ranking
@@ -4179,11 +4290,13 @@ def test_create_issue_success():
 ### 2. Requirements Analysis
 
 **EARS Conversion:**
+
 - Convert natural language to EARS syntax
 - Identify requirement patterns
 - Ensure verifiability
 
 **Quality Checks:**
+
 - Verify completeness
 - Check for ambiguity
 - Validate against quality characteristics
@@ -4191,6 +4304,7 @@ def test_create_issue_success():
 ### 3. Requirements Documentation
 
 **Story Documentation:**
+
 ```markdown
 # Epic: [Epic Name]
 
@@ -4239,11 +4353,13 @@ Links to architecture, design, tests
 ### 5. Requirements Baseline
 
 **Version Control:**
+
 - Store requirements in Git with code
 - Tag releases with requirement versions
 - Maintain change history
 
 **Change Management:**
+
 - Document requirement changes
 - Impact analysis for changes
 - Update traceability links
@@ -4397,7 +4513,6 @@ Effective requirements engineering for MCP servers combines:
 - [Agile Alliance - User Stories](https://www.agilealliance.org/glossary/user-stories/)
 - [Tool Implementation Standards](#tool-implementation-standards)
 - [Testing Strategy](#testing-strategy)
-
 \n\n<section class="section-break"></section>\n
 # Tool Implementation Standards
 
@@ -7910,7 +8025,7 @@ Summary:"""
 
 Build context with multiple messages:
 
-```python
+````python
 @mcp.tool()
 async def analyze_code_quality(
     code: str,
@@ -7938,7 +8053,7 @@ Provide a brief overall assessment (2-3 sentences):"""
         max_tokens=150,
         temperature=0.2
     )
-    
+
     # Second: Get detailed analysis for each focus area
     detailed_results = {}
     for area in focus_areas:
@@ -7978,12 +8093,13 @@ Provide a brief overall assessment (2-3 sentences):"""
             temperature=0.2
         )
         detailed_results[area] = detail.content.text
-    
+
     return {
         "overall": initial_analysis.content.text,
         "details": detailed_results
     }
-```
+
+````
 
 ### System Messages for Behavior Control
 
@@ -8622,7 +8738,7 @@ Now classify the following ticket:"""
 
 Guide reasoning for complex tasks:
 
-```python
+````python
 @mcp.tool()
 async def debug_code_issue(
     code: str,
@@ -8656,14 +8772,15 @@ Debug this issue step by step:"""
         temperature=0.3,
         max_tokens=1000
     )
-    
+
     # Parse structured reasoning
     text = completion.content.text
     return {
         "reasoning": text,
         "confidence": "high" if "definitely" in text.lower() else "medium"
     }
-```
+
+````
 
 ### Role Playing
 
@@ -8708,9 +8825,10 @@ Provide detailed feedback with specific recommendations."""
         temperature=0.4,
         max_tokens=1500
     )
-    
+
     return completion.content.text
-```
+
+```text
 
 ---
 
@@ -9181,7 +9299,7 @@ Comprehensive testing is essential for reliable MCP servers. This document estab
 
 ## Testing Pyramid
 
-```
+```mermaid
          /\
         /E2E\         <- Few (Critical user journeys)
        /------\
@@ -10020,7 +10138,7 @@ pytest --cov=mcp_server \
 
 ### Directory Structure
 
-```
+```text
 tests/
 ├── unit/
 │   ├── test_tools.py
@@ -10350,27 +10468,204 @@ Comprehensive observability enables effective monitoring, debugging, and perform
 
 ## Three Pillars of Observability
 
+The observability system integrates logs, metrics, and traces for comprehensive system visibility:
+
+```mermaid
+graph TB
+    subgraph Sources["📡 Data Sources"]
+        direction LR
+        MCP1[MCP Server 1]
+        MCP2[MCP Server 2]
+        MCP3[MCP Server 3]
+        Gateway[MCP Gateway]
+        K8s[Kubernetes<br/>Control Plane]
+    end
+    
+    subgraph Collection["🔄 Collection Layer"]
+        direction TB
+        
+        subgraph LogPipeline["Log Pipeline"]
+            Fluent[Fluentd/Fluent Bit<br/>Log Forwarder]
+            LogBuffer[(Buffer<br/>Kafka/Redis)]
+        end
+        
+        subgraph MetricPipeline["Metrics Pipeline"]
+            Prometheus[Prometheus<br/>Scraper]
+            StatsdExp[StatsD Exporter<br/>Push Gateway]
+        end
+        
+        subgraph TracePipeline["Trace Pipeline"]
+            OTel[OpenTelemetry<br/>Collector]
+            TraceBuffer[(Sampling<br/>Buffer)]
+        end
+    end
+    
+    subgraph Storage["💾 Storage Layer"]
+        direction TB
+        
+        subgraph LogStorage["Log Storage"]
+            Loki[(Loki<br/>LogQL)]
+            ES[(Elasticsearch<br/>Full-text Search)]
+            S3Log[(S3/GCS<br/>Long-term Archive)]
+        end
+        
+        subgraph MetricStorage["Metrics Storage"]
+            PromStorage[(Prometheus TSDB<br/>15d retention)]
+            Thanos[(Thanos<br/>Long-term Storage)]
+            M3[(M3DB<br/>High Cardinality)]
+        end
+        
+        subgraph TraceStorage["Trace Storage"]
+            Jaeger[(Jaeger<br/>Cassandra/ES)]
+            Tempo[(Grafana Tempo<br/>S3/GCS)]
+        end
+    end
+    
+    subgraph Analysis["🔍 Analysis & Visualization"]
+        direction LR
+        Grafana[Grafana<br/>Unified Dashboards]
+        Kibana[Kibana<br/>Log Analysis]
+        Jaeger_UI[Jaeger UI<br/>Trace Explorer]
+    end
+    
+    subgraph Alerting["🚨 Alerting & Response"]
+        direction TB
+        AlertMgr[Alert Manager<br/>Routing & Dedup]
+        PagerDuty[PagerDuty<br/>On-call]
+        Slack[Slack<br/>Notifications]
+        Email[Email<br/>Reports]
+    end
+    
+    subgraph Intelligence["🤖 AIOps (Optional)"]
+        Anomaly[Anomaly Detection<br/>ML Models]
+        Forecast[Capacity Forecasting<br/>Prophet/ARIMA]
+        RCA[Root Cause Analysis<br/>Graph Analysis]
+    end
+    
+    %% Log Flow
+    MCP1 -->|stdout/stderr| Fluent
+    MCP2 -->|stdout/stderr| Fluent
+    MCP3 -->|stdout/stderr| Fluent
+    Gateway -->|JSON logs| Fluent
+    K8s -->|Events| Fluent
+    
+    Fluent -->|Parse & Enrich| LogBuffer
+    LogBuffer -->|Indexed| Loki
+    LogBuffer -->|Full-text| ES
+    Loki -->|Cold Storage| S3Log
+    
+    %% Metrics Flow
+    MCP1 -->|/metrics| Prometheus
+    MCP2 -->|/metrics| Prometheus
+    MCP3 -->|/metrics| Prometheus
+    Gateway -->|StatsD| StatsdExp
+    K8s -->|kube-state-metrics| Prometheus
+    
+    StatsdExp -->|Expose| Prometheus
+    Prometheus -->|Federate| PromStorage
+    PromStorage -->|Downsample| Thanos
+    Prometheus -->|High Card| M3
+    
+    %% Trace Flow
+    MCP1 -->|OTLP| OTel
+    MCP2 -->|OTLP| OTel
+    MCP3 -->|OTLP| OTel
+    Gateway -->|Zipkin| OTel
+    
+    OTel -->|Sample & Batch| TraceBuffer
+    TraceBuffer -->|Spans| Jaeger
+    TraceBuffer -->|Spans| Tempo
+    
+    %% Visualization
+    Loki -->|LogQL| Grafana
+    ES -->|Query| Kibana
+    PromStorage -->|PromQL| Grafana
+    Thanos -->|PromQL| Grafana
+    Jaeger -->|Query| Jaeger_UI
+    Tempo -->|TraceQL| Grafana
+    
+    %% Correlation
+    Grafana -.->|trace_id| Jaeger_UI
+    Grafana -.->|correlation_id| Kibana
+    Jaeger_UI -.->|log correlation| Loki
+    
+    %% Alerting
+    Prometheus -->|Alert Rules| AlertMgr
+    Loki -->|Alert Rules| AlertMgr
+    AlertMgr -->|On-call| PagerDuty
+    AlertMgr -->|Notify| Slack
+    AlertMgr -->|Digest| Email
+    
+    %% AIOps
+    PromStorage -.->|Time Series| Anomaly
+    Loki -.->|Error Patterns| RCA
+    PromStorage -.->|Historical| Forecast
+    
+    Anomaly -->|Anomaly Alerts| AlertMgr
+    RCA -.->|Context| Grafana
+    Forecast -.->|Predictions| Grafana
+    
+    %% Styling
+    classDef sources fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef collection fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef storage fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef analysis fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef alerting fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef aiops fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class MCP1,MCP2,MCP3,Gateway,K8s sources
+    class Fluent,LogBuffer,Prometheus,StatsdExp,OTel,TraceBuffer collection
+    class Loki,ES,S3Log,PromStorage,Thanos,M3,Jaeger,Tempo storage
+    class Grafana,Kibana,Jaeger_UI analysis
+    class AlertMgr,PagerDuty,Slack,Email alerting
+    class Anomaly,Forecast,RCA aiops
 ```
-┌─────────────────────────────────────────────────────┐
-│              OBSERVABILITY SYSTEM                    │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐     │
-│  │  LOGS    │    │ METRICS  │    │  TRACES  │     │
-│  │          │    │          │    │          │     │
-│  │ Structured│   │ Time     │    │ Request  │     │
-│  │ Events   │    │ Series   │    │ Flows    │     │
-│  │          │    │ Data     │    │          │     │
-│  └────┬─────┘    └────┬─────┘    └────┬─────┘     │
-│       │               │               │            │
-│       └───────────────┴───────────────┘            │
-│                       │                            │
-│              ┌────────▼────────┐                   │
-│              │  Correlation    │                   │
-│              │  & Analysis     │                   │
-│              └─────────────────┘                   │
-└─────────────────────────────────────────────────────┘
-```
+
+### Observability Stack Components
+
+**Data Sources:**
+
+- MCP servers emit logs, metrics, and traces
+- Gateway provides centralized telemetry
+- Kubernetes control plane metrics and events
+
+**Collection Layer:**
+
+- **Logs**: Fluentd/Fluent Bit for log forwarding with parsing
+- **Metrics**: Prometheus pull-based scraping, StatsD push
+- **Traces**: OpenTelemetry Collector with sampling and batching
+
+**Storage Layer:**
+
+- **Logs**: Loki (efficient), Elasticsearch (full-text), S3 (archive)
+- **Metrics**: Prometheus (15d), Thanos (long-term), M3DB (high cardinality)
+- **Traces**: Jaeger (Cassandra/ES), Tempo (object storage)
+
+**Analysis & Visualization:**
+
+- Grafana for unified dashboards (logs, metrics, traces)
+- Kibana for advanced log analysis
+- Jaeger UI for trace exploration
+
+**Alerting:**
+
+- Alert Manager for routing and deduplication
+- PagerDuty for on-call escalation
+- Slack and email for notifications
+
+**AIOps (Optional):**
+
+- Anomaly detection with ML models
+- Capacity forecasting (Prophet/ARIMA)
+- Root cause analysis via graph analysis
+
+**Key Features:**
+
+- **Correlation**: Link traces to logs via correlation_id
+- **Cardinality Management**: M3DB for high-cardinality metrics
+- **Long-term Retention**: Thanos and S3 for cost-effective storage
+- **Sampling**: Intelligent trace sampling to reduce volume
+- **Federation**: Multi-cluster Prometheus aggregation
 
 ## Structured Logging
 
@@ -11243,7 +11538,7 @@ Establishing a consistent development lifecycle ensures maintainability, collabo
 
 ### Standard Directory Layout
 
-```
+```text
 mcp-server/
 ├── .github/
 │   └── workflows/
@@ -11805,7 +12100,7 @@ fail_under = 80
 
 ### Git Workflow
 
-```
+```text
 main (production)
   │
   ├── develop (staging)
@@ -12103,41 +12398,41 @@ repos:
 .PHONY: help install test lint format clean run
 
 help:  ## Show this help message
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+ @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install:  ## Install dependencies
-	pip install -r requirements.txt -r requirements-dev.txt
+ pip install -r requirements.txt -r requirements-dev.txt
 
 test:  ## Run tests
-	pytest tests/ -v --cov=mcp_server
+ pytest tests/ -v --cov=mcp_server
 
 test-unit:  ## Run unit tests only
-	pytest tests/unit -v
+ pytest tests/unit -v
 
 test-integration:  ## Run integration tests
-	pytest tests/integration -v
+ pytest tests/integration -v
 
 lint:  ## Run linters
-	ruff check src/ tests/
-	mypy src/
+ ruff check src/ tests/
+ mypy src/
 
 format:  ## Format code
-	black src/ tests/
-	ruff check --fix src/ tests/
+ black src/ tests/
+ ruff check --fix src/ tests/
 
 clean:  ## Clean build artifacts
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type f -name '*.pyc' -delete
-	rm -rf .pytest_cache .mypy_cache .coverage htmlcov dist build *.egg-info
+ find . -type d -name __pycache__ -exec rm -rf {} +
+ find . -type f -name '*.pyc' -delete
+ rm -rf .pytest_cache .mypy_cache .coverage htmlcov dist build *.egg-info
 
 run:  ## Run server locally
-	uvicorn mcp_server.server:app --reload --log-level debug
+ uvicorn mcp_server.server:app --reload --log-level debug
 
 docker-build:  ## Build Docker image
-	docker build -t mcp-server:latest .
+ docker build -t mcp-server:latest .
 
 docker-run:  ## Run Docker container
-	docker run -p 8000:8000 mcp-server:latest
+ docker run -p 8000:8000 mcp-server:latest
 ```
 
 ## Summary
@@ -12208,12 +12503,14 @@ async def process_large_dataset(data: list) -> dict:
 ### Async Best Practices
 
 **DO:**
+
 - Use `async`/`await` for I/O operations (network, disk, database)
 - Use `asyncio.gather()` for concurrent independent operations
 - Set timeouts on all external calls
 - Use connection pooling for frequently accessed resources
 
 **DON'T:**
+
 - Use `async` for CPU-intensive computations
 - Block the event loop with `time.sleep()` (use `asyncio.sleep()`)
 - Create unbounded concurrent tasks (use semaphores)
@@ -12477,6 +12774,7 @@ async def get_org_structure() -> dict:
 ### When to Cache
 
 **✅ Cache These:**
+
 - Static resources (documentation, schemas)
 - Slow-changing data (org structure, configuration)
 - Expensive queries with TTL tolerance
@@ -12484,6 +12782,7 @@ async def get_org_structure() -> dict:
 - Computed aggregations (reports, summaries)
 
 **❌ Don't Cache These:**
+
 - Real-time data (live metrics, current status)
 - User-specific sensitive data (PII)
 - Transaction-critical operations
@@ -13154,6 +13453,207 @@ networks:
   mcp-network:
     driver: bridge
 ```
+
+## Production Architecture
+
+### Complete Deployment Diagram
+
+The following diagram shows a complete production deployment on Kubernetes with all supporting infrastructure:
+
+```mermaid
+graph TB
+    subgraph Internet["🌐 Internet"]
+        Users[Users/AI Clients]
+        DNS[DNS<br/>Route53/CloudFlare]
+    end
+    
+    subgraph LoadBalancing["Load Balancing Layer"]
+        ALB[Application Load Balancer<br/>AWS ALB / GCP LB]
+        WAF[Web Application Firewall<br/>AWS WAF / Cloudflare]
+    end
+    
+    subgraph K8sCluster["☸️ Kubernetes Cluster (EKS/GKE/AKS)"]
+        subgraph IngressLayer["Ingress Layer"]
+            IngressCtrl[Ingress Controller<br/>NGINX/Traefik]
+            CertMgr[Cert Manager<br/>Let's Encrypt]
+        end
+        
+        subgraph AppLayer["Application Layer"]
+            direction LR
+            MCPPod1[MCP Server Pod 1<br/>Replicas: 3-10]
+            MCPPod2[MCP Server Pod 2<br/>Auto-scaled]
+            MCPPod3[MCP Server Pod 3<br/>Multi-AZ]
+        end
+        
+        subgraph ServiceMesh["Service Mesh (Optional)"]
+            Istio[Istio/Linkerd<br/>mTLS + Observability]
+        end
+        
+        subgraph DataLayer["Data Layer"]
+            Redis[(Redis Cluster<br/>Session/Cache<br/>3 replicas)]
+            PVC[Persistent Volume<br/>Logs/Temp Files]
+        end
+    end
+    
+    subgraph ManagedServices["☁️ Managed Services"]
+        RDS[(RDS/CloudSQL<br/>PostgreSQL<br/>Multi-AZ)]
+        S3[Object Storage<br/>S3/GCS/Azure Blob]
+        Secrets[Secrets Manager<br/>AWS Secrets/Vault]
+    end
+    
+    subgraph Observability["📊 Observability Stack"]
+        Prometheus[Prometheus<br/>Metrics]
+        Grafana[Grafana<br/>Dashboards]
+        Loki[Loki/CloudWatch<br/>Logs]
+        Jaeger[Jaeger/Tempo<br/>Traces]
+        AlertMgr[Alert Manager<br/>PagerDuty/Slack]
+    end
+    
+    subgraph CI_CD["🚀 CI/CD Pipeline"]
+        GHA[GitHub Actions<br/>GitLab CI]
+        Registry[Container Registry<br/>ECR/GCR/ACR]
+        ArgoCD[ArgoCD/Flux<br/>GitOps]
+    end
+    
+    subgraph BackendSystems["🏢 Backend Systems"]
+        DB[(Enterprise DB<br/>Oracle/SQL Server)]
+        ERP[ERP Systems<br/>SAP/Workday]
+        APIs[Legacy APIs<br/>REST/SOAP]
+    end
+    
+    %% Traffic Flow
+    Users -->|HTTPS| DNS
+    DNS -->|Resolved IP| WAF
+    WAF -->|Filtered Traffic| ALB
+    ALB -->|TLS 443| IngressCtrl
+    CertMgr -.->|Auto-renew| IngressCtrl
+    
+    IngressCtrl -->|HTTP| MCPPod1
+    IngressCtrl -->|HTTP| MCPPod2
+    IngressCtrl -->|HTTP| MCPPod3
+    
+    Istio -.->|mTLS| MCPPod1
+    Istio -.->|mTLS| MCPPod2
+    Istio -.->|mTLS| MCPPod3
+    
+    MCPPod1 <-->|Cache| Redis
+    MCPPod2 <-->|Cache| Redis
+    MCPPod3 <-->|Cache| Redis
+    
+    MCPPod1 -->|SQL| RDS
+    MCPPod2 -->|SQL| RDS
+    MCPPod3 -->|SQL| RDS
+    
+    MCPPod1 -->|Upload| S3
+    MCPPod2 -->|Get Secrets| Secrets
+    MCPPod3 -.->|Logs| PVC
+    
+    %% Backend Integration
+    MCPPod1 -->|Private Link| DB
+    MCPPod2 -->|API Gateway| ERP
+    MCPPod3 -->|VPN/VPC Peering| APIs
+    
+    %% Observability
+    MCPPod1 -.->|Metrics| Prometheus
+    MCPPod2 -.->|Logs| Loki
+    MCPPod3 -.->|Traces| Jaeger
+    
+    Prometheus -->|Visualize| Grafana
+    Loki -->|Visualize| Grafana
+    Jaeger -->|Visualize| Grafana
+    Prometheus -->|Alerts| AlertMgr
+    
+    %% CI/CD Flow
+    GHA -->|Build & Push| Registry
+    Registry -->|Pull Images| ArgoCD
+    ArgoCD -->|Deploy| K8sCluster
+    
+    %% Styling
+    classDef internet fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef lb fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef k8s fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef data fill:#f8bbd0,stroke:#c2185b,stroke-width:2px
+    classDef managed fill:#d1c4e9,stroke:#512da8,stroke-width:2px
+    classDef observability fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    classDef cicd fill:#b2dfdb,stroke:#00695c,stroke-width:2px
+    classDef backend fill:#cfd8dc,stroke:#455a64,stroke-width:2px
+    
+    class Users,DNS internet
+    class ALB,WAF lb
+    class IngressCtrl,CertMgr,MCPPod1,MCPPod2,MCPPod3,Istio k8s
+    class Redis,PVC data
+    class RDS,S3,Secrets managed
+    class Prometheus,Grafana,Loki,Jaeger,AlertMgr observability
+    class GHA,Registry,ArgoCD cicd
+    class DB,ERP,APIs backend
+```
+
+### Architecture Components
+
+**Internet Layer:**
+
+- DNS resolution with health checks and geo-routing
+- DDoS protection and CDN integration
+
+**Load Balancing:**
+
+- Layer 7 application load balancer
+- SSL/TLS termination
+- Web Application Firewall for security
+- Rate limiting and traffic shaping
+
+**Kubernetes Cluster:**
+
+- Multi-availability zone deployment
+- 3-10 replicas with horizontal pod autoscaling
+- Pod anti-affinity for high availability
+- Resource requests and limits
+- Security context and network policies
+
+**Ingress Layer:**
+
+- NGINX or Traefik ingress controller
+- Automatic certificate management via cert-manager
+- Path-based routing and request filtering
+
+**Service Mesh (Optional):**
+
+- mTLS between services
+- Traffic management and circuit breaking
+- Enhanced observability
+
+**Data Layer:**
+
+- Redis cluster for caching and sessions
+- Persistent volumes for logs and temporary files
+- StatefulSets for stateful workloads
+
+**Managed Services:**
+
+- Multi-AZ managed database (RDS/CloudSQL)
+- Object storage for files and backups
+- Secrets management with encryption
+
+**Observability:**
+
+- Prometheus for metrics collection
+- Loki or CloudWatch for log aggregation
+- Jaeger or Tempo for distributed tracing
+- Grafana for unified visualization
+- Alert Manager for incident notifications
+
+**CI/CD Pipeline:**
+
+- GitHub Actions or GitLab CI for builds
+- Container registry for image storage
+- ArgoCD or Flux for GitOps deployments
+- Automated rollback on failures
+
+**Backend Integration:**
+
+- Private Link or VPC peering for databases
+- API Gateway for ERP integration
+- VPN tunnels for legacy systems
 
 ## Kubernetes Deployment
 
@@ -13878,6 +14378,7 @@ Operational runbooks provide standardized procedures for troubleshooting, incide
 ### Service Not Responding
 
 **Symptoms:**
+
 - Health check endpoints returning 503 or timing out
 - No response from service
 - Kubernetes pods in CrashLoopBackOff
@@ -13904,7 +14405,7 @@ kubectl describe pod -n mcp <pod-name>
 **Common Causes & Resolutions:**
 
 | Cause | Resolution |
-|-------|-----------|
+|-------|------------|
 | Database connection failure | Check DB credentials, connectivity, and connection limits |
 | Out of memory | Increase memory limits or optimize memory usage |
 | Configuration error | Validate ConfigMap and Secret values |
@@ -13939,6 +14440,7 @@ kubectl get endpoints -n $NAMESPACE $APP
 ### High Error Rate
 
 **Symptoms:**
+
 - Elevated 500 errors in logs
 - Increased error metrics
 - Alerts firing for error rate
@@ -14017,6 +14519,7 @@ if __name__ == "__main__":
 **Resolution:**
 
 1. **Database Issues:**
+
    ```bash
    # Check database connections
    kubectl exec -n mcp postgres-0 -- \
@@ -14028,6 +14531,7 @@ if __name__ == "__main__":
    ```
 
 2. **External Service Failures:**
+
    ```bash
    # Check circuit breaker status
    kubectl exec -n mcp deployment/mcp-server -- \
@@ -14039,6 +14543,7 @@ if __name__ == "__main__":
    ```
 
 3. **Application Restart:**
+
    ```bash
    # Rolling restart
    kubectl rollout restart deployment/mcp-server -n mcp
@@ -14048,6 +14553,7 @@ if __name__ == "__main__":
 ### High Latency
 
 **Symptoms:**
+
 - P99 latency above 1000ms
 - Slow response times
 - Timeout errors
@@ -14110,6 +14616,7 @@ if __name__ == "__main__":
 **Resolution:**
 
 1. **Database Optimization:**
+
    ```sql
    -- Add missing indexes
    CREATE INDEX CONCURRENTLY idx_assignments_assignee ON assignments(assignee);
@@ -14127,6 +14634,7 @@ if __name__ == "__main__":
    ```
 
 2. **Cache Tuning:**
+
    ```python
    # Increase cache TTL for frequently accessed data
    cache.set("assignments:user:123", data, ttl=3600)
@@ -14136,6 +14644,7 @@ if __name__ == "__main__":
    ```
 
 3. **Connection Pooling:**
+
    ```python
    # Increase connection pool size
    engine = create_async_engine(
@@ -14148,6 +14657,7 @@ if __name__ == "__main__":
 ### Memory Leak
 
 **Symptoms:**
+
 - Gradually increasing memory usage
 - OOMKilled pods
 - Slow memory growth over time
@@ -14209,6 +14719,7 @@ if __name__ == "__main__":
 **Resolution:**
 
 1. **Identify Leak Source:**
+
    ```python
    # Add explicit cleanup
    async def create_assignment(title: str, assignee: str):
@@ -14222,6 +14733,7 @@ if __name__ == "__main__":
    ```
 
 2. **Fix Connection Leaks:**
+
    ```python
    # Use context managers
    async with httpx.AsyncClient() as client:
@@ -14236,6 +14748,7 @@ if __name__ == "__main__":
    ```
 
 3. **Restart Pods:**
+
    ```bash
    kubectl delete pod -n mcp -l app=mcp-server
    ```
@@ -14244,7 +14757,7 @@ if __name__ == "__main__":
 
 ### Incident Response Process
 
-```
+```text
 1. DETECT
    ├─ Alert fires
    ├─ User reports issue
@@ -16990,4 +17503,3 @@ docker logs -f container_id
 ---
 
 **Need more detail?** Each pattern and standard has a comprehensive guide in the full documentation. Use this quick reference as a starting point, then dive into specific sections for in-depth information.
-

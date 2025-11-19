@@ -78,6 +78,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Makefile: Included 02b-requirements-engineering.md in build
 - Documentation now 17,000+ lines covering full development lifecycle
 
+## [1.2.0] - 2025-11-19
+
+### Added
+
+- **Enhanced Mermaid Diagrams Across Documentation**:
+  - **Request Flow Diagram** (01-architecture-overview.md):
+    - Added latency annotations for each step (5-300ms ranges)
+    - Included P50/P95/P99 latency percentiles
+    - Showed async operations in parallel
+    - Documented typical latencies for auth, gateway, server, and backend
+  - **Network Security Boundaries Diagram** (01-architecture-overview.md):
+    - Replaced ASCII art with comprehensive mermaid diagram
+    - Visualized 5 trust zones: Internet, DMZ, Internal, Backend, Observability
+    - Documented security controls (TLS, mTLS, WAF, VPC)
+    - Added detailed network policies for each zone
+    - Used color coding for visual zone separation
+    - Included connection types and protocols
+  - **Production Deployment Architecture** (07-deployment-patterns.md):
+    - Complete production deployment diagram with all infrastructure
+    - Kubernetes cluster visualization (ingress, app, data layers)
+    - Managed services integration (RDS, S3, Secrets Manager)
+    - Observability stack (Prometheus, Grafana, Loki, Jaeger)
+    - CI/CD pipeline flow (GitHub Actions, Registry, ArgoCD)
+    - Backend integration patterns
+    - Service mesh option (Istio/Linkerd)
+  - **Complete Monitoring Stack** (05-observability.md):
+    - Replaced ASCII art with detailed observability pipeline
+    - Collection layer (Fluentd, Prometheus, OpenTelemetry)
+    - Storage layer (Loki, Elasticsearch, Prometheus TSDB, Thanos, Jaeger, Tempo)
+    - Analysis layer (Grafana, Kibana, Jaeger UI)
+    - Alerting stack (Alert Manager, PagerDuty, Slack)
+    - Optional AIOps components (anomaly detection, forecasting, RCA)
+    - Correlation flows between logs, metrics, and traces
+
+### Improved
+
+- All diagrams use consistent mermaid syntax
+- Color-coded components for better visual understanding
+- Professional-grade architecture visualizations
+- Enhanced documentation clarity with visual aids
+- Documentation size increased to 17,500+ lines (~290-320 pages)
+
+### Technical Details
+
+- 5 major diagram enhancements across 4 documentation sections
+- Replaced 2 ASCII art diagrams with mermaid equivalents
+- Added latency and timing information to request flows
+- Comprehensive production architecture visualization
+- Full observability stack with all integration points
+
 ## [Unreleased]
 
 ### Planned
