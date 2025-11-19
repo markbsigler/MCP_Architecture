@@ -4,6 +4,7 @@
 **Last Updated:** November 18, 2025  
 **Status:** Draft  
 **Repository:** MCP_Architecture
+**Author:** Mark Sigler
 
 ## Overview
 
@@ -235,10 +236,6 @@ For questions or clarifications:
 - **Internal Teams**: Contact platform-engineering channel
 - **Architecture Questions**: Reach out to the architecture review board
 - **Security Concerns**: Contact the security team
-
-## License
-
-Internal documentation - proprietary and confidential.
 
 ---
 
