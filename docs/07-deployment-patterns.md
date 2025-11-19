@@ -657,75 +657,124 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
-### GitLab CI/CD
+### Jenkins Pipeline
 
-```yaml
-# .gitlab-ci.yml
-stages:
-  - test
-  - build
-  - deploy
-
-variables:
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
-  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
-
-test:
-  stage: test
-  image: python:3.12
-  script:
-    - pip install -r requirements.txt -r requirements-dev.txt
-    - pytest tests/ --cov=mcp_server --cov-report=term --cov-report=xml
-  coverage: '/TOTAL.*\s+(\d+%)$/'
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
-
-build:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  script:
-    - docker build -t $IMAGE_TAG .
-    - docker push $IMAGE_TAG
-    - docker tag $IMAGE_TAG $CI_REGISTRY_IMAGE:latest
-    - docker push $CI_REGISTRY_IMAGE:latest
-  only:
-    - main
-    - tags
-
-deploy:staging:
-  stage: deploy
-  image: bitnami/kubectl:latest
-  script:
-    - kubectl config use-context staging
-    - kubectl set image deployment/mcp-server mcp-server=$IMAGE_TAG -n mcp
-    - kubectl rollout status deployment/mcp-server -n mcp
-  environment:
-    name: staging
-    url: https://staging.mcp.example.com
-  only:
-    - main
-
-deploy:production:
-  stage: deploy
-  image: bitnami/kubectl:latest
-  script:
-    - kubectl config use-context production
-    - kubectl set image deployment/mcp-server mcp-server=$IMAGE_TAG -n mcp
-    - kubectl rollout status deployment/mcp-server -n mcp
-  environment:
-    name: production
-    url: https://mcp.example.com
-  when: manual
-  only:
-    - tags
+```groovy
+// Jenkinsfile
+pipeline {
+    agent any
+    
+    environment {
+        REGISTRY = 'ghcr.io'
+        IMAGE_NAME = "${env.GITHUB_ORG}/mcp-server"
+        IMAGE_TAG = "${REGISTRY}/${IMAGE_NAME}:${env.GIT_COMMIT}"
+        GITHUB_CREDS = credentials('github-token')
+    }
+    
+    stages {
+        stage('Test') {
+            agent {
+                docker {
+                    image 'python:3.12'
+                    args '-u root'
+                }
+            }
+            steps {
+                sh '''
+                    pip install -r requirements.txt -r requirements-dev.txt
+                    pytest tests/ --cov=mcp_server --cov-report=term --cov-report=xml --junitxml=test-results.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'test-results.xml'
+                    publishCoverage adapters: [coberturaAdapter('coverage.xml')]
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                script {
+                    docker.withRegistry("https://${REGISTRY}", 'github-token') {
+                        def customImage = docker.build("${IMAGE_TAG}")
+                        customImage.push()
+                        
+                        if (env.BRANCH_NAME == 'main') {
+                            customImage.push('latest')
+                        }
+                        
+                        if (env.TAG_NAME) {
+                            customImage.push(env.TAG_NAME)
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                branch 'main'
+            }
+            steps {
+                withKubeConfig([credentialsId: 'kube-config-staging']) {
+                    sh """
+                        kubectl set image deployment/mcp-server \
+                          mcp-server=${IMAGE_TAG} \
+                          -n mcp
+                        
+                        kubectl rollout status deployment/mcp-server -n mcp --timeout=5m
+                    """
+                }
+                
+                sh 'python scripts/smoke_tests.py https://staging.mcp.example.com'
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                tag pattern: "v\\d+\\.\\d+\\.\\d+", comparator: "REGEXP"
+            }
+            steps {
+                input message: 'Deploy to production?', ok: 'Deploy'
+                
+                withKubeConfig([credentialsId: 'kube-config-prod']) {
+                    sh """
+                        kubectl set image deployment/mcp-server \
+                          mcp-server=${REGISTRY}/${IMAGE_NAME}:${env.TAG_NAME} \
+                          -n mcp
+                        
+                        kubectl rollout status deployment/mcp-server -n mcp --timeout=10m
+                    """
+                }
+                
+                sh 'python scripts/smoke_tests.py https://mcp.example.com'
+            }
+            post {
+                success {
+                    slackSend(
+                        channel: '#deployments',
+                        color: 'good',
+                        message: "Deployed ${env.TAG_NAME} to production"
+                    )
+                }
+                failure {
+                    slackSend(
+                        channel: '#deployments',
+                        color: 'danger',
+                        message: "Failed to deploy ${env.TAG_NAME} to production"
+                    )
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
 ```
 
 ## Deployment Strategies

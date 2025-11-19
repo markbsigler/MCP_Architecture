@@ -17,3 +17,11 @@ Thumbs.db
 .docusaurus/
 build/
 dist/
+docs/00-table-of-contents.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python

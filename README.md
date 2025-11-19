@@ -32,89 +32,149 @@ These guidelines are designed to help engineering teams:
 
 ### Core Architecture
 
-1. **[Architecture Overview](docs/01-architecture-overview.md)**
-   - Enterprise MCP architecture layers
-   - Request flow patterns
-   - Component interactions
-   - FastMCP integration patterns
+**[Architecture Overview](docs/01-architecture-overview.md)**
+- Enterprise MCP architecture layers
+- Request flow patterns
+- Component interactions
+- FastMCP integration patterns
+
+**[Architecture Decision Records](docs/01b-architecture-decisions.md)**
+- ADR format and templates
+- Key architectural decisions
+- Technology selection rationale
 
 ### Implementation Standards
 
-2. **[Security Architecture](docs/02-security-architecture.md)**
-   - Authentication patterns (JWT, OAuth 2.0, WorkOS)
-   - Authorization frameworks (RBAC, capability-based)
-   - Rate limiting with token bucket algorithm
-   - Input validation and sanitization
-   - Security headers and CORS
-   - Audit logging requirements
+**[Security Architecture](docs/02-security-architecture.md)**
 
-3. **[Tool Implementation Standards](docs/03-tool-implementation.md)**
-   - Naming conventions (verb-noun pattern)
-   - Parameter design standards
-   - Response format consistency
-   - Error handling framework
-   - Pagination patterns
-   - Versioning strategies
+- Authentication patterns (JWT, OAuth 2.0, WorkOS)
+- Authorization frameworks (RBAC, capability-based)
+- Rate limiting with token bucket algorithm
+- Input validation and sanitization
+- Security headers and CORS
+- Audit logging requirements
 
-4. **[Testing Strategy](docs/04-testing-strategy.md)**
-   - Unit testing patterns with mocking
-   - Integration testing approaches
-   - Security testing procedures
-   - Performance testing guidelines
-   - Coverage requirements (80%+ for enterprise)
-   - Test data management
+**[Data Privacy & Compliance](docs/02a-data-privacy-compliance.md)**
 
-5. **[Observability Architecture](docs/05-observability.md)**
-   - Structured logging standards (JSON format)
-   - Metrics collection (Prometheus/OpenTelemetry)
-   - Distributed tracing patterns
-   - Health check implementations
-   - SLI/SLO definitions
-   - Alerting strategies
+- PII detection and classification
+- Data masking and redaction
+- Retention policies and deletion
+- GDPR, CCPA, HIPAA compliance
+
+**[Requirements Engineering](docs/02b-requirements-engineering.md)**
+
+- EARS (Easy Approach to Requirements Syntax)
+- Agile user story format
+- Acceptance criteria standards
+- ISO/IEEE 29148 principles
+- Requirements traceability
+
+**[Tool Implementation Standards](docs/03-tool-implementation.md)**
+
+- Naming conventions (verb-noun pattern)
+- Parameter design standards
+- Response format consistency
+- Error handling framework
+- Pagination patterns
+- Versioning strategies
+
+**[Prompt Implementation Standards](docs/03a-prompt-implementation.md)**
+
+- User-controlled workflow templates
+- Parameter completion patterns
+- Dynamic prompt injection
+- Multi-message sequences
+- Versioning and compatibility
+
+**[Resource Implementation Standards](docs/03b-resource-implementation.md)**
+
+- URI design patterns and templates
+- MIME type handling
+- Pagination and subscriptions
+- Caching strategies
+- Access control patterns
+
+**[Sampling Patterns and LLM Interaction](docs/03c-sampling-patterns.md)**
+
+- Server-initiated LLM requests
+- Model selection and temperature control
+- Structured output patterns
+- Prompt engineering techniques
+- Performance optimization
+
+**[Testing Strategy](docs/04-testing-strategy.md)**
+
+- Unit testing patterns with mocking
+- Integration testing approaches
+- Security testing procedures
+- Performance testing guidelines
+- Coverage requirements (80%+ for enterprise)
+- Test data management
+
+**[Observability Architecture](docs/05-observability.md)**
+
+- Structured logging standards (JSON format)
+- Metrics collection (Prometheus/OpenTelemetry)
+- Distributed tracing patterns
+- Health check implementations
+- SLI/SLO definitions
+- Alerting strategies
 
 ### Development & Operations
 
-6. **[Development Lifecycle](docs/06-development-lifecycle.md)**
-   - Project structure standards
-   - Configuration management patterns
-   - Environment handling (dev/staging/prod)
-   - Dependency management
-   - Code quality standards
-   - Documentation requirements
+**[Development Lifecycle](docs/06-development-lifecycle.md)**
 
-7. **[Deployment Patterns](docs/07-deployment-patterns.md)**
-   - Container best practices (Dockerfile standards)
-   - Kubernetes deployment patterns
-   - CI/CD pipeline stages
-   - Blue-green and canary deployments
-   - Environment management
-   - Secrets management
+- Project structure standards
+- Configuration management patterns
+- Environment handling (dev/staging/prod)
+- Dependency management
+- Code quality standards
+- Documentation requirements
 
-8. **[Operational Runbooks](docs/08-operational-runbooks.md)**
-   - Common issues and resolutions
-   - Incident response procedures
-   - Performance tuning guidelines
-   - Capacity planning
-   - Disaster recovery
-   - Monitoring and alerting setup
+**[Performance & Scalability](docs/06a-performance-scalability.md)**
+
+- Horizontal and vertical scaling
+- Caching strategies
+- Connection pooling
+- Load balancing patterns
+
+**[Deployment Patterns](docs/07-deployment-patterns.md)**
+
+- Container best practices (Dockerfile standards)
+- Kubernetes deployment patterns
+- CI/CD pipeline stages
+- Blue-green and canary deployments
+- Environment management
+- Secrets management
+
+**[Operational Runbooks](docs/08-operational-runbooks.md)**
+
+- Common issues and resolutions
+- Incident response procedures
+- Performance tuning guidelines
+- Capacity planning
+- Disaster recovery
+- Monitoring and alerting setup
 
 ### Integration & Patterns
 
-9. **[Integration Patterns](docs/09-integration-patterns.md)**
-   - REST API integration with circuit breakers
-   - Multi-tier caching strategies
-   - OpenAPI-to-MCP tool generation
-   - Database access patterns
-   - Event-driven patterns
-   - Multi-service orchestration
+**[Integration Patterns](docs/09-integration-patterns.md)**
 
-10. **[Agentic System Best Practices](docs/10-agentic-best-practices.md)**
-    - Context management and token optimization
-    - User elicitation patterns
-    - Resource template architecture
-    - Prompt system design
-    - Safety and confirmation patterns
-    - LLM-specific considerations
+- REST API integration with circuit breakers
+- Multi-tier caching strategies
+- OpenAPI-to-MCP tool generation
+- Database access patterns
+- Event-driven patterns
+- Multi-service orchestration
+
+**[Agentic System Best Practices](docs/10-agentic-best-practices.md)**
+
+- Context management and token optimization
+- User elicitation patterns
+- Resource template architecture
+- Prompt system design
+- Safety and confirmation patterns
+- LLM-specific considerations
 
 ## Quick Start
 

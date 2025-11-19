@@ -8,6 +8,13 @@
 
 Consistent tool implementation is critical for maintainability and user experience. This document establishes naming conventions, parameter design patterns, response formats, and error handling standards for MCP tools.
 
+**Related Documentation:**
+
+- [Prompt Implementation Standards](03a-prompt-implementation.md) - User-controlled workflow templates
+- [Resource Implementation Standards](03b-resource-implementation.md) - Application-driven data access
+- [Sampling Patterns](03c-sampling-patterns.md) - Server-initiated LLM interactions
+- [Testing Strategy](04-testing-strategy.md) - Testing approaches for tools
+
 ## Naming Conventions
 
 ### Verb-Noun Pattern

@@ -835,6 +835,166 @@ async def recover_from_error(
 6. **Follow Workflows**: Use workflow tools for complex operations
 7. **Log for Debugging**: Log all agent interactions for troubleshooting
 
+## Multi-Agent Coordination
+
+### Agent Handoff Pattern
+
+When one agent should delegate to another specialist:
+
+```python
+@mcp.tool()
+async def escalate_to_specialist(
+    task_id: str,
+    reason: str,
+    specialist_type: str
+) -> dict:
+    """
+    Hand off current task to specialist agent.
+    
+    Use when:
+    - Current agent lacks required capability
+    - Task requires domain expertise  
+    - Human escalation needed
+    
+    Args:
+        task_id: Current task identifier
+        reason: Why escalation is needed
+        specialist_type: Type of specialist (security, sre, qa, human)
+    """
+    handoff = await agent_registry.create_handoff(
+        from_agent=current_agent_id,
+        to_agent_type=specialist_type,
+        task_id=task_id,
+        context={
+            "reason": reason,
+            "history": get_conversation_context(),
+            "attempted_actions": get_agent_actions()
+        }
+    )
+    
+    return {
+        "success": True,
+        "handoff_id": handoff.id,
+        "specialist_agent": handoff.assigned_agent,
+        "message": f"Task escalated to {specialist_type} agent"
+    }
+```
+
+### Consensus Pattern
+
+Multiple agents validate critical decisions:
+
+```python
+@mcp.tool()
+async def propose_production_deployment(
+    release_id: str,
+    changes: list[dict]
+) -> dict:
+    """
+    Propose deployment requiring multi-agent approval.
+    
+    Requires consensus from:
+    - Security agent (vulnerability scan)
+    - SRE agent (capacity check)  
+    - QA agent (test coverage validation)
+    """
+    proposal = await create_deployment_proposal(release_id, changes)
+    
+    # Parallel agent validation
+    results = await asyncio.gather(
+        security_agent.validate(proposal),
+        sre_agent.validate(proposal),
+        qa_agent.validate(proposal),
+        return_exceptions=True
+    )
+    
+    approvals = [r for r in results if not isinstance(r, Exception) and r.approved]
+    rejections = [r for r in results if not isinstance(r, Exception) and not r.approved]
+    errors = [r for r in results if isinstance(r, Exception)]
+    
+    if len(approvals) == 3:
+        return {
+            "status": "approved",
+            "proposal_id": proposal.id,
+            "approvals": [a.agent_id for a in approvals],
+            "message": "All validations passed"
+        }
+    else:
+        return {
+            "status": "rejected",
+            "proposal_id": proposal.id,
+            "approvals": [a.agent_id for a in approvals],
+            "blockers": [
+                {"agent": r.agent_id, "reason": r.reason}
+                for r in rejections
+            ],
+            "errors": [str(e) for e in errors],
+            "message": "Deployment blocked by validation failures"
+        }
+```
+
+### Collaborative Problem Solving
+
+```python
+@mcp.tool()
+async def solve_complex_issue(
+    issue_id: str,
+    max_iterations: int = 5
+) -> dict:
+    """
+    Collaborative multi-agent problem solving.
+    
+    Agents work together iteratively:
+    1. Diagnostic agent analyzes problem
+    2. Research agent finds solutions
+    3. Planning agent creates action plan
+    4. Execution agent implements solution
+    5. Validation agent verifies fix
+    """
+    issue = await get_issue(issue_id)
+    iteration = 0
+    
+    while iteration < max_iterations:
+        # Step 1: Diagnosis
+        diagnosis = await diagnostic_agent.analyze(issue)
+        
+        if diagnosis.root_cause_found:
+            # Step 2: Research solutions
+            solutions = await research_agent.find_solutions(
+                diagnosis.root_cause
+            )
+            
+            # Step 3: Plan
+            plan = await planning_agent.create_plan(
+                diagnosis,
+                solutions
+            )
+            
+            # Step 4: Execute
+            result = await execution_agent.execute(plan)
+            
+            # Step 5: Validate
+            validation = await validation_agent.verify(result)
+            
+            if validation.success:
+                return {
+                    "status": "resolved",
+                    "issue_id": issue_id,
+                    "iterations": iteration + 1,
+                    "solution": plan,
+                    "result": result
+                }
+        
+        iteration += 1
+    
+    return {
+        "status": "unresolved",
+        "issue_id": issue_id,
+        "iterations": iteration,
+        "message": "Max iterations reached without resolution"
+    }
+```
+
 ## Summary
 
 Agentic best practices ensure effective AI agent interactions:
@@ -845,6 +1005,8 @@ Agentic best practices ensure effective AI agent interactions:
 - **Prompt Engineering**: Write clear, actionable tool descriptions
 - **Workflow Patterns**: Support multi-step workflows with error recovery
 - **Error Handling**: Provide actionable guidance for error recovery
+- **Multi-Agent Coordination**: Enable agent handoffs and consensus
+- **Collaborative Problem Solving**: Orchestrate multiple specialist agents
 
 ---
 

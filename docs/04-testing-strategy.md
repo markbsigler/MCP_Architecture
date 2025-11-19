@@ -986,6 +986,171 @@ jobs:
         run: pytest tests/e2e -v
 ```
 
+## Contract Testing
+
+### Provider Contract Tests
+
+Verify MCP server conforms to protocol specification:
+
+```python
+# tests/contract/test_mcp_protocol.py
+"""Contract tests for MCP protocol compliance."""
+
+import pytest
+from mcp_protocol_validator import MCPValidator
+
+validator = MCPValidator()
+
+def test_tools_list_contract():
+    """Verify tools/list endpoint matches MCP spec."""
+    response = client.post("/mcp/v1/tools/list")
+    
+    # Validate response structure
+    validator.validate_tools_list_response(response.json())
+    
+    assert response.status_code == 200
+    assert "tools" in response.json()
+    
+    # Each tool must have required fields
+    for tool in response.json()["tools"]:
+        assert "name" in tool
+        assert "description" in tool
+        assert "inputSchema" in tool
+
+def test_tool_call_contract():
+    """Verify tool call endpoint matches MCP spec."""
+    response = client.post(
+        "/mcp/v1/tools/call",
+        json={
+            "name": "create_assignment",
+            "arguments": {"title": "Test", "assignee": "user@example.com"}
+        }
+    )
+    
+    # Validate response structure
+    validator.validate_tool_call_response(response.json())
+    
+    assert response.status_code == 200
+    assert "content" in response.json()
+    assert isinstance(response.json()["content"], list)
+
+def test_resource_contract():
+    """Verify resource endpoint matches MCP spec."""
+    response = client.post(
+        "/mcp/v1/resources/read",
+        json={"uri": "mcp://server/docs/readme.md"}
+    )
+    
+    validator.validate_resource_response(response.json())
+    
+    assert "contents" in response.json()
+```
+
+### Consumer Contract Tests
+
+Mock external API contracts using Pact:
+
+```python
+# tests/contract/test_github_api.py
+"""Contract tests for GitHub API integration."""
+
+import pytest
+from pact import Consumer, Provider
+
+pact = Consumer('mcp-server').has_pact_with(Provider('github-api'))
+
+def test_get_repository_contract():
+    """Mock GitHub repository API response."""
+    (pact
+     .given('Repository exists')
+     .upon_receiving('Get repository request')
+     .with_request('GET', '/repos/owner/repo')
+     .will_respond_with(200, body={
+         'id': 123,
+         'name': 'repo',
+         'full_name': 'owner/repo',
+         'owner': {'login': 'owner'},
+         'private': False
+     }))
+    
+    with pact:
+        # Test code that calls GitHub API
+        result = github_client.get_repository('owner', 'repo')
+        assert result['name'] == 'repo'
+
+def test_create_issue_contract():
+    """Mock GitHub issue creation."""
+    (pact
+     .given('Repository exists')
+     .upon_receiving('Create issue request')
+     .with_request('POST', '/repos/owner/repo/issues', body={
+         'title': 'Bug report',
+         'body': 'Description'
+     })
+     .will_respond_with(201, body={
+         'id': 456,
+         'number': 1,
+         'title': 'Bug report',
+         'state': 'open'
+     }))
+    
+    with pact:
+        result = github_client.create_issue(
+            'owner',
+            'repo',
+            'Bug report',
+            'Description'
+        )
+        assert result['number'] == 1
+```
+
+### Schema Validation Tests
+
+Ensure tool schemas are valid JSON Schema:
+
+```python
+# tests/contract/test_tool_schemas.py
+"""Validate tool input schemas."""
+
+import jsonschema
+import pytest
+
+def test_all_tool_schemas_valid():
+    """Ensure all tool schemas are valid JSON Schema."""
+    tools = mcp.list_tools()
+    
+    for tool in tools:
+        try:
+            # Validate schema itself
+            jsonschema.Draft7Validator.check_schema(tool.inputSchema)
+        except jsonschema.SchemaError as e:
+            pytest.fail(f"Invalid schema for tool {tool.name}: {e}")
+
+def test_tool_schema_validates_valid_input():
+    """Test schema accepts valid input."""
+    schema = get_tool_schema("create_assignment")
+    
+    valid_input = {
+        "title": "Test Assignment",
+        "assignee": "user@example.com",
+        "priority": 3
+    }
+    
+    jsonschema.validate(valid_input, schema)  # Should not raise
+
+def test_tool_schema_rejects_invalid_input():
+    """Test schema rejects invalid input."""
+    schema = get_tool_schema("create_assignment")
+    
+    invalid_input = {
+        "title": "",  # Empty string should fail
+        "assignee": "not-an-email"  # Invalid email
+    }
+    
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(invalid_input, schema)
+```
+
 ## Summary
 
 Comprehensive testing ensures MCP server reliability through:
@@ -993,6 +1158,7 @@ Comprehensive testing ensures MCP server reliability through:
 - **Unit Tests**: Test individual tools with mocked dependencies (90%+ coverage)
 - **Integration Tests**: Test component interactions and database persistence
 - **E2E Tests**: Validate complete user workflows
+- **Contract Tests**: Validate protocol compliance and external API contracts
 - **Load Tests**: Verify performance under realistic load
 - **Security Tests**: Validate authentication, authorization, and input handling
 - **CI/CD**: Automated testing on every commit and PR

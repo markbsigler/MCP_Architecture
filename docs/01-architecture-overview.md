@@ -8,6 +8,66 @@
 
 This document provides a comprehensive overview of the enterprise MCP (Model Context Protocol) server architecture. It establishes the foundational patterns and components that enable secure, scalable, and maintainable agentic services.
 
+## Executive Summary
+
+### Key Highlights
+
+This architecture guide covers the complete lifecycle of enterprise MCP server development, from design through deployment and operations. Key highlights include:
+
+**Architecture & Design:**
+
+- Five-layer enterprise architecture (Gateway, Server, Security, Observability, Integration)
+- FastMCP framework integration for rapid server development
+- Support for multiple communication protocols (JSON-RPC over HTTP, SSE)
+- Flexible deployment models: centralized gateway and federated servers
+
+**Security & Compliance:**
+
+- Multi-layered security with OAuth 2.0/JWT authentication and TLS encryption
+- Fine-grained authorization (RBAC and capability-based access control)
+- Comprehensive data privacy controls (PII detection, masking, retention policies)
+- GDPR, CCPA, and HIPAA compliance patterns
+
+**Implementation Standards:**
+
+- **Tools**: Action-oriented APIs with consistent naming conventions and error handling
+- **Prompts**: User-controlled workflow templates with dynamic parameter completion
+- **Resources**: Application-driven data access with URI templates and subscriptions
+- **Sampling**: Server-initiated LLM interactions with structured output patterns
+
+**Quality & Operations:**
+
+- Four-tier testing strategy (unit, integration, contract, end-to-end)
+- Comprehensive observability (structured logging, distributed tracing, custom metrics)
+- Automated CI/CD pipelines with security scanning and quality gates
+- Production runbooks for common operational scenarios
+
+**Scalability & Performance:**
+
+- Horizontal scaling with session affinity and distributed caching
+- Performance optimization patterns (connection pooling, lazy loading, pagination)
+- High availability through redundancy and graceful degradation
+- Multi-region deployment strategies for global distribution
+
+### Document Organization
+
+The guide is structured as follows:
+
+1. **Architecture Layers** (Sections 1-2): Core architectural patterns and decision records
+2. **Security & Privacy** (Sections 2-2a): Authentication, authorization, and compliance frameworks
+3. **Implementation** (Sections 3-3c): Detailed standards for tools, prompts, resources, and sampling
+4. **Quality Assurance** (Sections 4-5): Testing strategies and observability patterns
+5. **Development & Deployment** (Sections 6-7): Lifecycle management and deployment patterns
+6. **Operations & Integration** (Sections 8-10): Runbooks, integration patterns, and best practices
+
+### Target Audience
+
+- **Architects**: Enterprise patterns, scaling strategies, and deployment models
+- **Developers**: Implementation standards, code examples, and testing approaches
+- **Security Teams**: Authentication, authorization, and compliance requirements
+- **DevOps Engineers**: CI/CD pipelines, deployment automation, and monitoring
+- **Operations Teams**: Runbooks, troubleshooting guides, and incident response
+
 ## Enterprise MCP Architecture Layers
 
 The enterprise MCP architecture is organized into five primary layers, each serving distinct responsibilities while maintaining clear boundaries and interfaces.
@@ -61,6 +121,7 @@ The gateway layer serves as the entry point for all MCP requests, providing:
 - **Failover Management**: Handles server failures and maintains high availability
 
 **Key Responsibilities:**
+
 - TLS termination
 - Request validation
 - Rate limiting (global tier)
@@ -77,6 +138,7 @@ Individual MCP servers expose tools, resources, and prompts for specific domains
 - **Prompt Systems**: Provide reusable prompt templates for LLM interactions
 
 **Common Server Types:**
+
 - File system access servers
 - Database query servers
 - API integration servers
@@ -256,7 +318,7 @@ MCP servers communicate using JSON-RPC 2.0 over HTTP/HTTPS:
 
 For streaming responses and real-time updates:
 
-```
+```text
 data: {"type": "progress", "value": 25, "message": "Processing..."}
 
 data: {"type": "progress", "value": 50, "message": "Halfway there..."}
@@ -270,7 +332,7 @@ data: {"type": "complete", "result": {...}}
 
 All MCP servers behind a single gateway:
 
-```
+```text
 ┌─────────────┐
 │  AI Client  │
 └──────┬──────┘
@@ -287,6 +349,7 @@ All MCP servers behind a single gateway:
 ```
 
 **Benefits:**
+
 - Centralized security and monitoring
 - Consistent authentication
 - Simplified client configuration
@@ -296,7 +359,7 @@ All MCP servers behind a single gateway:
 
 Independent MCP servers with individual authentication:
 
-```
+```text
 ┌─────────────┐
 │  AI Client  │
 └─┬──────┬──┬─┘
@@ -307,6 +370,7 @@ Independent MCP servers with individual authentication:
 ```
 
 **Benefits:**
+
 - Independent deployment cycles
 - Domain-specific security policies
 - Simplified architecture
@@ -370,7 +434,7 @@ When backend systems fail:
 
 ### Trust Zones
 
-```
+```text
 ┌─────────────────────────────────────┐
 │  Internet (Untrusted)               │
 └─────────────┬───────────────────────┘
