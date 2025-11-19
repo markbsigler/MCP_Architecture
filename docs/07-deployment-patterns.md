@@ -200,6 +200,207 @@ networks:
     driver: bridge
 ```
 
+## Production Architecture
+
+### Complete Deployment Diagram
+
+The following diagram shows a complete production deployment on Kubernetes with all supporting infrastructure:
+
+```mermaid
+graph TB
+    subgraph Internet["🌐 Internet"]
+        Users[Users/AI Clients]
+        DNS[DNS<br/>Route53/CloudFlare]
+    end
+    
+    subgraph LoadBalancing["Load Balancing Layer"]
+        ALB[Application Load Balancer<br/>AWS ALB / GCP LB]
+        WAF[Web Application Firewall<br/>AWS WAF / Cloudflare]
+    end
+    
+    subgraph K8sCluster["☸️ Kubernetes Cluster (EKS/GKE/AKS)"]
+        subgraph IngressLayer["Ingress Layer"]
+            IngressCtrl[Ingress Controller<br/>NGINX/Traefik]
+            CertMgr[Cert Manager<br/>Let's Encrypt]
+        end
+        
+        subgraph AppLayer["Application Layer"]
+            direction LR
+            MCPPod1[MCP Server Pod 1<br/>Replicas: 3-10]
+            MCPPod2[MCP Server Pod 2<br/>Auto-scaled]
+            MCPPod3[MCP Server Pod 3<br/>Multi-AZ]
+        end
+        
+        subgraph ServiceMesh["Service Mesh (Optional)"]
+            Istio[Istio/Linkerd<br/>mTLS + Observability]
+        end
+        
+        subgraph DataLayer["Data Layer"]
+            Redis[(Redis Cluster<br/>Session/Cache<br/>3 replicas)]
+            PVC[Persistent Volume<br/>Logs/Temp Files]
+        end
+    end
+    
+    subgraph ManagedServices["☁️ Managed Services"]
+        RDS[(RDS/CloudSQL<br/>PostgreSQL<br/>Multi-AZ)]
+        S3[Object Storage<br/>S3/GCS/Azure Blob]
+        Secrets[Secrets Manager<br/>AWS Secrets/Vault]
+    end
+    
+    subgraph Observability["📊 Observability Stack"]
+        Prometheus[Prometheus<br/>Metrics]
+        Grafana[Grafana<br/>Dashboards]
+        Loki[Loki/CloudWatch<br/>Logs]
+        Jaeger[Jaeger/Tempo<br/>Traces]
+        AlertMgr[Alert Manager<br/>PagerDuty/Slack]
+    end
+    
+    subgraph CI_CD["🚀 CI/CD Pipeline"]
+        GHA[GitHub Actions<br/>GitLab CI]
+        Registry[Container Registry<br/>ECR/GCR/ACR]
+        ArgoCD[ArgoCD/Flux<br/>GitOps]
+    end
+    
+    subgraph BackendSystems["🏢 Backend Systems"]
+        DB[(Enterprise DB<br/>Oracle/SQL Server)]
+        ERP[ERP Systems<br/>SAP/Workday]
+        APIs[Legacy APIs<br/>REST/SOAP]
+    end
+    
+    %% Traffic Flow
+    Users -->|HTTPS| DNS
+    DNS -->|Resolved IP| WAF
+    WAF -->|Filtered Traffic| ALB
+    ALB -->|TLS 443| IngressCtrl
+    CertMgr -.->|Auto-renew| IngressCtrl
+    
+    IngressCtrl -->|HTTP| MCPPod1
+    IngressCtrl -->|HTTP| MCPPod2
+    IngressCtrl -->|HTTP| MCPPod3
+    
+    Istio -.->|mTLS| MCPPod1
+    Istio -.->|mTLS| MCPPod2
+    Istio -.->|mTLS| MCPPod3
+    
+    MCPPod1 <-->|Cache| Redis
+    MCPPod2 <-->|Cache| Redis
+    MCPPod3 <-->|Cache| Redis
+    
+    MCPPod1 -->|SQL| RDS
+    MCPPod2 -->|SQL| RDS
+    MCPPod3 -->|SQL| RDS
+    
+    MCPPod1 -->|Upload| S3
+    MCPPod2 -->|Get Secrets| Secrets
+    MCPPod3 -.->|Logs| PVC
+    
+    %% Backend Integration
+    MCPPod1 -->|Private Link| DB
+    MCPPod2 -->|API Gateway| ERP
+    MCPPod3 -->|VPN/VPC Peering| APIs
+    
+    %% Observability
+    MCPPod1 -.->|Metrics| Prometheus
+    MCPPod2 -.->|Logs| Loki
+    MCPPod3 -.->|Traces| Jaeger
+    
+    Prometheus -->|Visualize| Grafana
+    Loki -->|Visualize| Grafana
+    Jaeger -->|Visualize| Grafana
+    Prometheus -->|Alerts| AlertMgr
+    
+    %% CI/CD Flow
+    GHA -->|Build & Push| Registry
+    Registry -->|Pull Images| ArgoCD
+    ArgoCD -->|Deploy| K8sCluster
+    
+    %% Styling
+    classDef internet fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef lb fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef k8s fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef data fill:#f8bbd0,stroke:#c2185b,stroke-width:2px
+    classDef managed fill:#d1c4e9,stroke:#512da8,stroke-width:2px
+    classDef observability fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    classDef cicd fill:#b2dfdb,stroke:#00695c,stroke-width:2px
+    classDef backend fill:#cfd8dc,stroke:#455a64,stroke-width:2px
+    
+    class Users,DNS internet
+    class ALB,WAF lb
+    class IngressCtrl,CertMgr,MCPPod1,MCPPod2,MCPPod3,Istio k8s
+    class Redis,PVC data
+    class RDS,S3,Secrets managed
+    class Prometheus,Grafana,Loki,Jaeger,AlertMgr observability
+    class GHA,Registry,ArgoCD cicd
+    class DB,ERP,APIs backend
+```
+
+### Architecture Components
+
+**Internet Layer:**
+
+- DNS resolution with health checks and geo-routing
+- DDoS protection and CDN integration
+
+**Load Balancing:**
+
+- Layer 7 application load balancer
+- SSL/TLS termination
+- Web Application Firewall for security
+- Rate limiting and traffic shaping
+
+**Kubernetes Cluster:**
+
+- Multi-availability zone deployment
+- 3-10 replicas with horizontal pod autoscaling
+- Pod anti-affinity for high availability
+- Resource requests and limits
+- Security context and network policies
+
+**Ingress Layer:**
+
+- NGINX or Traefik ingress controller
+- Automatic certificate management via cert-manager
+- Path-based routing and request filtering
+
+**Service Mesh (Optional):**
+
+- mTLS between services
+- Traffic management and circuit breaking
+- Enhanced observability
+
+**Data Layer:**
+
+- Redis cluster for caching and sessions
+- Persistent volumes for logs and temporary files
+- StatefulSets for stateful workloads
+
+**Managed Services:**
+
+- Multi-AZ managed database (RDS/CloudSQL)
+- Object storage for files and backups
+- Secrets management with encryption
+
+**Observability:**
+
+- Prometheus for metrics collection
+- Loki or CloudWatch for log aggregation
+- Jaeger or Tempo for distributed tracing
+- Grafana for unified visualization
+- Alert Manager for incident notifications
+
+**CI/CD Pipeline:**
+
+- GitHub Actions or GitLab CI for builds
+- Container registry for image storage
+- ArgoCD or Flux for GitOps deployments
+- Automated rollback on failures
+
+**Backend Integration:**
+
+- Private Link or VPC peering for databases
+- API Gateway for ERP integration
+- VPN tunnels for legacy systems
+
 ## Kubernetes Deployment
 
 ### Deployment Manifest
