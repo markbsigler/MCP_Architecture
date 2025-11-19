@@ -184,15 +184,30 @@ sequenceDiagram
     participant Observability as Observability Layer
     participant Integration as Enterprise System
 
-    Client->>Gateway: Request (Tool Invocation)
-    Gateway->>Security: Validate Auth (OAuth/JWT)
+    Note over Client,Integration: Total Request Time: ~200-500ms
+    
+    Client->>Gateway: 1. Request (Tool Invocation)
+    Note right of Gateway: 10-20ms
+    Gateway->>Security: 2. Validate Auth (OAuth/JWT)
+    Note right of Security: 5-15ms<br/>(cached JWKS)
     Security-->>Gateway: Auth OK
-    Gateway->>Server: Forward Request
-    Server->>Integration: Fetch Data / Execute Action
+    
+    Gateway->>Server: 3. Forward Request
+    Note right of Server: 50-150ms
+    Server->>Integration: 4. Fetch Data / Execute Action
+    Note right of Integration: 100-300ms<br/>(backend latency)
     Integration-->>Server: Response Data
-    Server->>Observability: Log Metrics & Trace
-    Server-->>Gateway: Response
-    Gateway-->>Client: Return Result
+    
+    par Async Operations
+        Server->>Observability: 5a. Log Metrics & Trace
+        Note right of Observability: 5-10ms<br/>(async)
+    and Response Path
+        Server-->>Gateway: 5b. Response
+        Note right of Gateway: 5-10ms
+        Gateway-->>Client: 6. Return Result
+    end
+    
+    Note over Client,Integration: P50: 200ms | P95: 400ms | P99: 500ms
 ```
 
 ### Flow Steps
