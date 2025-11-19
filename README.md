@@ -6,6 +6,8 @@
 **Repository:** MCP_Architecture
 **Author:** Mark Sigler
 
+[![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
+
 ## Overview
 
 This repository contains comprehensive architectural and systems design guidelines for developing enterprise-grade Model Context Protocol (MCP) servers. It establishes consistent patterns, best practices, and implementation standards to ensure robust, secure, and maintainable agentic MCP services.
