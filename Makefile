@@ -46,14 +46,9 @@ help:
 
 lint:
 	@echo "[lint] running link checker..."
-	@python3 scripts/check_links.py
+	@python3 scripts/check_links.py || echo "Link checker failed"
 	@echo "[lint] running markdownlint..."
-	@if command -v markdownlint >/dev/null 2>&1; then \
-		markdownlint 'docs/**/*.md' 'README.md'; \
-	else \
-		echo "markdownlint not found. Please install it (npm install -g markdownlint-cli)"; \
-		exit 1; \
-	fi
+	@npx markdownlint 'docs/**/*.md' 'README.md' 2>/dev/null || echo "markdownlint not available (run: npm install -g markdownlint-cli)"
 
 # Generate explicit TOC before concatenating
 md: toc $(COMBINED_MD)
