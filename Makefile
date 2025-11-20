@@ -136,11 +136,12 @@ lint: check-deps
 	fi
 	@echo -e "$(BLUE)[lint] Running markdownlint...$(NC)"
 	@if command -v $(NPX) >/dev/null 2>&1; then \
-		if $(NPX) markdownlint 'docs/**/*.md' 'README.md' --disable MD051 2>/dev/null; then \
+		if $(NPX) markdownlint 'docs/**/*.md' 'README.md' --config .markdownlint.json; then \
 			echo -e "$(GREEN)[lint] Markdownlint passed ✓$(NC)"; \
 		else \
-			echo -e "$(YELLOW)[lint] Markdownlint found issues$(NC)"; \
-			echo -e "$(YELLOW)Run 'npx markdownlint --fix docs/**/*.md README.md --disable MD051' to auto-fix$(NC)"; \
+			echo -e "$(RED)[lint] Markdownlint found issues ✗$(NC)"; \
+			echo -e "$(YELLOW)Run 'npx markdownlint --fix docs/**/*.md README.md --config .markdownlint.json' to auto-fix$(NC)"; \
+			exit 1; \
 		fi; \
 	else \
 		echo -e "$(YELLOW)[lint] markdownlint not available (run: make install-deps)$(NC)"; \

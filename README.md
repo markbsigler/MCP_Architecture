@@ -268,6 +268,84 @@ These guidelines are designed to help engineering teams:
 - Deprecation policy and lifecycle management
 - Compatibility testing strategies
 
+## Development Setup
+
+### Prerequisites
+
+- **Python 3.11+** - Required for build scripts
+- **Node.js & npm** - Optional, for markdownlint (recommended)
+- **Git** - Version control
+
+### Quick Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/markbsigler/MCP_Architecture.git
+cd MCP_Architecture
+
+# Run setup script (installs git hooks and dependencies)
+./setup.sh
+
+# Verify installation
+make check-deps
+```
+
+### Available Commands
+
+```bash
+# Check for required dependencies
+make check-deps
+
+# Install missing dependencies (markdownlint)
+make install-deps
+
+# Run linting (link checker + markdownlint)
+make lint
+
+# Generate table of contents
+make toc
+
+# Build consolidated documentation
+make md
+
+# Clean generated files
+make clean
+```
+
+### Pre-commit Hooks
+
+The setup script automatically configures git hooks that will run before each commit:
+
+- ✅ **Link validation** - Ensures all internal documentation links are valid
+- ✅ **Markdown linting** - Checks formatting and style consistency
+- ✅ **Critical files check** - Verifies required files are present
+
+To manually run pre-commit checks:
+
+```bash
+./.githooks/pre-commit
+```
+
+To bypass hooks (not recommended):
+
+```bash
+git commit --no-verify
+```
+
+### Contributing Guidelines
+
+1. Run `./setup.sh` to configure your environment
+2. Make your changes
+3. Run `make lint` to verify changes pass all checks
+4. Commit (pre-commit hooks will run automatically)
+5. Submit a pull request
+
+All documentation must pass:
+
+- Link validation (`python3 scripts/check_links.py`)
+- Markdown linting (`npx markdownlint`)
+- Build verification (`make md`)
+
 ## Quick Start
 
 ### 🎯 Choose Your Path

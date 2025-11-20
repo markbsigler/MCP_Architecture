@@ -1,0 +1,69 @@
+#!/bin/bash
+# Pre-commit hook for MCP Architecture documentation
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Check if required tools are available
+echo -e "${BLUE}Checking dependencies...${NC}"
+if ! command -v python3 &> /dev/null; then
+    echo -e "${RED}Error: python3 is required but not installed${NC}"
+    exit 1
+fi
+
+if ! command -v npx &> /dev/null; then
+    echo -e "${YELLOW}Warning: npx not found, skipping markdownlint${NC}"
+    SKIP_MARKDOWNLINT=1
+fi
+
+# Run link checker
+echo -e "${BLUE}Checking internal links...${NC}"
+if python3 scripts/check_links.py; then
+    echo -e "${GREEN}✓ Link checker passed${NC}"
+else
+    echo -e "${RED}✗ Link checker failed${NC}"
+    echo -e "${YELLOW}Fix broken links before committing${NC}"
+    exit 1
+fi
+
+# Run markdownlint
+if [ -z "$SKIP_MARKDOWNLINT" ]; then
+    echo -e "${BLUE}Running markdownlint...${NC}"
+    if npx markdownlint 'docs/**/*.md' 'README.md' --config .markdownlint.json 2>/dev/null; then
+        echo -e "${GREEN}✓ Markdownlint passed${NC}"
+    else
+        echo -e "${RED}✗ Markdownlint found issues${NC}"
+        echo -e "${YELLOW}Run: npx markdownlint --fix 'docs/**/*.md' 'README.md' --config .markdownlint.json${NC}"
+        exit 1
+    fi
+fi
+
+# Verify critical files exist
+echo -e "${BLUE}Verifying critical files...${NC}"
+CRITICAL_FILES=(
+    "README.md"
+    "Makefile"
+    ".markdownlint.json"
+    "scripts/check_links.py"
+    "scripts/gen_toc.py"
+    "scripts/rewrite_links.py"
+)
+
+for file in "${CRITICAL_FILES[@]}"; do
+    if [ ! -f "$file" ]; then
+        echo -e "${RED}✗ Critical file missing: $file${NC}"
+        exit 1
+    fi
+done
+echo -e "${GREEN}✓ All critical files present${NC}"
+
+echo -e "${GREEN}✅ Pre-commit checks passed!${NC}"
+exit 0
