@@ -947,4 +947,4 @@ This benchmark document provides comprehensive performance data for MCP servers:
 
 ---
 
-**Next**: Review [API Reference](18-api-reference.md) for complete endpoint documentation.
+**Next**: Review [Quick Reference](99-quick-reference.md) for complete endpoint documentation.

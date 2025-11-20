@@ -1011,4 +1011,4 @@ Comprehensive metrics and KPIs track MCP server performance across three dimensi
 
 ---
 
-**Next**: Review [API Reference](18-api-reference.md) for complete endpoint documentation.
+**Next**: Review [Quick Reference](99-quick-reference.md) for complete endpoint documentation.

@@ -17,6 +17,7 @@ This guide establishes consistent terminology across all MCP Architecture docume
 **✅ USE:** "MCP server"
 
 **❌ AVOID:**
+
 - "server" (too generic)
 - "MCP service"
 - "MCP application"
@@ -41,6 +42,7 @@ This guide establishes consistent terminology across all MCP Architecture docume
 **✅ USE:** "tool" (lowercase unless starting a sentence)
 
 **❌ AVOID:**
+
 - "function" (implementation detail)
 - "method" (implementation detail)
 - "endpoint" (REST terminology)
@@ -82,6 +84,7 @@ async def create_user(name: str) -> dict:
 **✅ USE:** "resource" (lowercase unless starting a sentence)
 
 **❌ AVOID:**
+
 - "data source"
 - "read endpoint"
 - "data provider"
@@ -121,6 +124,7 @@ async def get_settings() -> str:
 **✅ USE:** "prompt" (lowercase unless starting a sentence)
 
 **❌ AVOID:**
+
 - "template" (implementation detail)
 - "workflow" (higher-level concept)
 - "prompt template" (redundant in MCP context)
@@ -160,6 +164,7 @@ async def code_review(language: str) -> list[Message]:
 **✅ USE:** "MCP client" or "AI agent"
 
 **❌ AVOID:**
+
 - "consumer"
 - "caller"
 - "user" (when referring to the AI, not the human)
@@ -183,6 +188,7 @@ async def code_review(language: str) -> list[Message]:
 **✅ USE:** "MCP gateway" or "gateway layer"
 
 **❌ AVOID:**
+
 - "API gateway" (too REST-specific)
 - "proxy"
 - "router" (implementation detail)
@@ -205,6 +211,7 @@ async def code_review(language: str) -> list[Message]:
 ### Layer
 
 **✅ USE:** Specific layer names with capitalization:
+
 - Gateway Layer
 - Server Layer  
 - Security Layer
@@ -212,6 +219,7 @@ async def code_review(language: str) -> list[Message]:
 - Integration Layer
 
 **❌ AVOID:**
+
 - "tier" (different abstraction)
 - "component layer"
 - lowercase when referring to specific layers
@@ -234,6 +242,7 @@ async def code_review(language: str) -> list[Message]:
 **✅ USE:** "MCP protocol" or "Model Context Protocol"
 
 **❌ AVOID:**
+
 - "MCP API"
 - "MCP interface"
 - "MCP specification" (unless referring to the spec document)
@@ -252,6 +261,7 @@ async def code_review(language: str) -> list[Message]:
 **✅ USE:** "JSON-RPC" (with hyphen)
 
 **❌ AVOID:**
+
 - "JSON RPC" (missing hyphen)
 - "JSONRPC" (missing hyphen)
 - "json-rpc" (wrong capitalization)
@@ -259,11 +269,13 @@ async def code_review(language: str) -> list[Message]:
 ### Transport
 
 **✅ USE:**
+
 - "SSE transport" (Server-Sent Events)
 - "stdio transport" (standard input/output)
 - "HTTP transport"
 
 **❌ AVOID:**
+
 - "SSE connection"
 - "stdio channel"
 - "HTTP protocol" (protocol vs transport confusion)
@@ -275,6 +287,7 @@ async def code_review(language: str) -> list[Message]:
 **✅ USE:** "FastMCP" (with specific capitalization)
 
 **❌ AVOID:**
+
 - "fast-mcp"
 - "fastmcp"
 - "FastMcp"
@@ -293,6 +306,7 @@ async def code_review(language: str) -> list[Message]:
 **✅ USE:** "decorator" (when referring to Python @syntax)
 
 **❌ AVOID:**
+
 - "annotation" (different concept)
 - "attribute"
 - "marker"
@@ -317,6 +331,7 @@ async def create_user(name: str) -> dict:
 **✅ USE:** "JWT" (all caps) or "JSON Web Token" (spelled out)
 
 **❌ AVOID:**
+
 - "jwt" (lowercase)
 - "Jwt"
 - "JWT token" (redundant - "token" is the T)
@@ -337,6 +352,7 @@ async def create_user(name: str) -> dict:
 **✅ USE:** "OAuth 2.0" (with space and version)
 
 **❌ AVOID:**
+
 - "OAuth2" (missing space)
 - "OAuth" (missing version)
 - "oauth 2.0" (wrong capitalization)
@@ -346,6 +362,7 @@ async def create_user(name: str) -> dict:
 **✅ USE:** "RBAC" (all caps) or "role-based access control" (spelled out, lowercase)
 
 **❌ AVOID:**
+
 - "Rbac"
 - "rbac"
 - "Role-Based Access Control" (unnecessary capitalization when spelled out)
@@ -357,29 +374,34 @@ async def create_user(name: str) -> dict:
 **✅ USE:** "metric" (singular) or "metrics" (plural)
 
 **❌ AVOID:**
+
 - "measure"
 - "measurement" (unless specifically referring to a measurement event)
 - "KPI" (higher-level concept)
 
 ### Log
 
-**✅ USE:** 
+**✅ USE:**
+
 - "log" (noun or verb)
 - "log entry"
 - "log message"
 
 **❌ AVOID:**
+
 - "log record" (too database-focused)
 - "log event" (use "event" separately)
 
 ### Trace
 
 **✅ USE:**
+
 - "distributed trace"
 - "trace" (when context is clear)
 - "tracing" (the practice)
 
 **❌ AVOID:**
+
 - "trace log" (different concepts)
 - "trace record"
 
@@ -388,12 +410,14 @@ async def create_user(name: str) -> dict:
 ### Test
 
 **✅ USE:**
+
 - "unit test"
 - "integration test"
 - "end-to-end test"
 - "contract test"
 
 **❌ AVOID:**
+
 - "unit testing" (when referring to a specific test)
 - "e2e test" (spell out "end-to-end")
 - "E2E" (acceptable in code, avoid in docs)
@@ -401,11 +425,13 @@ async def create_user(name: str) -> dict:
 ## Status Terms
 
 **✅ USE for document status:**
+
 - "Production Ready" - Finalized, stable
 - "Draft" - Work in progress
 - "Deprecated" - No longer recommended
 
 **❌ AVOID:**
+
 - "Active" (ambiguous)
 - "Complete" (use "Production Ready")
 - "WIP" (use "Draft")
@@ -416,6 +442,7 @@ async def create_user(name: str) -> dict:
 ### Recommended Pattern Marker
 
 **✅ USE:**
+
 ```python
 # ✅ RECOMMENDED: This pattern
 async def good_example():
@@ -426,6 +453,7 @@ async def good_example():
 ```
 
 **❌ AVOID:**
+
 ```python
 # ❌ AVOID: This anti-pattern
 def bad_example():
@@ -436,11 +464,13 @@ def bad_example():
 ### Comment Style
 
 **✅ RECOMMENDED:**
+
 - Use `# ✅ RECOMMENDED:` for good examples
 - Use `# ❌ AVOID:` for anti-patterns
 - Always explain WHY in the docstring
 
 **❌ AVOID:**
+
 - `# Good:` (not visual enough)
 - `# Bad:` (not visual enough)
 - `# Do this:` (less clear)
@@ -451,11 +481,13 @@ def bad_example():
 ### Document Titles
 
 **✅ USE:** Title Case for document names
+
 - "Architecture Overview"
 - "Security Architecture"
 - "Tool Implementation Standards"
 
-**❌ AVOID:** 
+**❌ AVOID:**
+
 - "architecture overview" (missing capitals)
 - "ARCHITECTURE OVERVIEW" (all caps)
 
@@ -476,6 +508,7 @@ def bad_example():
 ### Code Elements
 
 **✅ USE:** Backticks for inline code references:
+
 - \`create_user\` (function names)
 - \`User\` (class names)
 - \`MCP_AUTH_TOKEN\` (environment variables)
@@ -513,6 +546,7 @@ def bad_example():
 - "database" (not "DB" in documentation)
 
 Exception: Abbreviations are acceptable in:
+
 - Code examples
 - File paths
 - Environment variable names
