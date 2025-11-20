@@ -7,6 +7,16 @@
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 
+## Quick Links
+
+- [Baseline Performance Metrics](#baseline-performance-metrics)
+- [Configuration Comparison](#configuration-comparison)
+- [Load Testing Results](#load-testing-results)
+- [Scaling Analysis](#scaling-analysis)
+- [Cost-Optimized Scaling](#cost-optimized-scaling)
+- [Hardware Recommendations](#hardware-recommendations)
+- [Summary](#summary)
+
 ## Introduction
 
 This document provides comprehensive performance benchmarks for MCP servers, including baseline metrics, configuration comparisons, load testing results, scaling characteristics, and hardware recommendations. Use these benchmarks to establish performance expectations, capacity planning, and optimization targets.

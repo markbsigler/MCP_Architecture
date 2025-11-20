@@ -51,6 +51,15 @@ These guidelines are designed to help engineering teams:
 
 ## Documentation Structure
 
+### Foundation & Reference
+
+**[Terminology Guide](docs/00-terminology-guide.md)** ⭐ **NEW**
+
+- Standard terminology definitions (MCP server, tool, resource, prompt)
+- Consistent naming conventions across all documentation
+- Code example standards (✅ RECOMMENDED vs ❌ AVOID patterns)
+- Capitalization and abbreviation rules
+
 ### Core Architecture
 
 **[Architecture Overview](docs/01-architecture-overview.md)**

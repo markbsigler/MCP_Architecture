@@ -4,8 +4,17 @@
 **Related**: [← Previous: Architecture Overview](01-architecture-overview.md) | [Next: Security Architecture →](02-security-architecture.md) | [Decision Trees](03d-decision-trees.md)
 
 **Version:** 1.3.0  
-**Last Updated:** November 19, 2025  
-**Status:** Draft
+**Last Updated:** November 20, 2025  
+**Status:** Production Ready
+
+## Quick Links
+
+- [ADR Format and Template](#adr-format-and-template)
+- [ADR 001: FastMCP Framework](#adr-001-fastmcp-as-mcp-server-framework)
+- [ADR 002: JWT Authentication](#adr-002-jwt-and-oauth-20-for-authentication)
+- [ADR 003: Observability Stack](#adr-003-opentelemetry-for-observability)
+- [ADR 004: Deployment Platform](#adr-004-kubernetes-for-production-deployment)
+- [Summary](#summary)
 
 ## Introduction
 

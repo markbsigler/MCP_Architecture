@@ -7,6 +7,16 @@
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 
+## Quick Links
+
+- [Resource Sizing](#resource-sizing-and-right-sizing)
+- [Caching Strategies](#caching-strategies-for-cost-reduction)
+- [Query Optimization](#database-query-optimization)
+- [API Call Batching](#api-call-batching)
+- [Cold Start Optimization](#cold-start-optimization)
+- [Auto-Scaling Policies](#auto-scaling-policies)
+- [Summary](#summary)
+
 ## Introduction
 
 This guide provides comprehensive strategies for optimizing costs in MCP server deployments while maintaining performance and reliability. Cost optimization is not a one-time activity but an ongoing process of monitoring, analyzing, and adjusting resource usage.
