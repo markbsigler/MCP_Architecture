@@ -540,6 +540,312 @@ Phase 3 (10K+ users):
 - Architecture: Multi-region active-active
 ```
 
+## Error Recovery Strategy
+
+Choose the appropriate error recovery strategy based on error characteristics and business requirements:
+
+```text
+START: Error Detected
+│
+├─ What type of error occurred?
+│
+├─ TRANSIENT ERROR (Network timeout, rate limit, temporary unavailability)
+│  │
+│  ├─ Is immediate retry safe?
+│  │  │
+│  │  ├─ YES (Idempotent operation)
+│  │  │  │
+│  │  │  ├─ How critical is the operation?
+│  │  │  │
+│  │  │  ├─ HIGH PRIORITY
+│  │  │  │  └─> EXPONENTIAL BACKOFF RETRY
+│  │  │  │      • Max retries: 5
+│  │  │  │      • Base delay: 100ms
+│  │  │  │      • Backoff factor: 2x
+│  │  │  │      • Max delay: 30s
+│  │  │  │      • Add jitter: ±25%
+│  │  │  │
+│  │  │  └─ NORMAL PRIORITY
+│  │  │     └─> LINEAR BACKOFF RETRY
+│  │  │         • Max retries: 3
+│  │  │         • Delay: 1s, 2s, 4s
+│  │  │         • Circuit breaker threshold: 50% failures
+│  │  │
+│  │  └─ NO (Non-idempotent operation)
+│  │     └─> DEDUPLICATION + RETRY
+│  │         • Generate idempotency key
+│  │         • Store operation result
+│  │         • Retry with same key
+│  │         • TTL: 24 hours
+│  │
+│  └─ Rate Limiting Detected?
+│     │
+│     ├─ YES
+│     │  └─> ADAPTIVE RATE LIMITING
+│     │      • Respect Retry-After header
+│     │      • Implement token bucket
+│     │      • Reduce request rate: 50%
+│     │      • Gradual recovery: +10% per minute
+│     │
+│     └─ NO
+│        └─> STANDARD RETRY (see above)
+│
+├─ PERMANENT ERROR (404, 403, validation failure)
+│  │
+│  ├─ User-Correctable?
+│  │  │
+│  │  ├─ YES (Invalid input, missing permissions)
+│  │  │  └─> USER FEEDBACK + NO RETRY
+│  │  │      • Return detailed error message
+│  │  │      • Suggest corrective actions
+│  │  │      • Log for analytics
+│  │  │      • Do NOT retry automatically
+│  │  │
+│  │  └─ NO (Configuration error, system misconfiguration)
+│  │     └─> ALERT + FALLBACK
+│  │         • Send alert to operations team
+│  │         • Log with HIGH severity
+│  │         • Disable failing feature
+│  │         • Return cached/default response
+│  │
+│  └─ Resource Not Found?
+│     │
+│     ├─ YES
+│     │  └─> VALIDATE + FALLBACK
+│     │      • Verify resource should exist
+│     │      • Check for data consistency issues
+│     │      • Provide alternative resources
+│     │      • Cache negative results (5 min TTL)
+│     │
+│     └─ NO
+│        └─> FAIL FAST (see above)
+│
+├─ TIMEOUT ERROR (Operation exceeded deadline)
+│  │
+│  ├─ Upstream Service Timeout?
+│  │  │
+│  │  ├─ YES
+│  │  │  └─> CIRCUIT BREAKER PATTERN
+│  │  │      States:
+│  │  │      • CLOSED: Normal operation
+│  │  │        - Failure threshold: 5 consecutive failures
+│  │  │        - Success threshold: Reset counter on success
+│  │  │      • OPEN: Fail fast without calling service
+│  │  │        - Duration: 30 seconds
+│  │  │        - Return: Cached/default response
+│  │  │      • HALF-OPEN: Test service recovery
+│  │  │        - Allow 1 request
+│  │  │        - Success → CLOSED
+│  │  │        - Failure → OPEN (60s)
+│  │  │
+│  │  └─ NO (Local operation timeout)
+│  │     └─> INCREASE TIMEOUT + OPTIMIZE
+│  │         • Analyze operation duration
+│  │         • Identify bottlenecks
+│  │         • Add progress indicators
+│  │         • Consider async processing
+│  │
+│  └─ Cascading Timeout?
+│     │
+│     ├─ YES (Multiple services timing out)
+│     │  └─> BULKHEAD PATTERN
+│     │      • Isolate failing components
+│     │      • Limit concurrent requests: 10 per service
+│     │      • Separate thread pools
+│     │      • Degrade gracefully
+│     │
+│     └─ NO
+│        └─> CIRCUIT BREAKER (see above)
+│
+├─ RESOURCE EXHAUSTION (Memory, connections, disk space)
+│  │
+│  ├─ Recoverable?
+│  │  │
+│  │  ├─ YES (Can free resources)
+│  │  │  └─> SHED LOAD + BACKPRESSURE
+│  │  │      • Reject new requests (503 Service Unavailable)
+│  │  │      • Return Retry-After: 60 header
+│  │  │      • Trigger resource cleanup
+│  │  │      • Complete in-flight requests
+│  │  │      • Alert operations team
+│  │  │
+│  │  └─ NO (System-level issue)
+│  │     └─> EMERGENCY SHUTDOWN
+│  │         • Stop accepting requests
+│  │         • Drain existing connections
+│  │         • Save state if possible
+│  │         • Alert with CRITICAL severity
+│  │         • Auto-restart with rate limiting
+│  │
+│  └─ Memory Leak Detected?
+│     │
+│     ├─ YES
+│     │  └─> RESTART + INVESTIGATE
+│     │      • Schedule graceful restart
+│     │      • Enable heap dump
+│     │      • Analyze memory profile
+│     │      • Implement memory limits
+│     │
+│     └─ NO
+│        └─> LOAD SHEDDING (see above)
+│
+└─ PARTIAL FAILURE (Some operations succeed, some fail)
+   │
+   ├─ Batch Operation?
+   │  │
+   │  ├─ YES
+   │  │  └─> RETRY FAILED ITEMS ONLY
+   │  │      • Track successful items
+   │  │      • Retry failed subset
+   │  │      • Return partial success response
+   │  │      • Log failure reasons
+   │  │      • Consider batch size reduction
+   │  │
+   │  └─ NO
+   │     └─> COMPENSATING TRANSACTION
+   │         • Identify completed steps
+   │         • Roll back successful operations
+   │         • Use saga pattern for distributed transactions
+   │         • Log compensation actions
+   │
+   └─ Distributed Transaction?
+      │
+      ├─ YES
+      │  └─> SAGA PATTERN
+      │      Forward Recovery:
+      │      • T1 → T2 → T3 → ... → Tn
+      │      • On failure at Ti:
+      │        - Option A: Continue with partial success
+      │        - Option B: Compensate T(i-1) ... T1
+      │      
+      │      Compensation Actions:
+      │      • C1 ← C2 ← C3 ← ... ← Ci
+      │      • Idempotent compensations
+      │      • Store compensation log
+      │      • Retry compensations on failure
+      │
+      └─ NO
+         └─> RETRY FAILED ITEMS (see above)
+
+RECOMMENDATION SUMMARY:
+
+✅ Transient Errors → Retry with exponential backoff + circuit breaker
+✅ Permanent Errors → Fail fast with user feedback, no retries
+✅ Timeouts → Circuit breaker pattern, prevent cascading failures
+✅ Resource Exhaustion → Load shedding + backpressure, alert immediately
+✅ Partial Failures → Compensating transactions or retry failed subset
+
+ANTI-PATTERNS TO AVOID:
+
+❌ Retrying non-idempotent operations without deduplication
+❌ Infinite retry loops without backoff or circuit breaker
+❌ Ignoring Retry-After headers on rate limit errors
+❌ Synchronous blocking on retry logic
+❌ Failing to distinguish transient vs permanent errors
+❌ Retrying permanent errors (wastes resources)
+❌ No timeout on retry attempts (can compound failures)
+
+IMPLEMENTATION EXAMPLE:
+
+```python
+from enum import Enum
+import asyncio
+from typing import TypeVar, Callable
+import random
+
+class ErrorType(Enum):
+    TRANSIENT = "transient"
+    PERMANENT = "permanent"
+    TIMEOUT = "timeout"
+    RESOURCE_EXHAUSTION = "resource_exhaustion"
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold: int = 5, timeout: int = 30):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+        self.last_failure_time = None
+    
+    async def call(self, func: Callable, *args, **kwargs):
+        if self.state == CircuitState.OPEN:
+            if time.time() - self.last_failure_time > self.timeout:
+                self.state = CircuitState.HALF_OPEN
+            else:
+                raise CircuitBreakerOpenError("Circuit breaker is OPEN")
+        
+        try:
+            result = await func(*args, **kwargs)
+            self.on_success()
+            return result
+        except Exception as e:
+            self.on_failure()
+            raise
+    
+    def on_success(self):
+        self.failure_count = 0
+        if self.state == CircuitState.HALF_OPEN:
+            self.state = CircuitState.CLOSED
+    
+    def on_failure(self):
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+
+async def retry_with_backoff(
+    func: Callable,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    max_delay: float = 30.0,
+    jitter: bool = True
+):
+    """Retry with exponential backoff and jitter."""
+    for attempt in range(max_retries + 1):
+        try:
+            return await func()
+        except Exception as e:
+            if attempt == max_retries:
+                raise
+            
+            # Classify error
+            error_type = classify_error(e)
+            
+            if error_type == ErrorType.PERMANENT:
+                # Don't retry permanent errors
+                raise
+            
+            # Calculate delay
+            delay = min(base_delay * (backoff_factor ** attempt), max_delay)
+            
+            # Add jitter to prevent thundering herd
+            if jitter:
+                delay = delay * (0.75 + random.random() * 0.5)
+            
+            await asyncio.sleep(delay)
+
+def classify_error(error: Exception) -> ErrorType:
+    """Classify error type for recovery strategy."""
+    if isinstance(error, (ConnectionError, TimeoutError)):
+        return ErrorType.TRANSIENT
+    elif isinstance(error, (ValueError, PermissionError)):
+        return ErrorType.PERMANENT
+    elif isinstance(error, asyncio.TimeoutError):
+        return ErrorType.TIMEOUT
+    elif isinstance(error, MemoryError):
+        return ErrorType.RESOURCE_EXHAUSTION
+    else:
+        return ErrorType.TRANSIENT  # Default to transient for unknown errors
+```
+
+```
+
 ## Summary
 
 These decision trees provide a structured approach to common architectural decisions. Use them as starting points, then refer to detailed documentation sections for implementation guidance.

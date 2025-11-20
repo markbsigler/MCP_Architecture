@@ -595,6 +595,253 @@ Maintain bidirectional traceability between requirements and implementation:
 └──────────────────────┴────────────────────┴─────────────────┘
 ```
 
+#### Automated Traceability Tracking
+
+For comprehensive traceability, use decorators and automated reporting:
+
+```python
+from typing import Callable, List
+from functools import wraps
+import inspect
+
+# Global traceability registry
+_traceability_registry = {}
+
+def implements(*requirement_ids: str):
+    """Decorator to mark functions as implementing specific requirements."""
+    def decorator(func: Callable) -> Callable:
+        module = inspect.getmodule(func).__name__
+        func_name = func.__qualname__
+        
+        for req_id in requirement_ids:
+            if req_id not in _traceability_registry:
+                _traceability_registry[req_id] = {
+                    "implementations": [],
+                    "tests": []
+                }
+            
+            _traceability_registry[req_id]["implementations"].append({
+                "module": module,
+                "function": func_name,
+                "file": inspect.getfile(func),
+                "line": inspect.getsourcelines(func)[1]
+            })
+        
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+        
+        wrapper._requirements = requirement_ids
+        return wrapper
+    
+    return decorator
+
+
+def verifies(*requirement_ids: str):
+    """Decorator to mark tests as verifying specific requirements."""
+    def decorator(func: Callable) -> Callable:
+        module = inspect.getmodule(func).__name__
+        func_name = func.__qualname__
+        
+        for req_id in requirement_ids:
+            base_req = req_id if not req_id.startswith("AC-") else req_id.rsplit("-", 1)[0]
+            
+            if base_req not in _traceability_registry:
+                _traceability_registry[base_req] = {
+                    "implementations": [],
+                    "tests": []
+                }
+            
+            _traceability_registry[base_req]["tests"].append({
+                "module": module,
+                "function": func_name,
+                "file": inspect.getfile(func),
+                "line": inspect.getsourcelines(func)[1],
+                "criteria": req_id if req_id.startswith("AC-") else None
+            })
+        
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+        
+        wrapper._verifies = requirement_ids
+        return wrapper
+    
+    return decorator
+
+
+def generate_traceability_report() -> str:
+    """Generate a comprehensive traceability report."""
+    from datetime import datetime
+    
+    report = []
+    report.append("# Requirements Traceability Report\n")
+    report.append(f"Generated: {datetime.now().isoformat()}\n\n")
+    
+    for req_id in sorted(_traceability_registry.keys()):
+        data = _traceability_registry[req_id]
+        report.append(f"## {req_id}\n")
+        
+        report.append("### Implementations\n")
+        if data["implementations"]:
+            for impl in data["implementations"]:
+                report.append(f"- `{impl['module']}.{impl['function']}` ({impl['file']}:{impl['line']})\n")
+        else:
+            report.append("- ⚠️ **No implementations found**\n")
+        
+        report.append("\n### Tests\n")
+        if data["tests"]:
+            for test in data["tests"]:
+                criteria = f" [{test['criteria']}]" if test['criteria'] else ""
+                report.append(f"- `{test['module']}.{test['function']}`{criteria} ({test['file']}:{test['line']})\n")
+        else:
+            report.append("- ⚠️ **No tests found**\n")
+        
+        coverage = "✅ Complete" if data["implementations"] and data["tests"] else "❌ Incomplete"
+        report.append(f"\n**Coverage:** {coverage}\n\n")
+    
+    return "".join(report)
+```
+
+**Usage in Implementation:**
+
+```python
+@implements("REQ-TOOL-001", "REQ-SEC-005", "REQ-OBS-002")
+@mcp.tool()
+async def create_issue(
+    title: str,
+    description: str,
+    project_id: str
+) -> dict:
+    """Create a new project issue.
+    
+    Requirements Traceability:
+        - REQ-TOOL-001: Issue creation functionality
+        - REQ-SEC-005: Permission validation
+        - REQ-OBS-002: Operation logging
+    
+    Acceptance Criteria:
+        - AC-001: Returns issue_id on success
+        - AC-002: Validates all parameters
+        - AC-003: Enforces permissions
+    """
+    correlation_id = get_correlation_id()
+    logger.info(f"Creating issue", extra={"correlation_id": correlation_id})
+    
+    # REQ-SEC-005: Validate authentication
+    if not get_current_user():
+        raise AuthenticationError("Authentication required")
+    
+    # AC-002: Validate parameters
+    if not title or not description:
+        raise ValidationError("Title and description required")
+    
+    # REQ-TOOL-001: Create issue
+    issue_id = await db.issues.insert({
+        "title": title,
+        "description": description,
+        "project_id": project_id,
+        "created_by": get_current_user()
+    })
+    
+    # REQ-OBS-002: Log operation
+    logger.info(f"Issue created: {issue_id}", extra={"correlation_id": correlation_id})
+    
+    # AC-001: Return issue_id
+    return {"issue_id": issue_id}
+```
+
+**Usage in Tests:**
+
+```python
+@verifies("REQ-TOOL-001", "AC-001", "AC-002", "AC-003")
+def test_create_issue_success():
+    """Verify REQ-TOOL-001: Successful issue creation.
+    
+    Acceptance Criteria:
+        - AC-001: Returns issue_id on success
+        - AC-002: Validates all parameters
+        - AC-003: Enforces permissions
+    
+    Given: Valid auth and parameters
+    When: create_issue is invoked
+    Then: Issue created and ID returned
+    """
+    result = await create_issue("Test Issue", "Test Description", "proj-123")
+    
+    # AC-001: Issue ID returned
+    assert result["issue_id"] is not None
+    
+    # AC-002: Parameters validated and stored
+    issue = await db.issues.get(result["issue_id"])
+    assert issue["title"] == "Test Issue"
+    assert issue["description"] == "Test Description"
+    
+    # AC-003: Permissions enforced (user must be authenticated)
+    assert issue["created_by"] == get_current_user()
+
+
+@verifies("REQ-TOOL-001", "AC-002")
+def test_create_issue_validation():
+    """Verify AC-002: Parameter validation."""
+    with pytest.raises(ValidationError):
+        await create_issue("", "Description", "proj-123")
+
+
+@verifies("REQ-SEC-005")
+def test_create_issue_authentication():
+    """Verify REQ-SEC-005: Authentication required."""
+    clear_current_user()
+    with pytest.raises(AuthenticationError):
+        await create_issue("Test", "Description", "proj-123")
+```
+
+**Generate Traceability Report:**
+
+```python
+# In CI/CD pipeline or development workflow
+def test_generate_traceability_report():
+    """Generate and validate traceability report."""
+    report = generate_traceability_report()
+    
+    # Save report
+    with open("docs/traceability-report.md", "w") as f:
+        f.write(report)
+    
+    # Verify all requirements have coverage
+    for req_id, data in _traceability_registry.items():
+        assert data["implementations"], f"{req_id} missing implementation"
+        assert data["tests"], f"{req_id} missing tests"
+```
+
+**Example Generated Report:**
+
+```markdown
+# Requirements Traceability Report
+Generated: 2025-01-15T10:30:00
+
+## REQ-TOOL-001
+### Implementations
+- `tools.issue_tracker.create_issue` (src/tools/issue_tracker.py:45)
+
+### Tests
+- `tests.test_issue_tracker.test_create_issue_success` [AC-001] (tests/test_issue_tracker.py:12)
+- `tests.test_issue_tracker.test_create_issue_success` [AC-002] (tests/test_issue_tracker.py:12)
+- `tests.test_issue_tracker.test_create_issue_success` [AC-003] (tests/test_issue_tracker.py:12)
+- `tests.test_issue_tracker.test_create_issue_validation` [AC-002] (tests/test_issue_tracker.py:35)
+
+**Coverage:** ✅ Complete
+
+## REQ-SEC-005
+### Implementations
+- `tools.issue_tracker.create_issue` (src/tools/issue_tracker.py:45)
+
+### Tests
+- `tests.test_issue_tracker.test_create_issue_authentication` (tests/test_issue_tracker.py:50)
+
+**Coverage:** ✅ Complete
+```
+
 ### Requirements Tracking
 
 **In Code Documentation:**

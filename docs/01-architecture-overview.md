@@ -171,6 +171,51 @@ Connections to backend systems:
 - **Legacy APIs**: Adapters for existing internal APIs
 - **Workflow Orchestration**: Coordination across multiple systems
 
+### When to Use Each Layer
+
+Use this decision table to determine which architectural layer is appropriate for your component:
+
+| Concern | Gateway Layer | Server Layer | Security Layer | Observability Layer | Integration Layer |
+|---------|--------------|--------------|----------------|---------------------|-------------------|
+| **Authentication** | ✅ Primary (JWT validation) | ❌ Rely on gateway | ✅ Policy enforcement | 📊 Audit logs | ❌ Not applicable |
+| **Authorization** | ⚠️ Coarse-grained | ✅ Fine-grained (RBAC) | ✅ Policy decisions | 📊 Access logs | ❌ Not applicable |
+| **Rate Limiting** | ✅ Global limits | ✅ Per-user limits | ❌ Not applicable | 📊 Rate metrics | ❌ Not applicable |
+| **Request Routing** | ✅ Server selection | ❌ Not applicable | ❌ Not applicable | 📊 Routing metrics | ❌ Not applicable |
+| **Load Balancing** | ✅ Instance distribution | ❌ Not applicable | ❌ Not applicable | 📊 Load metrics | ❌ Not applicable |
+| **Tool Implementation** | ❌ Not applicable | ✅ Business logic | ⚠️ Permission checks | 📊 Tool metrics | ⚠️ Backend calls |
+| **Data Transformation** | ❌ Not applicable | ✅ Response formatting | ❌ Not applicable | ❌ Not applicable | ✅ Protocol adaptation |
+| **Caching** | ✅ Response cache | ✅ Data cache | ❌ Not applicable | 📊 Cache metrics | ⚠️ Backend cache |
+| **Circuit Breaking** | ✅ Server health | ❌ Not applicable | ❌ Not applicable | 📊 Failure metrics | ✅ Backend protection |
+| **Error Handling** | ⚠️ Gateway errors | ✅ Business errors | ⚠️ Auth errors | 📊 Error tracking | ⚠️ Integration errors |
+| **Logging** | ✅ Access logs | ✅ Application logs | ✅ Security logs | ✅ Centralized storage | ✅ Integration logs |
+| **Metrics Collection** | ✅ Traffic metrics | ✅ Business metrics | ✅ Security metrics | ✅ All metrics | ✅ Integration metrics |
+| **TLS Termination** | ✅ Primary point | ❌ Not applicable | ✅ mTLS between layers | ❌ Not applicable | ⚠️ Backend TLS |
+| **Session Management** | ✅ Session affinity | ⚠️ Stateless preferred | ❌ Not applicable | 📊 Session tracking | ❌ Not applicable |
+| **API Versioning** | ✅ Version routing | ✅ Version implementation | ❌ Not applicable | 📊 Version metrics | ⚠️ Backend versioning |
+
+**Legend:**
+
+- ✅ Primary responsibility - implement here
+- ⚠️ Shared responsibility - coordinate between layers
+- ❌ Not applicable - do not implement here
+- 📊 Observability concern - monitor and track
+
+**Usage Guidelines:**
+
+1. **Gateway Layer**: Use for cross-cutting concerns affecting all servers (auth, routing, global rate limits)
+2. **Server Layer**: Use for business logic, tool implementations, and domain-specific functionality
+3. **Security Layer**: Use for centralized policy enforcement and security decisions
+4. **Observability Layer**: Use for monitoring, logging, and operational insights (non-blocking)
+5. **Integration Layer**: Use for adapting external systems to MCP patterns
+
+**Anti-Patterns to Avoid:**
+
+- ❌ Business logic in gateway layer (violates separation of concerns)
+- ❌ Authentication in server layer (security should be centralized)
+- ❌ Synchronous logging in request path (use async observability)
+- ❌ Direct database access from gateway (bypasses server abstraction)
+- ❌ Heavy computation in observability layer (impacts performance)
+
 ## Request Flow Pattern
 
 The standard request flow through the enterprise MCP architecture follows this sequence:

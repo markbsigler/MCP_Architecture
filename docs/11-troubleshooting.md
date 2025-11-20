@@ -1073,6 +1073,231 @@ sudo py-spy top --pid $(pgrep -f "mcp-server")
 sudo py-spy record -o flamegraph.svg --format speedscope --pid $(pgrep -f "mcp-server")
 ```
 
+#### Understanding Flame Graphs
+
+Flame graphs visualize CPU time spent in different code paths. Here's how to interpret them:
+
+**Flame Graph Anatomy:**
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                     main() [100%]                            │  ← Root (bottom)
+├─────────────────────────────────────────────────────────────┤
+│  run_server() [98%]                    idle() [2%]           │
+├─────────────────────────────────────────────────────────────┤
+│  handle_request() [95%]                                      │
+├─────────────────────────────────────────────────────────────┤
+│  process_tool() [70%]        validate() [15%]  log() [10%]  │
+├─────────────────────────────────────────────────────────────┤
+│  db_query() [60%]  parse()[10%]                             │  ← Hot paths (wider)
+├─────────────────────────────────────────────────────────────┤
+│  execute_sql() [60%]                                         │
+└─────────────────────────────────────────────────────────────┘
+  ↑ Stack depth (bottom = root, top = leaf functions)
+  ↑ Width = CPU time percentage
+```
+
+**Key Patterns to Look For:**
+
+**1. Wide Plateaus (Hot Paths)** - High CPU consumption:
+
+```text
+Example: Database Query Hot Path
+┌────────────────────────────────────────────┐
+│         handle_request() [100%]            │
+├────────────────────────────────────────────┤
+│  ████████ db_query() [80%] ████████        │  ← PROBLEM: 80% time in DB
+├────────────────────────────────────────────┤
+│  ████ execute_sql() [75%] ████             │
+└────────────────────────────────────────────┘
+
+Solution:
+- Add database indexes
+- Use connection pooling
+- Implement query caching
+- Reduce N+1 queries
+```
+
+**2. Tall Stacks (Deep Call Chains)** - Excessive function calls:
+
+```text
+Example: Recursive Processing
+┌──────────────┐
+│  process() [100%]   │
+├──────────────┤
+│  validate()  │
+├──────────────┤
+│  check()     │
+├──────────────┤
+│  verify()    │  ← PROBLEM: Deep nesting (8+ levels)
+├──────────────┤
+│  inspect()   │
+├──────────────┤
+│  analyze()   │
+├──────────────┤
+│  examine()   │
+└──────────────┘
+
+Solution:
+- Flatten call hierarchy
+- Cache validation results
+- Combine multiple validation steps
+- Use iterative instead of recursive approach
+```
+
+**3. Repeated Patterns (Inefficient Loops)** - Same functions called repeatedly:
+
+```text
+Example: N+1 Query Problem
+┌────────────────────────────────────────────┐
+│         process_users() [100%]             │
+├────────────────────────────────────────────┤
+│ get_user() get_user() get_user() get_user()│  ← PROBLEM: Repeated calls
+│   [5%]       [5%]       [5%]       [5%]    │
+└────────────────────────────────────────────┘
+
+Solution:
+- Batch database queries
+- Use JOINs instead of multiple queries
+- Implement eager loading
+- Add result caching
+```
+
+**4. Blocking I/O (Synchronous Calls)** - Functions waiting for I/O:
+
+```text
+Example: Synchronous HTTP Calls
+┌────────────────────────────────────────────┐
+│         handle_tool() [100%]               │
+├────────────────────────────────────────────┤
+│  ████ http_request() [60%] ████            │  ← PROBLEM: Blocking wait
+│  (waiting for response...)                 │
+└────────────────────────────────────────────┘
+
+Solution:
+- Use async/await for I/O
+- Implement connection pooling
+- Add request timeouts
+- Use circuit breakers
+```
+
+**5. JSON Parsing Overhead** - Serialization bottleneck:
+
+```text
+Example: Heavy JSON Processing
+┌────────────────────────────────────────────┐
+│         handle_response() [100%]           │
+├────────────────────────────────────────────┤
+│  ████ json.dumps() [40%] ████              │  ← PROBLEM: Slow serialization
+├────────────────────────────────────────────┤
+│  dict_to_json() [38%]                      │
+└────────────────────────────────────────────┘
+
+Solution:
+- Use orjson or ujson (faster alternatives)
+- Reduce response payload size
+- Cache serialized responses
+- Stream large responses
+```
+
+**6. Regex Compilation** - Repeated pattern compilation:
+
+```text
+Example: Uncompiled Regular Expressions
+┌────────────────────────────────────────────┐
+│         validate_input() [100%]            │
+├────────────────────────────────────────────┤
+│ re.match() re.match() re.match() re.match()│  ← PROBLEM: Recompiling regex
+│   [10%]      [10%]      [10%]      [10%]   │
+└────────────────────────────────────────────┘
+
+Solution:
+- Precompile regex patterns
+- Use re.compile() at module level
+- Cache compiled patterns
+```
+
+**Real-World Example: Database Query Optimization**
+
+**Before (Slow - 800ms P99):**
+
+```text
+Flame Graph:
+┌─────────────────────────────────────────────────────┐
+│              handle_list_issues() [100%]            │
+├─────────────────────────────────────────────────────┤
+│  ████████████ get_issues() [85%] ████████████       │
+├─────────────────────────────────────────────────────┤
+│  ████████ execute_query() [80%] ████████            │
+├─────────────────────────────────────────────────────┤
+│  ████ wait_for_result() [75%] ████                  │  ← Blocking on DB
+└─────────────────────────────────────────────────────┘
+
+Code:
+async def get_issues():
+    issues = await db.query("SELECT * FROM issues")
+    for issue in issues:
+        issue.author = await db.query(f"SELECT * FROM users WHERE id={issue.user_id}")  # N+1!
+        issue.comments = await db.query(f"SELECT * FROM comments WHERE issue_id={issue.id}")  # N+1!
+    return issues
+```
+
+**After (Fast - 120ms P99):**
+
+```text
+Flame Graph:
+┌─────────────────────────────────────────────────────┐
+│              handle_list_issues() [100%]            │
+├─────────────────────────────────────────────────────┤
+│  ██ get_issues() [20%] ██   format() [10%]          │  ← Much faster!
+├─────────────────────────────────────────────────────┤
+│  execute_query() [18%]                              │
+└─────────────────────────────────────────────────────┘
+
+Code:
+async def get_issues():
+    # Single query with JOINs
+    query = """
+        SELECT 
+            i.*,
+            u.name as author_name,
+            COUNT(c.id) as comment_count
+        FROM issues i
+        LEFT JOIN users u ON i.user_id = u.id
+        LEFT JOIN comments c ON i.id = c.issue_id
+        GROUP BY i.id, u.name
+    """
+    return await db.query(query)
+```
+
+**Profiling Workflow:**
+
+```bash
+# 1. Generate flame graph
+sudo py-spy record -o profile.svg --duration 60 --pid $(pgrep -f "mcp-server")
+
+# 2. Open in browser
+open profile.svg
+
+# 3. Identify hot paths (widest sections)
+# 4. Click to zoom into specific functions
+# 5. Note cumulative time percentages
+
+# 6. For interactive analysis, use speedscope format
+sudo py-spy record -o profile.json --format speedscope --duration 60 --pid $(pgrep -f "mcp-server")
+# Upload to https://www.speedscope.app/
+```
+
+**Optimization Checklist:**
+
+- ✅ Wide plateaus → Add caching, optimize algorithm
+- ✅ Tall stacks → Flatten call hierarchy, reduce indirection
+- ✅ Repeated patterns → Batch operations, use loops efficiently
+- ✅ Blocking I/O → Convert to async, add timeouts
+- ✅ JSON overhead → Use faster parsers (orjson)
+- ✅ Regex compilation → Precompile patterns
+- ✅ Database queries → Add indexes, use JOINs, batch queries
+
 ### Application Profiling
 
 ```python
