@@ -52,6 +52,288 @@ flowchart TB
     Layer4 --> Layer5
 ```
 
+## Threat Modeling
+
+### STRIDE Analysis
+
+Threat modeling using the STRIDE framework identifies security risks across MCP server components. Each threat category requires specific mitigations.
+
+#### Spoofing Identity
+
+**Threats:**
+
+- Attackers impersonating legitimate users or services
+- Token theft and replay attacks
+- Session hijacking
+
+**Mitigations:**
+
+- Strong authentication (JWT with signature verification)
+- Multi-factor authentication (MFA) for administrative access
+- Short-lived tokens with refresh rotation
+- Token binding to client identity (certificate fingerprints)
+- Anti-CSRF tokens for state-changing operations
+
+**Implementation:**
+
+```python
+# JWT with short expiration and refresh tokens
+jwt_config = {
+    "access_token_ttl": 900,  # 15 minutes
+    "refresh_token_ttl": 86400,  # 24 hours
+    "require_token_binding": True
+}
+
+# Validate token freshness
+def validate_token_freshness(token: dict) -> bool:
+    issued_at = token.get("iat")
+    if not issued_at:
+        return False
+    
+    age_seconds = time.time() - issued_at
+    return age_seconds < MAX_TOKEN_AGE
+```
+
+#### Tampering with Data
+
+**Threats:**
+
+- Message interception and modification
+- Parameter tampering in tool calls
+- Database manipulation through injection attacks
+
+**Mitigations:**
+
+- TLS/mTLS for transport encryption
+- Message signing (HMAC or digital signatures)
+- Input validation and sanitization
+- Parameterized queries (no string concatenation)
+- Integrity checks on critical data
+
+**Implementation:**
+
+```python
+# Message integrity verification
+import hmac
+import hashlib
+
+def verify_message_integrity(message: str, signature: str, secret: str) -> bool:
+    """Verify HMAC signature on message."""
+    expected = hmac.new(
+        secret.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+# SQL injection prevention
+async def safe_query(db, user_id: str):
+    """Use parameterized queries."""
+    # SECURE: Parameters are escaped
+    result = await db.fetch(
+        "SELECT * FROM users WHERE id = $1",
+        user_id
+    )
+    # NEVER do: f"SELECT * FROM users WHERE id = '{user_id}'"
+```
+
+#### Repudiation
+
+**Threats:**
+
+- Users denying actions they performed
+- Lack of audit trail for security events
+- Insufficient logging for forensic analysis
+
+**Mitigations:**
+
+- Comprehensive audit logging with immutable records
+- Cryptographic signatures on audit events
+- Centralized log aggregation with tamper detection
+- Non-repudiation through digital signatures on critical actions
+
+**Implementation:**
+
+```python
+# Immutable audit log entry with signature
+import json
+from datetime import datetime
+
+async def create_audit_entry(
+    action: str,
+    user_id: str,
+    details: dict,
+    signing_key: str
+) -> dict:
+    """Create signed audit log entry."""
+    entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "action": action,
+        "user_id": user_id,
+        "details": details,
+        "nonce": secrets.token_hex(16)
+    }
+    
+    # Sign entry for non-repudiation
+    entry_json = json.dumps(entry, sort_keys=True)
+    signature = hmac.new(
+        signing_key.encode(),
+        entry_json.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    entry["signature"] = signature
+    await audit_log.write(entry)
+    return entry
+```
+
+#### Information Disclosure
+
+**Threats:**
+
+- Sensitive data leakage in logs or error messages
+- Exposure of system internals in stack traces
+- PII disclosure without proper authorization
+- API enumeration through verbose responses
+
+**Mitigations:**
+
+- Redact sensitive data in logs (see Audit Logging section)
+- Generic error messages to clients (detailed logs server-side only)
+- Field-level access control for sensitive attributes
+- Rate limiting to prevent enumeration attacks
+- Least privilege principle for data access
+
+**Implementation:**
+
+```python
+# Safe error responses
+class SafeErrorResponse:
+    """Return generic errors to clients, log details internally."""
+    
+    @staticmethod
+    async def handle_error(error: Exception, request_id: str):
+        # Log full details server-side
+        logger.error(
+            "Request failed",
+            request_id=request_id,
+            error_type=type(error).__name__,
+            error_details=str(error),
+            stack_trace=traceback.format_exc()
+        )
+        
+        # Return generic message to client
+        return {
+            "error": "An error occurred processing your request",
+            "request_id": request_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+```
+
+#### Denial of Service (DoS)
+
+**Threats:**
+
+- Resource exhaustion through excessive requests
+- Slowloris-style attacks with slow connections
+- Algorithmic complexity attacks (ReDoS, billion laughs)
+- Memory exhaustion through large payloads
+
+**Mitigations:**
+
+- Multi-tier rate limiting (global, per-user, per-endpoint)
+- Request size limits and timeouts
+- Circuit breakers for downstream dependencies
+- Horizontal scaling with load balancing
+- Input complexity validation (regex timeout, recursion depth)
+
+**Implementation:**
+
+```python
+# Request size and complexity limits
+MAX_REQUEST_SIZE = 1_048_576  # 1 MB
+MAX_ARRAY_DEPTH = 5
+MAX_STRING_LENGTH = 10_000
+REQUEST_TIMEOUT = 30  # seconds
+
+async def validate_request_complexity(data: dict, depth: int = 0):
+    """Prevent DoS through complex nested structures."""
+    if depth > MAX_ARRAY_DEPTH:
+        raise ValueError(f"Maximum nesting depth exceeded: {MAX_ARRAY_DEPTH}")
+    
+    for key, value in data.items():
+        if isinstance(value, str) and len(value) > MAX_STRING_LENGTH:
+            raise ValueError(f"String length exceeds limit: {MAX_STRING_LENGTH}")
+        elif isinstance(value, dict):
+            await validate_request_complexity(value, depth + 1)
+        elif isinstance(value, list):
+            for item in value[:100]:  # Limit iteration
+                if isinstance(item, dict):
+                    await validate_request_complexity(item, depth + 1)
+```
+
+#### Elevation of Privilege
+
+**Threats:**
+
+- Vertical privilege escalation (user → admin)
+- Horizontal privilege escalation (user A → user B)
+- Capability bypass through parameter manipulation
+- Confused deputy attacks
+
+**Mitigations:**
+
+- Principle of least privilege enforcement
+- Explicit authorization checks before every privileged operation
+- Role hierarchy with inheritance controls
+- Capability tokens that cannot be forged
+- Resource ownership verification
+
+**Implementation:**
+
+```python
+# Explicit privilege checks
+async def delete_user(requester_id: str, target_user_id: str, db):
+    """Delete user with authorization checks."""
+    
+    # Check requester has admin role
+    requester = await db.fetch_one(
+        "SELECT role FROM users WHERE id = $1",
+        requester_id
+    )
+    if requester["role"] not in ["admin", "super_admin"]:
+        raise PermissionError("Insufficient privileges")
+    
+    # Prevent super_admin deletion by regular admin
+    target = await db.fetch_one(
+        "SELECT role FROM users WHERE id = $1",
+        target_user_id
+    )
+    if target["role"] == "super_admin" and requester["role"] != "super_admin":
+        raise PermissionError("Cannot delete super admin")
+    
+    # Audit before action
+    await audit_log.write({
+        "action": "user_delete",
+        "requester": requester_id,
+        "target": target_user_id
+    })
+    
+    # Execute deletion
+    await db.execute("DELETE FROM users WHERE id = $1", target_user_id)
+```
+
+### Threat Model Summary
+
+| STRIDE Category | Key Risks | Primary Mitigations |
+|----------------|-----------|---------------------|
+| **Spoofing** | Token theft, impersonation | Strong auth, MFA, short-lived tokens |
+| **Tampering** | Message modification, injection | TLS, input validation, parameterized queries |
+| **Repudiation** | Action denial, missing audit trail | Immutable logs, digital signatures |
+| **Information Disclosure** | Data leaks, verbose errors | Redaction, generic errors, least privilege |
+| **Denial of Service** | Resource exhaustion, complexity attacks | Rate limiting, timeouts, input validation |
+| **Elevation of Privilege** | Unauthorized access escalation | Explicit auth checks, least privilege, auditing |
+
 ## Authentication Patterns
 
 ### Multi-Provider Support
@@ -787,6 +1069,551 @@ def redact_sensitive_data(data: dict) -> dict:
             redacted['email'] = f"{parts[0][0]}***@{parts[1]}"
     
     return redacted
+```
+
+## Security Testing Tools
+
+### Static Analysis
+
+#### Bandit (Python Security Linter)
+
+Bandit scans Python code for common security issues.
+
+**Installation & Configuration:**
+
+```bash
+pip install bandit
+```
+
+**Configuration File (`bandit.yaml`):**
+
+```yaml
+# .bandit.yaml
+tests:
+  - B201  # Flask debug mode
+  - B301  # Pickle usage
+  - B302  # marshal usage
+  - B303  # MD5 or SHA1
+  - B304  # Insecure ciphers
+  - B305  # Insecure cipher modes
+  - B306  # Insecure TempFile
+  - B307  # eval usage
+  - B308  # mark_safe usage
+  - B309  # HTTPSConnection
+  - B310  # urllib.urlopen
+  - B311  # Random for crypto
+  - B312  # Telnet usage
+  - B313  # XML vulnerabilities
+  - B314  - B320  # XML processing
+  - B321  # FTP usage
+  - B323  # Unverified SSL
+  - B324  # Insecure hashes
+  - B325  # Tempfile
+  - B401  - B404  # Imports
+  - B501  - B509  # Crypto
+  - B601  - B612  # Injection
+
+exclude_dirs:
+  - /tests/
+  - /venv/
+  - /.venv/
+
+# Ignore test fixtures
+skips:
+  - B101  # Allow assert in tests
+```
+
+**Usage:**
+
+```bash
+# Scan entire project
+bandit -r src/ -f json -o bandit-report.json
+
+# CI/CD integration
+bandit -r src/ -ll -i  # Low severity, ignore info
+
+# Exclude specific files
+bandit -r src/ --exclude src/tests/
+```
+
+**Example Issues Detected:**
+
+```python
+# BAD: Hardcoded password
+password = "admin123"  # B105: hardcoded_password_string
+
+# BAD: Use of eval
+eval(user_input)  # B307: eval usage
+
+# BAD: Weak random for tokens
+token = random.randint(1000, 9999)  # B311: use secrets module
+
+# GOOD: Secure alternatives
+password = os.environ["DB_PASSWORD"]
+# Don't use eval, parse safely instead
+token = secrets.token_hex(16)
+```
+
+#### Safety (Dependency Vulnerability Scanner)
+
+Safety checks dependencies for known security vulnerabilities.
+
+**Installation:**
+
+```bash
+pip install safety
+```
+
+**Usage:**
+
+```bash
+# Check installed packages
+safety check
+
+# Check requirements file
+safety check -r requirements.txt
+
+# Generate JSON report
+safety check --json --output safety-report.json
+
+# CI/CD with exit codes
+safety check --exit-code  # Fails build on vulnerabilities
+```
+
+**Configuration (`safety-policy.yml`):**
+
+```yaml
+# .safety-policy.yml
+security:
+  ignore-vulnerabilities:
+    # Temporarily ignore specific CVEs (with justification)
+    - id: 12345
+      reason: "False positive - not using affected feature"
+      expires: "2025-12-31"
+  
+  ignore-packages:
+    # Ignore dev dependencies
+    - pytest
+    - black
+
+  continue-on-vulnerability-error: false
+```
+
+#### Semgrep (Multi-language Static Analysis)
+
+Semgrep finds bugs and enforces code standards with custom rules.
+
+**Installation:**
+
+```bash
+pip install semgrep
+```
+
+**Configuration (`.semgrep.yml`):**
+
+```yaml
+rules:
+  # SQL Injection Prevention
+  - id: sql-injection-risk
+    patterns:
+      - pattern: $DB.execute(f"... {$VAR} ...")
+      - pattern: $DB.execute("..." + $VAR + "...")
+    message: "Potential SQL injection. Use parameterized queries."
+    severity: ERROR
+    languages:
+      - python
+  
+  # Hardcoded Secrets
+  - id: hardcoded-secret
+    patterns:
+      - pattern: $VAR = "..."
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (password|secret|api_key|token)
+    message: "Possible hardcoded secret. Use environment variables."
+    severity: WARNING
+    languages:
+      - python
+  
+  # Missing Authentication Check
+  - id: missing-auth-check
+    patterns:
+      - pattern: |
+          @app.route(...)
+          def $FUNC(...):
+            ...
+      - pattern-not: |
+          @app.route(...)
+          @require_auth
+          def $FUNC(...):
+            ...
+    message: "Endpoint missing authentication decorator"
+    severity: ERROR
+    languages:
+      - python
+  
+  # Dangerous Function Usage
+  - id: dangerous-exec
+    patterns:
+      - pattern-either:
+          - pattern: exec(...)
+          - pattern: eval(...)
+          - pattern: __import__(...)
+    message: "Dangerous function usage: code execution risk"
+    severity: ERROR
+    languages:
+      - python
+  
+  # Insecure Random
+  - id: insecure-random
+    patterns:
+      - pattern: random.$METHOD(...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: (randint|random|choice)
+    message: "Use secrets module for security-sensitive randomness"
+    severity: WARNING
+    languages:
+      - python
+```
+
+**Usage:**
+
+```bash
+# Run all rules
+semgrep --config .semgrep.yml src/
+
+# Use community rules
+semgrep --config "p/security-audit" src/
+
+# CI/CD mode
+semgrep ci --config auto
+
+# Generate SARIF output for GitHub
+semgrep --config auto --sarif -o semgrep.sarif src/
+```
+
+### Dynamic Testing
+
+#### Penetration Testing Guidelines
+
+**Scope Definition:**
+
+1. **Pre-engagement:**
+   - Define testing scope (URLs, API endpoints, IP ranges)
+   - Establish rules of engagement (times, methods, data handling)
+   - Obtain written authorization
+   - Define communication channels for critical findings
+
+2. **Testing Phases:**
+
+##### Phase 1: Information Gathering
+
+```bash
+# Enumerate endpoints
+curl https://api.example.com/.well-known/openapi.json
+
+# DNS reconnaissance
+dig example.com ANY
+nslookup -type=ANY example.com
+
+# Certificate inspection
+openssl s_client -connect api.example.com:443 -showcerts
+```
+
+##### Phase 2: Authentication Testing
+
+```bash
+# Test JWT validation
+# - Expired tokens
+# - Invalid signatures (modify payload)
+# - Algorithm confusion (none, HS256 vs RS256)
+# - Missing required claims
+
+# Brute force prevention
+for i in {1..1000}; do
+  curl -X POST https://api.example.com/auth \
+    -d '{"username":"admin","password":"pass'$i'"}' &
+done
+
+# Token enumeration
+# Try sequential token IDs, predictable patterns
+```
+
+##### Phase 3: Authorization Testing
+
+```bash
+# Horizontal privilege escalation
+# User A tries to access User B's resources
+curl -H "Authorization: Bearer $USER_A_TOKEN" \
+  https://api.example.com/users/$USER_B_ID
+
+# Vertical privilege escalation
+# Regular user tries admin endpoints
+curl -H "Authorization: Bearer $USER_TOKEN" \
+  https://api.example.com/admin/users
+
+# IDOR (Insecure Direct Object Reference)
+# Test sequential IDs, GUIDs
+for id in {1..100}; do
+  curl https://api.example.com/documents/$id
+done
+```
+
+##### Phase 4: Input Validation Testing
+
+```bash
+# SQL Injection
+curl -X POST https://api.example.com/search \
+  -d '{"query": "admin'\'' OR 1=1--"}'
+
+# Command Injection
+curl -X POST https://api.example.com/tools/ping \
+  -d '{"host": "127.0.0.1; cat /etc/passwd"}'
+
+# Path Traversal
+curl https://api.example.com/files?path=../../../../etc/passwd
+
+# XXE (XML External Entity)
+curl -X POST https://api.example.com/upload \
+  -H "Content-Type: application/xml" \
+  -d '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><data>&xxe;</data>'
+
+# SSRF (Server-Side Request Forgery)
+curl -X POST https://api.example.com/fetch \
+  -d '{"url": "http://169.254.169.254/latest/meta-data/"}'
+```
+
+##### Phase 5: Business Logic Testing
+
+- Race conditions (concurrent requests)
+- Price/quantity manipulation
+- Workflow bypass (skip steps)
+- Rate limit bypass (distributed requests, header manipulation)
+
+**Automated Tools:**
+
+```bash
+# OWASP ZAP (Web scanner)
+docker run -t owasp/zap2docker-stable zap-baseline.py \
+  -t https://api.example.com
+
+# Burp Suite (Manual + automated)
+# Configure proxy, spider, active scan
+
+# Nuclei (Vulnerability scanner)
+nuclei -u https://api.example.com -t cves/ -t vulnerabilities/
+```
+
+**Reporting:**
+
+- **Critical**: Immediate notification (< 4 hours)
+- **High**: Detailed report within 24 hours
+- **Medium/Low**: Included in final report
+
+### Security Incident Response Procedures
+
+#### Incident Response Plan
+
+##### 1. Preparation
+
+- Maintain updated contact list (security team, legal, PR)
+- Document escalation paths
+- Pre-provision isolated forensic environment
+- Establish secure communication channels
+
+##### 2. Detection & Analysis
+
+```python
+# Anomaly detection example
+async def detect_anomaly(user_id: str, action: str, context: dict):
+    """Flag suspicious patterns."""
+    
+    # Unusual time
+    hour = datetime.now().hour
+    if hour < 6 or hour > 22:
+        await alert("Off-hours access", user_id, action)
+    
+    # Unusual location (IP geolocation change)
+    recent_ips = await get_recent_ips(user_id, hours=1)
+    if len(set(geolocate(ip) for ip in recent_ips)) > 2:
+        await alert("Multiple geolocations", user_id, action)
+    
+    # Excessive failed attempts
+    failed_count = await get_failed_attempts(user_id, minutes=10)
+    if failed_count > 5:
+        await alert("Brute force attempt", user_id, action)
+    
+    # Privilege escalation attempt
+    if action.startswith("admin_") and not await is_admin(user_id):
+        await alert("Privilege escalation attempt", user_id, action)
+```
+
+##### 3. Containment
+
+**Immediate Actions (< 15 minutes):**
+
+```bash
+# Revoke compromised credentials
+curl -X POST https://api.example.com/admin/revoke-token \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"user_id": "compromised-user-id"}'
+
+# Block IP address
+kubectl exec -it gateway-pod -- \
+  iptables -A INPUT -s $SUSPICIOUS_IP -j DROP
+
+# Isolate affected service
+kubectl scale deployment compromised-service --replicas=0
+```
+
+**Short-term Containment (< 1 hour):**
+
+- Rotate all API keys for affected service
+- Force password reset for impacted users
+- Enable additional logging/monitoring
+- Snapshot systems for forensics
+
+##### 4. Eradication
+
+- Identify root cause (vulnerability, misconfiguration, compromised credentials)
+- Apply patches or configuration fixes
+- Remove malware/backdoors
+- Verify integrity of systems
+
+##### 5. Recovery
+
+- Restore from clean backups (verify integrity first)
+- Gradual service restoration with enhanced monitoring
+- Verify fixes prevent recurrence
+
+##### 6. Post-Incident Activity
+
+```markdown
+## Incident Report Template
+
+**Incident ID:** INC-2025-001
+**Severity:** Critical / High / Medium / Low
+**Date Detected:** YYYY-MM-DD HH:MM UTC
+**Date Resolved:** YYYY-MM-DD HH:MM UTC
+
+### Summary
+Brief description of the incident.
+
+### Timeline
+- HH:MM: Detection
+- HH:MM: Containment initiated
+- HH:MM: Root cause identified
+- HH:MM: Fix applied
+- HH:MM: Service restored
+
+### Root Cause
+Technical details of vulnerability or misconfiguration.
+
+### Impact
+- Users affected: X
+- Data exposed: Yes/No (details)
+- Service downtime: X hours
+
+### Response Actions
+1. Immediate containment steps taken
+2. Eradication measures applied
+3. Recovery procedures executed
+
+### Lessons Learned
+- What worked well
+- What could be improved
+- Process gaps identified
+
+### Remediation
+- [ ] Patch applied and tested
+- [ ] Configuration hardened
+- [ ] Monitoring enhanced
+- [ ] Documentation updated
+- [ ] Training conducted
+
+### Follow-up
+- Schedule: Post-mortem meeting (DATE)
+- Assignees: Update runbooks, implement preventive controls
+```
+
+### Vulnerability Disclosure Policy
+
+**Purpose:** Provide a safe channel for security researchers to report vulnerabilities.
+
+**Policy Template:**
+
+```markdown
+# Vulnerability Disclosure Policy
+
+## Scope
+
+This policy applies to the following systems:
+
+- Production API: https://api.example.com
+- Web application: https://app.example.com
+- Mobile applications (iOS, Android)
+
+**Out of Scope:**
+- Third-party dependencies (report to respective maintainers)
+- Social engineering or phishing tests
+- Physical security tests
+- Denial of service testing
+
+## How to Report
+
+**Preferred Channel:** security@example.com (PGP key available)
+
+**Alternative Channels:**
+- HackerOne: https://hackerone.com/example
+- Bug bounty platform: [link]
+
+## Information to Include
+
+- Description of vulnerability
+- Steps to reproduce
+- Proof of concept (if applicable)
+- Impact assessment
+- Suggested remediation (optional)
+
+## Safe Harbor
+
+We will not pursue legal action against researchers who:
+- Act in good faith
+- Avoid privacy violations
+- Avoid data destruction
+- Follow responsible disclosure timeline
+- Do not publicly disclose until resolved
+
+## Response Timeline
+
+- **Acknowledgment:** Within 48 hours
+- **Initial Assessment:** Within 5 business days
+- **Status Updates:** Every 10 business days
+- **Resolution Target:** 90 days for critical, 180 days for others
+
+## Recognition
+
+With your permission, we will:
+- Acknowledge your contribution in our security advisories
+- Add you to our Hall of Fame
+- Offer bug bounty rewards (if enrolled in program)
+
+## Severity Classification
+
+| Severity | Examples | Response Time |
+|----------|----------|---------------|
+| **Critical** | RCE, authentication bypass, data breach | < 24 hours |
+| **High** | Privilege escalation, SQL injection | < 72 hours |
+| **Medium** | XSS, CSRF, info disclosure | < 7 days |
+| **Low** | Minor configuration issues | < 14 days |
+
+## Contact
+
+Security Team: security@example.com
+PGP Fingerprint: XXXX XXXX XXXX XXXX XXXX
+
+Last Updated: November 20, 2025
 ```
 
 ## Security Checklist
