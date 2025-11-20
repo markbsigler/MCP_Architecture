@@ -1,5 +1,8 @@
 # Performance Benchmarks
 
+**Navigation**: [Home](../README.md) > Metrics & Reference > Performance Benchmarks  
+**Related**: [← Previous: Metrics & KPIs](13-metrics-kpis.md) | [Next: MCP Protocol Compatibility →](15-mcp-protocol-compatibility.md) | [Performance & Scalability](06a-performance-scalability.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready

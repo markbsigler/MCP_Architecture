@@ -1,5 +1,8 @@
 # Operational Runbooks
 
+**Navigation**: [Home](../README.md) > Quality & Operations > Operational Runbooks  
+**Related**: [← Previous: Deployment Patterns](07-deployment-patterns.md) | [Next: Agentic Best Practices →](09-agentic-best-practices.md) | [Troubleshooting](11-troubleshooting.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

@@ -1,5 +1,8 @@
 # Resource Implementation Standards
 
+**Navigation**: [Home](../README.md) > Implementation Standards > Resource Implementation  
+**Related**: [← Previous: Prompt Implementation](03a-prompt-implementation.md) | [Next: Sampling Patterns →](03c-sampling-patterns.md) | [Agentic Best Practices](09-agentic-best-practices.md#resource-template-architecture)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

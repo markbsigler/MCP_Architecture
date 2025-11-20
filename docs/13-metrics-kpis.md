@@ -1,5 +1,8 @@
 # Metrics and KPIs
 
+**Navigation**: [Home](../README.md) > Metrics & Reference > Metrics and KPIs  
+**Related**: [← Previous: Cost Optimization](12-cost-optimization.md) | [Next: Performance Benchmarks →](14-performance-benchmarks.md) | [Observability](05-observability.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 20, 2025  
 **Status:** Draft

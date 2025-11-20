@@ -1,5 +1,8 @@
 # Prompt Implementation Standards
 
+**Navigation**: [Home](../README.md) > Implementation Standards > Prompt Implementation  
+**Related**: [← Previous: Tool Implementation](03-tool-implementation.md) | [Next: Resource Implementation →](03b-resource-implementation.md) | [Agentic Best Practices](09-agentic-best-practices.md#prompt-system-design)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

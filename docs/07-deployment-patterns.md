@@ -1,5 +1,8 @@
 # Deployment Patterns
 
+**Navigation**: [Home](../README.md) > Quality & Operations > Deployment Patterns  
+**Related**: [← Previous: Performance & Scalability](06a-performance-scalability.md) | [Next: Operational Runbooks →](08-operational-runbooks.md) | [Migration Guides](10-migration-guides.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

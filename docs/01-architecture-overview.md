@@ -1,5 +1,8 @@
 # Architecture Overview
 
+**Navigation**: [Home](../README.md) > Core Architecture > Architecture Overview  
+**Related**: [Next: Architecture Decisions →](01b-architecture-decisions.md) | [Security Architecture →](02-security-architecture.md) | [Quick Reference](99-quick-reference.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

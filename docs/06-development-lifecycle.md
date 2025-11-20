@@ -1,5 +1,8 @@
 # Development Lifecycle
 
+**Navigation**: [Home](../README.md) > Quality & Operations > Development Lifecycle  
+**Related**: [← Previous: Observability](05-observability.md) | [Next: Performance & Scalability →](06a-performance-scalability.md) | [Testing Strategy](04-testing-strategy.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

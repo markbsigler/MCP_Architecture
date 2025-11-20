@@ -1,5 +1,8 @@
 # Migration Guides
 
+**Navigation**: [Home](../README.md) > Advanced Topics > Migration Guides  
+**Related**: [← Previous: Agentic Best Practices](09-agentic-best-practices.md) | [Next: Troubleshooting →](11-troubleshooting.md) | [Protocol Compatibility](15-mcp-protocol-compatibility.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

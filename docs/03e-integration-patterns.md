@@ -1,5 +1,8 @@
 # Integration Patterns
 
+**Navigation**: [Home](../README.md) > Decision Support > Integration Patterns  
+**Related**: [← Previous: Decision Trees](03d-decision-trees.md) | [Next: Testing Strategy →](04-testing-strategy.md) | [Cost Optimization](12-cost-optimization.md#caching-strategies-for-cost-reduction)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft

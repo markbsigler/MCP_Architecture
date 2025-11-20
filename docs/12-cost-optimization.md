@@ -1,5 +1,8 @@
 # Cost Optimization Guide
 
+**Navigation**: [Home](../README.md) > Advanced Topics > Cost Optimization  
+**Related**: [← Previous: Troubleshooting](11-troubleshooting.md) | [Next: Metrics & KPIs →](13-metrics-kpis.md) | [Performance Benchmarks](14-performance-benchmarks.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready

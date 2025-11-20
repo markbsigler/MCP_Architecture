@@ -261,51 +261,96 @@ These guidelines are designed to help engineering teams:
 
 ## Quick Start
 
-### 🚀 For New Projects
+### 🎯 Choose Your Path
 
-#### Phase 1: Foundation (Week 1)
+**New Project (0 → Production in 4 weeks)**
 
-1. Review [Architecture Overview](docs/01-architecture-overview.md) to understand the overall system design
-2. Set up project structure following [Development Lifecycle](docs/06-development-lifecycle.md) standards
-3. Implement [Security Architecture](docs/02-security-architecture.md) with JWT/OAuth 2.0 from day one
-4. Configure [Observability](docs/05-observability.md) with structured logging and metrics
+```text
+├─ Week 1: Foundation
+│  ├─ [Architecture](docs/01-architecture-overview.md) → Understand 5-layer enterprise design
+│  ├─ [Security](docs/02-security-architecture.md) → Implement JWT/OAuth 2.0 from day one
+│  ├─ [Privacy](docs/02a-data-privacy-compliance.md) → Set up PII detection and compliance
+│  └─ [Requirements](docs/02b-requirements-engineering.md) → Define requirements with EARS format
+│
+├─ Week 2: Core Implementation
+│  ├─ [Tools](docs/03-tool-implementation.md) → Build APIs with verb-noun naming
+│  ├─ [Prompts](docs/03a-prompt-implementation.md) → Create workflow templates
+│  ├─ [Resources](docs/03b-resource-implementation.md) → Implement data access patterns
+│  └─ [Testing](docs/04-testing-strategy.md) → Achieve 80%+ coverage
+│
+├─ Week 3: Quality & Operations
+│  ├─ [Observability](docs/05-observability.md) → Add logging, metrics, tracing
+│  ├─ [Performance](docs/06a-performance-scalability.md) → Optimize for scale
+│  ├─ [Deployment](docs/07-deployment-patterns.md) → Containerize with Docker/Kubernetes
+│  └─ [Integration](docs/03e-integration-patterns.md) → Connect external systems
+│
+└─ Week 4: Production Readiness
+   ├─ [Operations](docs/08-operational-runbooks.md) → Set up incident response
+   ├─ [Agentic Best Practices](docs/09-agentic-best-practices.md) → Optimize context management
+   ├─ [Metrics](docs/13-metrics-kpis.md) → Configure dashboards and SLOs
+   └─ Production Launch! 🚀
+```
 
-#### Phase 2: Implementation (Weeks 2-3)
+**Existing Project (Continuous Improvement)**
 
-1. Build tools using [Tool Implementation Standards](docs/03-tool-implementation.md) (verb-noun naming, consistent error handling)
-2. Implement [Testing Strategy](docs/04-testing-strategy.md) with 80%+ coverage targets
-3. Add [Prompt](docs/03a-prompt-implementation.md) and [Resource](docs/03b-resource-implementation.md) patterns as needed
-4. Follow [Agentic Best Practices](docs/09-agentic-best-practices.md) for context management
+```text
+├─ Security Enhancement
+│  ├─ [Audit Checklist](docs/02-security-architecture.md#security-checklist) → Review current controls
+│  ├─ [Authentication](docs/02-security-architecture.md#authentication-patterns) → Upgrade auth
+│  ├─ [Authorization](docs/02-security-architecture.md#role-based-access-control-rbac) → Add RBAC
+│  └─ [Compliance](docs/02a-data-privacy-compliance.md) → Meet GDPR/CCPA requirements
+│
+├─ Quality Improvement
+│  ├─ [Testing Strategy](docs/04-testing-strategy.md) → Increase coverage to 80%+
+│  ├─ [Coverage Requirements](docs/04-testing-strategy.md#coverage-requirements) → Set targets
+│  ├─ [Security Testing](docs/04-testing-strategy.md#security-testing) → Add security tests
+│  └─ [Performance Testing](docs/04-testing-strategy.md#performance-testing) → Benchmark system
+│
+├─ Performance Optimization
+│  ├─ [Optimization Guide](docs/06a-performance-scalability.md) → Identify bottlenecks
+│  ├─ [Benchmarks](docs/14-performance-benchmarks.md) → Compare against baselines
+│  ├─ [Cost Optimization](docs/12-cost-optimization.md) → Reduce infrastructure costs
+│  └─ [Troubleshooting](docs/11-troubleshooting.md#understanding-flame-graphs) → Profile with flame graphs
+│
+└─ Operational Excellence
+   ├─ [Runbooks](docs/08-operational-runbooks.md) → Document incident procedures
+   ├─ [Troubleshooting](docs/11-troubleshooting.md) → Build diagnostic playbooks
+   ├─ [Metrics](docs/13-metrics-kpis.md#dora-metrics) → Track DORA metrics
+   └─ [Alerting](docs/05-observability.md#alerting-strategies) → Set up smart alerts
+```
 
-#### Phase 3: Production Readiness (Week 4)
+**Migration (REST → MCP)**
 
-1. Set up [Deployment Patterns](docs/07-deployment-patterns.md) with Docker/Kubernetes
-2. Configure [Operational Runbooks](docs/08-operational-runbooks.md) for incident response
-3. Implement [Metrics and KPIs](docs/13-metrics-kpis.md) dashboards
-4. Complete [Data Privacy & Compliance](docs/02a-data-privacy-compliance.md) review
+```text
+└─ Start Here: [Migration Guides](docs/10-migration-guides.md#migrating-from-rest-api-to-mcp)
+   │
+   ├─ Phase 1: Planning
+   │  ├─ [MCP vs REST Decision](docs/03d-decision-trees.md#when-to-use-mcp-vs-rest-api) → Validate migration
+   │  ├─ [Architecture Overview](docs/01-architecture-overview.md) → Understand MCP patterns
+   │  └─ [Requirements](docs/02b-requirements-engineering.md) → Map REST endpoints to MCP tools
+   │
+   ├─ Phase 2: Parallel Implementation
+   │  ├─ [Tool Implementation](docs/03-tool-implementation.md) → Build MCP tools
+   │  ├─ [OpenAPI to MCP](docs/03e-integration-patterns.md#openapi-to-mcp-tool-generation) → Auto-generate tools
+   │  └─ [Testing](docs/04-testing-strategy.md#contract-testing) → Contract tests for compatibility
+   │
+   ├─ Phase 3: Gradual Migration
+   │  ├─ [Zero-Downtime Migration](docs/10-migration-guides.md#zero-downtime-migration-strategies) → Deploy safely
+   │  ├─ [Protocol Compatibility](docs/15-mcp-protocol-compatibility.md) → Handle version differences
+   │  └─ [Database Migration](docs/10-migration-guides.md#database-migration-with-shadow-writes) → Shadow writes pattern
+   │
+   └─ Phase 4: Cutover & Decommission
+      ├─ [Monitoring](docs/05-observability.md) → Watch for issues
+      ├─ [Troubleshooting](docs/11-troubleshooting.md) → Quick diagnostic guide
+      └─ Decommission REST API
+```
 
-### 🔧 For Existing Projects
+### 📚 Quick Navigation
 
-#### Security Hardening
-
-1. Audit against [Security Architecture](docs/02-security-architecture.md) checklist
-2. Implement missing authentication/authorization controls
-3. Add rate limiting and input validation
-4. Review [Troubleshooting Guide](docs/11-troubleshooting.md) for common issues
-
-#### Quality Improvement
-
-1. Increase test coverage using [Testing Strategy](docs/04-testing-strategy.md)
-2. Add [Observability](docs/05-observability.md) instrumentation (metrics, traces, logs)
-3. Implement [Performance & Scalability](docs/06a-performance-scalability.md) optimizations
-4. Track [DORA metrics](docs/13-metrics-kpis.md) for continuous improvement
-
-#### Migration Support
-
-1. Follow [Migration Guides](docs/10-migration-guides.md) for REST API → MCP transitions
-2. Use [MCP Protocol Compatibility](docs/15-mcp-protocol-compatibility.md) for version upgrades
-3. Adopt [Tool Implementation Standards](docs/03-tool-implementation.md) incrementally
-4. Leverage [Decision Trees](docs/03d-decision-trees.md) for architectural choices
+- **Find a Topic**: See [Index by Topic](docs/98-index-by-topic.md) for comprehensive topic index
+- **Quick Reference**: See [Quick Reference](docs/99-quick-reference.md) for command cheat sheets
+- **Table of Contents**: See [Table of Contents](docs/00-table-of-contents.md) for sequential listing
+- **Decision Help**: Use [Decision Trees](docs/03d-decision-trees.md) for architectural choices
 
 ## Reference Implementation
 

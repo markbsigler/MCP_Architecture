@@ -1,4 +1,7 @@
-# Architecture Decision Records
+# Architecture Decision Records (ADRs)
+
+**Navigation**: [Home](../README.md) > Core Architecture > Architecture Decisions  
+**Related**: [← Previous: Architecture Overview](01-architecture-overview.md) | [Next: Security Architecture →](02-security-architecture.md) | [Decision Trees](03d-decision-trees.md)
 
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  

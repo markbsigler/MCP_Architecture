@@ -1,5 +1,8 @@
 # Troubleshooting Guide
 
+**Navigation**: [Home](../README.md) > Advanced Topics > Troubleshooting  
+**Related**: [← Previous: Migration Guides](10-migration-guides.md) | [Next: Cost Optimization →](12-cost-optimization.md) | [Operational Runbooks](08-operational-runbooks.md)
+
 **Version:** 1.3.0  
 **Last Updated:** November 20, 2025  
 **Status:** Draft

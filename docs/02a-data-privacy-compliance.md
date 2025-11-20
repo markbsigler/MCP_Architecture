@@ -1,5 +1,8 @@
 # Data Privacy & Compliance
 
+**Navigation**: [Home](../README.md) > Implementation Standards > Data Privacy & Compliance  
+**Related**: [← Previous: Security Architecture](02-security-architecture.md) | [Next: Requirements Engineering →](02b-requirements-engineering.md) | [Security Audit](02-security-architecture.md#audit-logging)
+
 **Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft
