@@ -1,7 +1,7 @@
 # MCP Enterprise Architecture Documentation
 
-**Version:** 1.0.0  
-**Last Updated:** November 18, 2025  
+**Version:** 1.3.0  
+**Last Updated:** November 19, 2025  
 **Status:** Draft  
 **Repository:** MCP_Architecture
 **Author:** Mark Sigler
@@ -180,6 +180,21 @@ These guidelines are designed to help engineering teams:
 - Prompt system design
 - Safety and confirmation patterns
 - LLM-specific considerations
+
+**[Decision Trees](docs/11-decision-trees.md)**
+
+- Structured architectural choice guides
+- Tool vs prompt vs resource selection matrices
+- Authentication method decision flows
+- Caching, database, and deployment pattern trees
+
+**[Migration Guides](docs/12-migration-guides.md)**
+
+- REST API → MCP transition phases
+- MCP protocol version upgrade strategies
+- Authentication provider migration steps
+- Database migration and shadow write patterns
+- Zero-downtime deployment approaches
 
 ## Quick Start
 

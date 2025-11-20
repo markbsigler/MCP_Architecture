@@ -1,6 +1,6 @@
 # Decision Trees
 
-**Version:** 1.0.0  
+**Version:** 1.3.0  
 **Last Updated:** November 19, 2025  
 **Status:** Draft
 
@@ -544,6 +544,8 @@ Phase 3 (10K+ users):
 
 These decision trees provide a structured approach to common architectural decisions. Use them as starting points, then refer to detailed documentation sections for implementation guidance.
 
+For multi-phase transition planning (e.g., REST → MCP, protocol negotiation, auth rotation), consult **Migration Guides (12)** alongside these trees.
+
 **Key Principles:**
 
 1. **Start Simple**: Choose the simplest solution that meets requirements
@@ -563,3 +565,4 @@ These decision trees provide a structured approach to common architectural decis
 - [Testing Strategy](04-testing-strategy.md)
 - [Deployment Patterns](07-deployment-patterns.md)
 - [Integration Patterns](09-integration-patterns.md)
+- [Migration Guides](12-migration-guides.md)

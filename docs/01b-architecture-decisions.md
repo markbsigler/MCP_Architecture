@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
-**Version:** 1.0.0  
-**Last Updated:** November 18, 2025  
+**Version:** 1.3.0  
+**Last Updated:** November 19, 2025  
 **Status:** Draft
 
 ## Introduction

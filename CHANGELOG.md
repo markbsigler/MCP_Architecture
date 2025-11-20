@@ -137,6 +137,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance benchmarking guidelines
 - Multi-language code examples
 
+### Added
+
+- Decision Trees section integrated (docs/11-decision-trees.md) pending build inclusion
+- Migration Guides scaffold (docs/12-migration-guides.md) covering five transition scenarios
+
 ---
 
 ## Version History

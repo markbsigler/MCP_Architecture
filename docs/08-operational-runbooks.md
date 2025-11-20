@@ -1,12 +1,14 @@
 # Operational Runbooks
 
-**Version:** 1.0.0  
-**Last Updated:** November 18, 2025  
+**Version:** 1.3.0  
+**Last Updated:** November 19, 2025  
 **Status:** Draft
 
 ## Introduction
 
 Operational runbooks provide standardized procedures for troubleshooting, incident response, performance tuning, and routine maintenance of MCP servers. These runbooks ensure consistent responses to common operational scenarios.
+
+For planned change execution and rollback strategies during protocol, authentication, or data migrations, consult the **Migration Guides (12)**.
 
 ## Troubleshooting
 

@@ -23,6 +23,8 @@ CONTENT_SECTIONS = \
 	docs/08-operational-runbooks.md \
 	docs/09-integration-patterns.md \
 	docs/10-agentic-best-practices.md \
+	docs/11-decision-trees.md \
+	docs/12-migration-guides.md \
 	docs/99-quick-reference.md
 
 # Preface sections (generated or static)

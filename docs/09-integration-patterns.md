@@ -1,12 +1,14 @@
 # Integration Patterns
 
-**Version:** 1.0.0  
-**Last Updated:** November 18, 2025  
+**Version:** 1.3.0  
+**Last Updated:** November 19, 2025  
 **Status:** Draft
 
 ## Introduction
 
 MCP servers often need to integrate with external services, databases, APIs, and other systems. This document covers integration patterns including REST API integration, caching strategies, circuit breakers, retry logic, and webhook handling.
+
+For structured guidance on migrating existing REST integrations to MCP primitives and evolving database backends, see **Migration Guides (12)**.
 
 ## External API Integration
 

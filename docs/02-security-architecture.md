@@ -1,12 +1,14 @@
 # Security Architecture
 
-**Version:** 1.0.0  
-**Last Updated:** November 18, 2025  
+**Version:** 1.3.0  
+**Last Updated:** November 19, 2025  
 **Status:** Draft
 
 ## Introduction
 
 Security is foundational to enterprise MCP servers. This document establishes comprehensive security patterns covering authentication, authorization, rate limiting, input validation, and audit logging.
+
+For guidance on transitioning existing REST authentication flows or rotating identity providers during modernization efforts, see the **Migration Guides (12)**.
 
 ## Defense in Depth
 

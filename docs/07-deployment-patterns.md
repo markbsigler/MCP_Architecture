@@ -1,12 +1,14 @@
 # Deployment Patterns
 
-**Version:** 1.0.0  
-**Last Updated:** November 18, 2025  
+**Version:** 1.3.0  
+**Last Updated:** November 19, 2025  
 **Status:** Draft
 
 ## Introduction
 
 Deploying MCP servers to production requires careful attention to containerization, orchestration, networking, and deployment strategies. This document covers Docker best practices, Kubernetes patterns, CI/CD pipelines, and rollout strategies.
+
+For phased production rollouts and zero-downtime upgrade sequencing across versions and infrastructure, reference the **Migration Guides (12)**.
 
 ## Containerization
 
