@@ -3,7 +3,7 @@
 **Navigation**: [Home](../README.md) > Core Architecture > Architecture Decisions  
 **Related**: [← Previous: Architecture Overview](01-architecture-overview.md) | [Next: Security Architecture →](02-security-architecture.md) | [Decision Trees](03d-decision-trees.md)
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 

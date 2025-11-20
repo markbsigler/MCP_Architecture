@@ -3,7 +3,7 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Tool Implementation  
 **Related**: [← Previous: Requirements Engineering](02b-requirements-engineering.md) | [Next: Prompt Implementation →](03a-prompt-implementation.md) | [Decision Trees](03d-decision-trees.md#tool-vs-prompt-vs-resource-selection)
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 

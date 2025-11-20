@@ -3,7 +3,7 @@
 **Navigation**: [Home](../README.md) > Metrics & Reference > MCP Protocol Compatibility  
 **Related**: [← Previous: Performance Benchmarks](14-performance-benchmarks.md) | [Migration Guides](10-migration-guides.md#mcp-protocol-version-upgrades) | [Index by Topic](98-index-by-topic.md)
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 

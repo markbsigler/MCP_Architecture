@@ -3,7 +3,7 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Sampling Patterns  
 **Related**: [← Previous: Resource Implementation](03b-resource-implementation.md) | [Next: Decision Trees →](03d-decision-trees.md) | [Agentic Best Practices](09-agentic-best-practices.md#llm-specific-considerations)
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 

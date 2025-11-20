@@ -1,6 +1,6 @@
 # Terminology Guide
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready  
 **Navigation**: [Home](../README.md) > Reference > Terminology Guide  

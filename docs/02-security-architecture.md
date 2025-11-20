@@ -3,7 +3,7 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Security Architecture  
 **Related**: [← Previous: Architecture Decisions](01b-architecture-decisions.md) | [Next: Data Privacy & Compliance →](02a-data-privacy-compliance.md) | [Testing Security](04-testing-strategy.md#security-testing)
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 

@@ -3,7 +3,7 @@
 **Navigation**: [Home](../README.md) > Quality & Operations > Observability  
 **Related**: [← Previous: Testing Strategy](04-testing-strategy.md) | [Next: Development Lifecycle →](06-development-lifecycle.md) | [Metrics & KPIs](13-metrics-kpis.md)
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Status:** Production Ready
 

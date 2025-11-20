@@ -1,6 +1,6 @@
 # Index by Topic
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
 **Purpose:** Quick reference for finding documentation by technical topic
 
