@@ -717,4 +717,4 @@ Operational excellence requires:
 
 ---
 
-**Next**: Review [Integration Patterns](09-integration-patterns.md) for external service integrations.
+**Next**: Review [Integration Patterns](03e-integration-patterns.md) for external service integrations.

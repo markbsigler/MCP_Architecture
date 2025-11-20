@@ -898,4 +898,4 @@ Effective integration patterns ensure:
 
 ---
 
-**Next**: Review [Agentic Best Practices](10-agentic-best-practices.md) for AI agent integration patterns.
+**Next**: Review [Agentic Best Practices](09-agentic-best-practices.md) for AI agent integration patterns.

@@ -914,4 +914,4 @@ Effective MCP protocol version management ensures smooth upgrades and backward c
 
 ---
 
-**Next**: Review [Migration Guides](12-migration-guides.md) for specific upgrade scenarios.
+**Next**: Review [Migration Guides](10-migration-guides.md) for specific upgrade scenarios.

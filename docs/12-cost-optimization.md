@@ -1361,4 +1361,4 @@ Comprehensive cost optimization strategies for MCP servers:
 
 ---
 
-**Next**: Review [Performance Benchmarks](19-performance-benchmarks.md) for optimization targets.
+**Next**: Review [Performance Benchmarks](14-performance-benchmarks.md) for optimization targets.

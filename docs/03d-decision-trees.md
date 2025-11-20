@@ -33,7 +33,7 @@ START: Should I use MCP or traditional REST API?
 │  └─ NO → REST API may be sufficient
 │
 └─ Do you have existing REST APIs to wrap?
-   ├─ YES → Use MCP with REST integration (see 09-integration-patterns.md)
+   ├─ YES → Use MCP with REST integration (see 03e-integration-patterns.md)
    └─ NO → Use MCP for greenfield AI services
 
 RECOMMENDATION SUMMARY:
@@ -564,5 +564,5 @@ For multi-phase transition planning (e.g., REST → MCP, protocol negotiation, a
 - [Tool Implementation](03-tool-implementation.md)
 - [Testing Strategy](04-testing-strategy.md)
 - [Deployment Patterns](07-deployment-patterns.md)
-- [Integration Patterns](09-integration-patterns.md)
-- [Migration Guides](12-migration-guides.md)
+- [Integration Patterns](03e-integration-patterns.md)
+- [Migration Guides](10-migration-guides.md)

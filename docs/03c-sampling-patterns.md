@@ -22,7 +22,7 @@ This section establishes implementation standards for effective, responsible sam
 - [Tool Implementation Standards](03-tool-implementation.md) - Using sampling within tools
 - [Resource Implementation Standards](03b-resource-implementation.md) - Using sampling for resource transformation
 - [Prompt Implementation Standards](03a-prompt-implementation.md) - Prompt engineering techniques
-- [Agentic Best Practices](10-agentic-best-practices.md) - Context management and safety patterns
+- [Agentic Best Practices](09-agentic-best-practices.md) - Context management and safety patterns
 
 ---
 

@@ -21,7 +21,7 @@ This section establishes implementation standards for creating effective, scalab
 
 - [Tool Implementation Standards](03-tool-implementation.md) - Action-oriented APIs
 - [Prompt Implementation Standards](03a-prompt-implementation.md) - Leveraging resources in prompts
-- [Integration Patterns](09-integration-patterns.md) - API and database integration
+- [Integration Patterns](03e-integration-patterns.md) - API and database integration
 - [Performance & Scalability](06a-performance-scalability.md) - Caching and optimization
 
 ---

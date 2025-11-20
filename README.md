@@ -13,7 +13,7 @@
 [![FastMCP](https://img.shields.io/badge/FastMCP-enabled-orange.svg)](https://github.com/jlowin/fastmcp)
 [![Tests](https://img.shields.io/badge/coverage-80%25+-success.svg)](docs/04-testing-strategy.md)
 [![Security](https://img.shields.io/badge/security-hardened-red.svg)](docs/02-security-architecture.md)
-[![DORA](https://img.shields.io/badge/DORA-elite-purple.svg)](docs/17-metrics-kpis.md)
+[![DORA](https://img.shields.io/badge/DORA-elite-purple.svg)](docs/13-metrics-kpis.md)
 
 ## Overview
 
@@ -125,6 +125,26 @@ These guidelines are designed to help engineering teams:
 - Prompt engineering techniques
 - Performance optimization
 
+### Decision Support
+
+**[Decision Trees](docs/03d-decision-trees.md)**
+
+- Structured architectural choice guides
+- Tool vs prompt vs resource selection matrices
+- Authentication method decision flows
+- Caching, database, and deployment pattern trees
+
+**[Integration Patterns](docs/03e-integration-patterns.md)**
+
+- REST API integration with circuit breakers
+- Multi-tier caching strategies
+- OpenAPI-to-MCP tool generation
+- Database access patterns
+- Event-driven patterns
+- Multi-service orchestration
+
+### Quality & Operations
+
 **[Testing Strategy](docs/04-testing-strategy.md)**
 
 - Unit testing patterns with mocking
@@ -179,18 +199,9 @@ These guidelines are designed to help engineering teams:
 - Disaster recovery
 - Monitoring and alerting setup
 
-### Integration & Patterns
+### Advanced Topics
 
-**[Integration Patterns](docs/09-integration-patterns.md)**
-
-- REST API integration with circuit breakers
-- Multi-tier caching strategies
-- OpenAPI-to-MCP tool generation
-- Database access patterns
-- Event-driven patterns
-- Multi-service orchestration
-
-**[Agentic System Best Practices](docs/10-agentic-best-practices.md)**
+**[Agentic System Best Practices](docs/09-agentic-best-practices.md)**
 
 - Context management and token optimization
 - User elicitation patterns
@@ -199,14 +210,7 @@ These guidelines are designed to help engineering teams:
 - Safety and confirmation patterns
 - LLM-specific considerations
 
-**[Decision Trees](docs/11-decision-trees.md)**
-
-- Structured architectural choice guides
-- Tool vs prompt vs resource selection matrices
-- Authentication method decision flows
-- Caching, database, and deployment pattern trees
-
-**[Migration Guides](docs/12-migration-guides.md)**
+**[Migration Guides](docs/10-migration-guides.md)**
 
 - REST API → MCP transition phases
 - MCP protocol version upgrade strategies
@@ -214,7 +218,7 @@ These guidelines are designed to help engineering teams:
 - Database migration and shadow write patterns
 - Zero-downtime deployment approaches
 
-**[Troubleshooting Guide](docs/13-troubleshooting.md)**
+**[Troubleshooting Guide](docs/11-troubleshooting.md)**
 
 - Common authentication and rate limiting issues
 - Performance degradation diagnostics
@@ -222,16 +226,33 @@ These guidelines are designed to help engineering teams:
 - Database connection troubleshooting
 - Log analysis patterns and profiling techniques
 
-### Metrics & Monitoring
+**[Cost Optimization](docs/12-cost-optimization.md)**
 
-**[Metrics and KPIs](docs/17-metrics-kpis.md)**
+- Resource sizing recommendations
+- Caching strategies for cost reduction
+- Database query optimization
+- API call batching patterns
+- Cold start optimization
+- Auto-scaling policies
+
+### Metrics & Reference
+
+**[Metrics and KPIs](docs/13-metrics-kpis.md)**
 
 - Service Level Objectives (SLOs): availability, latency, error rate
 - Business metrics: tool executions, active users, API volume
 - Operational metrics: deployment frequency, MTTR, change failure rate
 - DORA metrics tracking for elite performance
 
-**[MCP Protocol Compatibility](docs/22-mcp-protocol-compatibility.md)**
+**[Performance Benchmarks](docs/14-performance-benchmarks.md)**
+
+- Baseline performance metrics
+- Configuration comparisons
+- Load testing results
+- Scaling characteristics
+- Hardware recommendations
+
+**[MCP Protocol Compatibility](docs/15-mcp-protocol-compatibility.md)**
 
 - Supported protocol versions and feature matrix
 - Version negotiation and upgrade paths
@@ -254,13 +275,13 @@ These guidelines are designed to help engineering teams:
 1. Build tools using [Tool Implementation Standards](docs/03-tool-implementation.md) (verb-noun naming, consistent error handling)
 2. Implement [Testing Strategy](docs/04-testing-strategy.md) with 80%+ coverage targets
 3. Add [Prompt](docs/03a-prompt-implementation.md) and [Resource](docs/03b-resource-implementation.md) patterns as needed
-4. Follow [Agentic Best Practices](docs/10-agentic-best-practices.md) for context management
+4. Follow [Agentic Best Practices](docs/09-agentic-best-practices.md) for context management
 
 #### Phase 3: Production Readiness (Week 4)
 
 1. Set up [Deployment Patterns](docs/07-deployment-patterns.md) with Docker/Kubernetes
 2. Configure [Operational Runbooks](docs/08-operational-runbooks.md) for incident response
-3. Implement [Metrics and KPIs](docs/17-metrics-kpis.md) dashboards
+3. Implement [Metrics and KPIs](docs/13-metrics-kpis.md) dashboards
 4. Complete [Data Privacy & Compliance](docs/02a-data-privacy-compliance.md) review
 
 ### 🔧 For Existing Projects
@@ -270,21 +291,21 @@ These guidelines are designed to help engineering teams:
 1. Audit against [Security Architecture](docs/02-security-architecture.md) checklist
 2. Implement missing authentication/authorization controls
 3. Add rate limiting and input validation
-4. Review [Troubleshooting Guide](docs/13-troubleshooting.md) for common issues
+4. Review [Troubleshooting Guide](docs/11-troubleshooting.md) for common issues
 
 #### Quality Improvement
 
 1. Increase test coverage using [Testing Strategy](docs/04-testing-strategy.md)
 2. Add [Observability](docs/05-observability.md) instrumentation (metrics, traces, logs)
 3. Implement [Performance & Scalability](docs/06a-performance-scalability.md) optimizations
-4. Track [DORA metrics](docs/17-metrics-kpis.md) for continuous improvement
+4. Track [DORA metrics](docs/13-metrics-kpis.md) for continuous improvement
 
 #### Migration Support
 
-1. Follow [Migration Guides](docs/12-migration-guides.md) for REST API → MCP transitions
-2. Use [MCP Protocol Compatibility](docs/22-mcp-protocol-compatibility.md) for version upgrades
+1. Follow [Migration Guides](docs/10-migration-guides.md) for REST API → MCP transitions
+2. Use [MCP Protocol Compatibility](docs/15-mcp-protocol-compatibility.md) for version upgrades
 3. Adopt [Tool Implementation Standards](docs/03-tool-implementation.md) incrementally
-4. Leverage [Decision Trees](docs/11-decision-trees.md) for architectural choices
+4. Leverage [Decision Trees](docs/03d-decision-trees.md) for architectural choices
 
 ## Reference Implementation
 
@@ -430,10 +451,10 @@ A: While examples use Python with FastMCP, the patterns and principles apply to 
 ### Implementation Questions
 
 **Q: Do I need to implement everything?**
-A: No. Start with core patterns (architecture, security, testing) and adopt others based on your needs. Use [Decision Trees](docs/11-decision-trees.md) to guide choices.
+A: No. Start with core patterns (architecture, security, testing) and adopt others based on your needs. Use [Decision Trees](docs/03d-decision-trees.md) to guide choices.
 
 **Q: How do I migrate from REST APIs?**
-A: Follow the [Migration Guides](docs/12-migration-guides.md) for phased approaches, shadow writing, and zero-downtime strategies.
+A: Follow the [Migration Guides](docs/10-migration-guides.md) for phased approaches, shadow writing, and zero-downtime strategies.
 
 **Q: What test coverage should I target?**
 A: 80%+ for enterprise applications. See [Testing Strategy](docs/04-testing-strategy.md) for details.
@@ -447,13 +468,13 @@ A: We recommend JWT with JWKS or OAuth 2.0. See [Security Architecture](docs/02-
 A: We recommend Prometheus for metrics, OpenTelemetry for tracing, and structured JSON logging. See [Observability Architecture](docs/05-observability.md).
 
 **Q: How do I monitor SLOs?**
-A: Use the [Metrics and KPIs](docs/17-metrics-kpis.md) guide for SLO definitions, error budget tracking, and alerting rules.
+A: Use the [Metrics and KPIs](docs/13-metrics-kpis.md) guide for SLO definitions, error budget tracking, and alerting rules.
 
 **Q: What deployment patterns are recommended?**
 A: Docker containers with Kubernetes orchestration. Blue-green and canary deployments for zero-downtime. See [Deployment Patterns](docs/07-deployment-patterns.md).
 
 **Q: How do I troubleshoot production issues?**
-A: Start with the [Troubleshooting Guide](docs/13-troubleshooting.md) for common issues, diagnostic commands, and profiling techniques.
+A: Start with the [Troubleshooting Guide](docs/11-troubleshooting.md) for common issues, diagnostic commands, and profiling techniques.
 
 ### Compliance Questions
 
@@ -479,7 +500,7 @@ A: Use security checklists (coming in v1.4.0) and review [Security Architecture]
 #### Technical Questions
 
 - Review relevant documentation sections first
-- Check [Troubleshooting Guide](docs/13-troubleshooting.md)
+- Check [Troubleshooting Guide](docs/11-troubleshooting.md)
 - Search existing GitHub issues
 - Open a new issue with detailed context
 

@@ -21,7 +21,7 @@ This section establishes implementation standards for creating effective, mainta
 - [Tool Implementation Standards](03-tool-implementation.md) - Model-controlled actions
 - [Resource Implementation Standards](03b-resource-implementation.md) - Data access patterns for prompts
 - [Sampling Patterns](03c-sampling-patterns.md) - LLM interactions within tools
-- [Agentic Best Practices](10-agentic-best-practices.md) - User elicitation patterns
+- [Agentic Best Practices](09-agentic-best-practices.md) - User elicitation patterns
 
 ---
 
