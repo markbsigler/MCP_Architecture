@@ -1,0 +1,214 @@
+{
+  "dashboard": {
+    "title": "MCP Server Performance",
+    "tags": ["mcp", "performance", "latency"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-3h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "timeseries",
+        "title": "Response Time Distribution",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.90, rate(mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P90"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99"
+          },
+          {
+            "expr": "histogram_quantile(0.999, rate(mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99.9"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "timeseries",
+        "title": "Database Query Duration",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(mcp_db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{query_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+        "type": "timeseries",
+        "title": "Memory Usage",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "decmbytes"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+        "type": "timeseries",
+        "title": "GC Pause Time",
+        "targets": [
+          {
+            "expr": "rate(python_gc_time_sum[5m])"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+        "type": "timeseries",
+        "title": "Connection Pool Usage",
+        "targets": [
+          {
+            "expr": "mcp_db_connection_pool_active"
+          },
+          {
+            "expr": "mcp_db_connection_pool_idle"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "type": "heatmap",
+        "title": "Request Duration Heatmap",
+        "targets": [
+          {
+            "expr": "sum(rate(mcp_request_duration_seconds_bucket[5m])) by (le)",
+            "format": "heatmap"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "type": "timeseries",
+        "title": "Throughput vs Latency",
+        "targets": [
+          {
+            "expr": "rate(mcp_requests_total[5m])",
+            "legendFormat": "Throughput (req/s)"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(mcp_request_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P95 Latency (ms)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Throughput (req/s)"},
+              "properties": [
+                {"id": "unit", "value": "reqps"},
+                {"id": "custom.axisPlacement", "value": "left"}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "P95 Latency (ms)"},
+              "properties": [
+                {"id": "unit", "value": "ms"},
+                {"id": "custom.axisPlacement", "value": "right"}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+        "type": "table",
+        "title": "Endpoint Performance Summary",
+        "targets": [
+          {
+            "expr": "sum by (endpoint) (rate(mcp_requests_total[5m]))",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum by (endpoint, le) (rate(mcp_request_duration_seconds_bucket[5m])))",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "sum by (endpoint) (rate(mcp_requests_total{status=~\"5..\"}[5m])) / sum by (endpoint) (rate(mcp_requests_total[5m]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge"
+          },
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "Value #A": "Requests/sec",
+                "Value #B": "P95 Latency",
+                "Value #C": "Error Rate"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

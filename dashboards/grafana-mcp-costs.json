@@ -1,0 +1,205 @@
+{
+  "dashboard": {
+    "title": "MCP Cloud Cost Monitoring",
+    "tags": ["mcp", "costs", "cloud"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5m",
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+        "type": "stat",
+        "title": "Total Monthly Cost (MTD)",
+        "targets": [
+          {
+            "expr": "sum(increase(cloud_cost_usd[30d]))"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5000, "color": "yellow"},
+                {"value": 10000, "color": "red"}
+              ]
+            },
+            "unit": "currencyUSD",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+        "type": "stat",
+        "title": "Cost per Request (avg)",
+        "targets": [
+          {
+            "expr": "sum(increase(cloud_cost_usd[1h])) / sum(increase(mcp_requests_total[1h]))"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "currencyUSD",
+            "decimals": 6
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+        "type": "stat",
+        "title": "Projected Monthly Cost",
+        "targets": [
+          {
+            "expr": "sum(increase(cloud_cost_usd[7d])) * 30 / 7"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 8000, "color": "yellow"},
+                {"value": 12000, "color": "red"}
+              ]
+            },
+            "unit": "currencyUSD",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+        "type": "timeseries",
+        "title": "Daily Cost Trend",
+        "targets": [
+          {
+            "expr": "sum(increase(cloud_cost_usd[1d]))",
+            "legendFormat": "Daily Cost"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+        "type": "piechart",
+        "title": "Cost Breakdown by Service",
+        "targets": [
+          {
+            "expr": "sum by (service) (increase(cloud_cost_usd[30d]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 18},
+        "type": "bargauge",
+        "title": "Top Cost Drivers",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (resource) (increase(cloud_cost_usd[7d])))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "currencyUSD"
+          }
+        },
+        "options": {
+          "displayMode": "gradient",
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 18},
+        "type": "table",
+        "title": "Resource Efficiency Metrics",
+        "targets": [
+          {
+            "expr": "sum by (instance) (rate(mcp_requests_total[1h])) / sum by (instance) (cloud_cost_per_hour)",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "Value": "Requests per $1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 28},
+        "type": "timeseries",
+        "title": "Cost vs Traffic Correlation",
+        "targets": [
+          {
+            "expr": "sum(rate(cloud_cost_usd[1h])) * 3600",
+            "legendFormat": "Hourly Cost ($)"
+          },
+          {
+            "expr": "sum(rate(mcp_requests_total[5m])) / 10",
+            "legendFormat": "Traffic (req/s ÷ 10)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Hourly Cost ($)"},
+              "properties": [
+                {"id": "unit", "value": "currencyUSD"},
+                {"id": "custom.axisPlacement", "value": "left"}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Traffic (req/s ÷ 10)"},
+              "properties": [
+                {"id": "unit", "value": "reqps"},
+                {"id": "custom.axisPlacement", "value": "right"}
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

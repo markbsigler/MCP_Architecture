@@ -1,0 +1,127 @@
+{
+  "dashboard": {
+    "title": "MCP Server Errors & Debugging",
+    "tags": ["mcp", "errors", "debugging"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1m",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "type": "timeseries",
+        "title": "Error Rate by Status Code",
+        "targets": [
+          {
+            "expr": "sum by (status) (rate(mcp_requests_total{status=~\"4..|5..\"}[5m]))",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+        "type": "logs",
+        "title": "Recent Error Logs",
+        "targets": [
+          {
+            "expr": "{job=\"mcp-server\"} |= \"ERROR\" | json"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "wrapLogMessage": true,
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+        "type": "table",
+        "title": "Error Distribution by Type",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (error_type) (increase(mcp_errors_total[1h])))",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+        "type": "timeseries",
+        "title": "Retry Rate",
+        "targets": [
+          {
+            "expr": "rate(mcp_retries_total[5m])",
+            "legendFormat": "{{operation}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "ops"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+        "type": "timeseries",
+        "title": "Circuit Breaker Status",
+        "targets": [
+          {
+            "expr": "sum by (service) (mcp_circuit_breaker_open)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 26},
+        "type": "table",
+        "title": "Recent 5xx Errors with Context",
+        "targets": [
+          {
+            "expr": "sum by (endpoint, method, error_type) (increase(mcp_requests_total{status=~\"5..\"}[15m]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [{"field": "Value", "desc": true}]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
