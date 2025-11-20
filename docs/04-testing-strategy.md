@@ -1151,6 +1151,582 @@ def test_tool_schema_rejects_invalid_input():
         jsonschema.validate(invalid_input, schema)
 ```
 
+## Test Data Management Strategies
+
+### Fixture-Based Data
+
+```python
+# tests/fixtures/data.py
+import pytest
+from datetime import datetime, timedelta
+
+@pytest.fixture
+def sample_user():
+    """Provide a standard test user."""
+    return {
+        "id": "test-user-123",
+        "email": "test@example.com",
+        "name": "Test User",
+        "role": "developer",
+        "created_at": datetime(2025, 1, 1)
+    }
+
+@pytest.fixture
+def sample_assignments(sample_user):
+    """Provide test assignments."""
+    return [
+        {
+            "id": f"assignment-{i}",
+            "title": f"Task {i}",
+            "assignee_id": sample_user["id"],
+            "status": "in_progress",
+            "priority": i % 5 + 1
+        }
+        for i in range(1, 11)
+    ]
+```
+
+### Factory Pattern with Faker
+
+```bash
+pip install factory-boy faker
+```
+
+```python
+# tests/factories.py
+import factory
+from factory import Faker, LazyAttribute
+from datetime import datetime, timedelta
+import random
+
+class UserFactory(factory.Factory):
+    """Factory for creating test users."""
+    
+    class Meta:
+        model = dict
+    
+    id = factory.Sequence(lambda n: f"user-{n}")
+    email = Faker("email")
+    name = Faker("name")
+    role = factory.Iterator(["developer", "manager", "admin"])
+    created_at = LazyAttribute(
+        lambda _: datetime.now() - timedelta(days=random.randint(1, 365))
+    )
+
+class AssignmentFactory(factory.Factory):
+    """Factory for creating test assignments."""
+    
+    class Meta:
+        model = dict
+    
+    id = factory.Sequence(lambda n: f"assignment-{n}")
+    title = Faker("sentence", nb_words=4)
+    assignee_id = factory.LazyFunction(lambda: UserFactory().id)
+    status = factory.Iterator(["todo", "in_progress", "done"])
+    priority = factory.LazyFunction(lambda: random.randint(1, 5))
+
+# Usage
+async def test_bulk_operations():
+    """Test with factory-generated data."""
+    assignments = [AssignmentFactory() for _ in range(100)]
+    result = await bulk_create_assignments(assignments)
+    assert len(result) == 100
+```
+
+### Snapshot Testing for Response Validation
+
+```bash
+pip install syrupy
+```
+
+```python
+# tests/snapshots/test_responses.py
+import pytest
+from syrupy import SnapshotAssertion
+
+@pytest.mark.asyncio
+async def test_assignment_list_snapshot(snapshot: SnapshotAssertion):
+    """Verify assignment list structure doesn't regress."""
+    result = await list_assignments(limit=3)
+    
+    # Sanitize dynamic fields
+    sanitized = [
+        {**item, "created_at": "TIMESTAMP", "id": "ID"}
+        for item in result["data"]
+    ]
+    
+    assert sanitized == snapshot
+
+@pytest.mark.asyncio
+async def test_error_response_snapshot(snapshot: SnapshotAssertion):
+    """Verify error response structure consistency."""
+    with pytest.raises(HTTPException) as exc_info:
+        await create_assignment(title="", assignee="invalid")
+    
+    error_response = {
+        "status_code": exc_info.value.status_code,
+        "error_type": exc_info.value.detail.get("error"),
+        "field_errors": sorted(exc_info.value.detail.get("details", {}).keys())
+    }
+    
+    assert error_response == snapshot
+```
+
+**Update snapshots:**
+
+```bash
+pytest --snapshot-update
+```
+
+### Mock vs Real Service Decision Matrix
+
+| Criteria | Use Mock | Use Real Service |
+|----------|----------|------------------|
+| **Speed** | Slow external API (> 1s) | Fast local service (< 100ms) |
+| **Determinism** | Non-deterministic responses | Deterministic behavior |
+| **Cost** | Paid API calls | Free/internal services |
+| **Availability** | Unreliable service | Always available |
+| **Test Type** | Unit tests | E2E tests |
+| **Environment** | CI/CD pipelines | Local development |
+| **Data Isolation** | Shared state concerns | Isolated test data |
+| **Network** | External network calls | Internal services |
+
+**Implementation:**
+
+```python
+# Unit Tests: Always mock
+@pytest.fixture
+def mock_external_api():
+    """Mock external API."""
+    with patch('httpx.AsyncClient.post') as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"success": True}
+        yield mock_post
+
+# Integration Tests: Real database, mock expensive services
+@pytest.fixture(scope="session")
+async def real_database():
+    """Use real PostgreSQL for integration tests."""
+    import asyncpg
+    db = await asyncpg.connect(os.environ["TEST_DATABASE_URL"])
+    await db.execute("CREATE SCHEMA IF NOT EXISTS test")
+    yield db
+    await db.execute("DROP SCHEMA test CASCADE")
+    await db.close()
+
+@pytest.fixture
+def mock_payment_processor():
+    """Mock expensive payment processor."""
+    with patch('stripe.Charge.create') as mock_charge:
+        mock_charge.return_value = {"id": "ch_test", "paid": True}
+        yield mock_charge
+```
+
+## Mutation Testing
+
+Mutation testing validates test suite quality by introducing bugs and verifying tests catch them.
+
+### Setup with mutmut
+
+```bash
+pip install mutmut
+```
+
+**Configuration (`.mutmut`):**
+
+```ini
+[mutmut]
+paths_to_mutate=src/mcp_server/
+tests_dir=tests/
+runner=python -m pytest -x
+dict_synonyms=Struct,NamedStruct
+```
+
+**Run mutation testing:**
+
+```bash
+# Run all mutations
+mutmut run
+
+# Show results
+mutmut results
+
+# Show specific mutation
+mutmut show 1
+
+# Apply mutation to see what changed
+mutmut apply 1
+```
+
+**Example Output:**
+
+```text
+- Total mutations: 247
+- Survived:        15  (6%)   ← Tests didn't catch these mutations
+- Killed:         220  (89%)  ← Tests caught these mutations
+- Timeout:          5  (2%)
+- Suspicious:       7  (3%)
+```
+
+**Analyze Survivors:**
+
+```bash
+# Show survived mutations
+mutmut show survived
+
+# Example survivor
+# Original:  if priority > 0:
+# Mutated:   if priority >= 0:
+# Fix: Add test for priority=0 edge case
+```
+
+**Best Practices:**
+
+- Run mutations on critical code paths first
+- Focus on business logic over infrastructure
+- Aim for < 10% survived mutations
+- Add tests for each survived mutation
+- Run in CI on changed files only (fast feedback)
+
+```python
+# Example test improvement from mutation analysis
+# Survivor found: changed > to >= in validation
+# Add edge case test:
+async def test_priority_zero_boundary():
+    """Test priority validation at zero boundary."""
+    with pytest.raises(HTTPException):
+        await create_assignment(
+            title="Test",
+            assignee="user@example.com",
+            priority=0  # Should fail (minimum is 1)
+        )
+```
+
+## Chaos Engineering for Resilience
+
+Chaos engineering validates system resilience by injecting controlled failures.
+
+### Chaos Testing with pytest-chaos
+
+```bash
+pip install pytest-chaos
+```
+
+**Configuration:**
+
+```python
+# tests/chaos/test_resilience.py
+import pytest
+from pytest_chaos import chaos_monkey
+
+@pytest.mark.asyncio
+@chaos_monkey(error_rate=0.2, latency_ms=500)
+async def test_retry_logic_under_chaos():
+    """Verify retry logic handles intermittent failures."""
+    result = await fetch_data_with_retries(
+        url="https://api.example.com/data",
+        max_retries=3
+    )
+    assert result is not None
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_under_failures():
+    """Verify circuit breaker opens after threshold failures."""
+    from circuit_breaker import CircuitBreakerOpen
+    
+    # Inject consistent failures
+    with patch('httpx.AsyncClient.get') as mock_get:
+        mock_get.side_effect = Exception("Service unavailable")
+        
+        # Should fail fast after circuit opens
+        with pytest.raises(CircuitBreakerOpen):
+            for _ in range(10):
+                await fetch_with_circuit_breaker()
+```
+
+### Manual Failure Injection
+
+```python
+# tests/chaos/failure_injection.py
+import random
+import asyncio
+
+class ChaosMiddleware:
+    """Inject random failures for chaos testing."""
+    
+    def __init__(self, error_rate=0.1, latency_range=(100, 2000)):
+        self.error_rate = error_rate
+        self.latency_range = latency_range
+    
+    async def __call__(self, func):
+        """Wrap function with chaos injection."""
+        # Random latency
+        if random.random() < 0.3:
+            delay = random.randint(*self.latency_range) / 1000
+            await asyncio.sleep(delay)
+        
+        # Random failure
+        if random.random() < self.error_rate:
+            raise Exception("Chaos-injected failure")
+        
+        return await func()
+
+# Usage
+@pytest.fixture
+def chaos_enabled():
+    """Enable chaos for resilience tests."""
+    return ChaosMiddleware(error_rate=0.2)
+
+@pytest.mark.asyncio
+async def test_graceful_degradation(chaos_enabled):
+    """Verify service degrades gracefully under chaos."""
+    results = []
+    
+    for _ in range(100):
+        try:
+            result = await chaos_enabled(fetch_assignment)
+            results.append(result)
+        except Exception:
+            # Should have fallback mechanism
+            fallback = get_cached_data()
+            results.append(fallback)
+    
+    # Should have some successful responses
+    assert len(results) > 50
+    # All results should be valid (even fallbacks)
+    assert all(r is not None for r in results)
+```
+
+### Network Partition Testing
+
+```python
+# tests/chaos/test_network_partitions.py
+import pytest
+from unittest.mock import patch
+import asyncio
+
+@pytest.mark.asyncio
+async def test_database_connection_loss():
+    """Verify handling of database connection loss."""
+    with patch('asyncpg.connect') as mock_connect:
+        # Simulate connection loss mid-operation
+        mock_connect.side_effect = ConnectionError("Connection lost")
+        
+        # Should retry with backoff
+        result = await execute_with_retry(
+            query="SELECT * FROM assignments",
+            max_retries=3
+        )
+        
+        # Verify retry attempts
+        assert mock_connect.call_count == 3
+
+@pytest.mark.asyncio
+async def test_timeout_handling():
+    """Verify proper timeout handling."""
+    async def slow_operation():
+        await asyncio.sleep(10)  # Exceeds timeout
+        return "result"
+    
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(slow_operation(), timeout=2.0)
+```
+
+## Performance Regression Testing
+
+Automated performance benchmarking catches performance regressions.
+
+### Setup with pytest-benchmark
+
+```bash
+pip install pytest-benchmark
+```
+
+**Basic Benchmarking:**
+
+```python
+# tests/performance/test_benchmarks.py
+import pytest
+
+def test_assignment_creation_performance(benchmark):
+    """Benchmark assignment creation."""
+    result = benchmark(
+        create_assignment_sync,
+        title="Benchmark Test",
+        assignee="test@example.com"
+    )
+    assert result["success"] is True
+
+@pytest.mark.asyncio
+async def test_async_benchmark(benchmark):
+    """Benchmark async operations."""
+    result = await benchmark.pedantic(
+        create_assignment,
+        args=("Test", "test@example.com"),
+        iterations=100,
+        rounds=10
+    )
+    assert result is not None
+```
+
+**Run benchmarks:**
+
+```bash
+# Run and save baseline
+pytest tests/performance/ --benchmark-save=baseline
+
+# Compare against baseline
+pytest tests/performance/ --benchmark-compare=baseline
+
+# Fail if regression > 10%
+pytest tests/performance/ --benchmark-compare=baseline \
+  --benchmark-compare-fail=mean:10%
+```
+
+### Custom Performance Metrics
+
+```python
+# tests/performance/metrics.py
+import time
+import psutil
+import pytest
+from contextlib import contextmanager
+
+@contextmanager
+def measure_performance():
+    """Context manager for measuring performance."""
+    process = psutil.Process()
+    
+    # Capture baseline
+    start_time = time.perf_counter()
+    start_memory = process.memory_info().rss / 1024 / 1024  # MB
+    start_cpu = process.cpu_percent()
+    
+    yield
+    
+    # Capture after execution
+    end_time = time.perf_counter()
+    end_memory = process.memory_info().rss / 1024 / 1024
+    end_cpu = process.cpu_percent()
+    
+    metrics = {
+        "duration_ms": (end_time - start_time) * 1000,
+        "memory_delta_mb": end_memory - start_memory,
+        "cpu_percent": end_cpu
+    }
+    
+    # Assert performance thresholds
+    assert metrics["duration_ms"] < 1000, f"Too slow: {metrics['duration_ms']}ms"
+    assert metrics["memory_delta_mb"] < 50, f"Memory leak: {metrics['memory_delta_mb']}MB"
+
+@pytest.mark.asyncio
+async def test_bulk_operation_performance():
+    """Verify bulk operations meet performance targets."""
+    with measure_performance():
+        assignments = [
+            AssignmentFactory() for _ in range(1000)
+        ]
+        result = await bulk_create_assignments(assignments)
+        assert len(result) == 1000
+```
+
+### Load Testing with Locust
+
+```bash
+pip install locust
+```
+
+**Load Test Definition:**
+
+```python
+# tests/performance/locustfile.py
+from locust import HttpUser, task, between
+import random
+
+class MCPServerUser(HttpUser):
+    """Simulate MCP server user load."""
+    
+    wait_time = between(1, 3)  # Random wait between requests
+    
+    def on_start(self):
+        """Called when user starts."""
+        self.client.headers = {
+            "Authorization": f"Bearer {self.get_auth_token()}"
+        }
+    
+    @task(3)  # Weight: 3x more frequent than other tasks
+    def list_assignments(self):
+        """GET /assignments endpoint."""
+        self.client.get(
+            "/api/v1/assignments",
+            params={"limit": 20, "status": "in_progress"}
+        )
+    
+    @task(1)
+    def create_assignment(self):
+        """POST /assignments endpoint."""
+        self.client.post(
+            "/api/v1/assignments",
+            json={
+                "title": f"Load Test Assignment {random.randint(1, 1000)}",
+                "assignee": "test@example.com",
+                "priority": random.randint(1, 5)
+            }
+        )
+    
+    @task(2)
+    def get_assignment(self):
+        """GET /assignments/:id endpoint."""
+        assignment_id = random.choice(self.assignment_ids)
+        self.client.get(f"/api/v1/assignments/{assignment_id}")
+```
+
+**Run Load Test:**
+
+```bash
+# Web UI
+locust -f tests/performance/locustfile.py --host=https://api.example.com
+
+# Headless (CI/CD)
+locust -f tests/performance/locustfile.py \
+  --host=https://staging-api.example.com \
+  --users 100 \
+  --spawn-rate 10 \
+  --run-time 5m \
+  --headless \
+  --csv=results
+```
+
+**Performance SLO Assertions:**
+
+```python
+# tests/performance/test_slo.py
+import pytest
+import json
+
+def test_load_test_slo():
+    """Verify load test results meet SLOs."""
+    with open("results_stats.json") as f:
+        stats = json.load(f)
+    
+    # Parse results
+    assignments_get = stats.get("/api/v1/assignments")
+    
+    # SLO: P95 latency < 500ms
+    assert assignments_get["response_times"]["95th_percentile"] < 500
+    
+    # SLO: Error rate < 1%
+    error_rate = (
+        assignments_get["num_failures"] / 
+        assignments_get["num_requests"] * 100
+    )
+    assert error_rate < 1.0
+    
+    # SLO: Throughput > 100 req/s
+    throughput = assignments_get["requests_per_second"]
+    assert throughput > 100
+```
+
 ## Summary
 
 Comprehensive testing ensures MCP server reliability through:
