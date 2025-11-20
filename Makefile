@@ -8,12 +8,21 @@ SHELL := /bin/bash
 PYTHON := python3
 NPX := npx
 
-# Color output
-RED := \033[0;31m
-GREEN := \033[0;32m
-YELLOW := \033[0;33m
-BLUE := \033[0;34m
-NC := \033[0m # No Color
+# Detect if running in CI environment (disable colors)
+ifeq ($(CI),true)
+    RED :=
+    GREEN :=
+    YELLOW :=
+    BLUE :=
+    NC :=
+else
+    # Color output for local development
+    RED := \033[0;31m
+    GREEN := \033[0;32m
+    YELLOW := \033[0;33m
+    BLUE := \033[0;34m
+    NC := \033[0m
+endif
 
 # Content markdown sections (excluding title page & explicit TOC)
 CONTENT_SECTIONS = \
