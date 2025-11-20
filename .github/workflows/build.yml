@@ -25,6 +25,10 @@ jobs:
         python -m pip install --upgrade pip
         # Add any Python dependencies if needed in future
         
+    - name: Check dependencies
+      run: |
+        make check-deps
+        
     - name: Verify documentation structure
       run: |
         echo "Checking documentation files..."
@@ -69,25 +73,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
     - name: Install markdownlint-cli
       run: |
         npm install -g markdownlint-cli
         
-    - name: Run markdown lint
+    - name: Check dependencies
       run: |
-        markdownlint 'docs/**/*.md' --config .markdownlint.json || true
-      continue-on-error: true
-      
-    - name: Check markdown syntax
+        make check-deps
+        
+    - name: Run lint checks
       run: |
-        echo "Validating markdown syntax..."
-        for file in docs/*.md; do
-          echo "Checking $file"
-          # Basic syntax validation
-          if ! grep -q "^#" "$file"; then
-            echo "Warning: $file has no headings"
-          fi
-        done
+        make lint
 
   validate-links:
     runs-on: ubuntu-latest
@@ -96,23 +97,14 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
     - name: Check internal links
       run: |
-        echo "Validating internal documentation links..."
-        for file in docs/*.md README.md; do
-          echo "Checking links in $file"
-          # Extract markdown links and verify targets exist
-          grep -oP '\[.*?\]\(\K[^)]+' "$file" | while read link; do
-            if [[ "$link" =~ ^docs/ ]]; then
-              if [ ! -f "$link" ]; then
-                echo "Error: Broken link in $file -> $link"
-                exit 1
-              fi
-            fi
-          done
-        done
-        echo "All internal links valid"
-      continue-on-error: true
+        python3 scripts/check_links.py
 
   summary:
     runs-on: ubuntu-latest

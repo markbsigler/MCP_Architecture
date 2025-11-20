@@ -26,16 +26,21 @@ CONTENT_SECTIONS = \
 	docs/03a-prompt-implementation.md \
 	docs/03b-resource-implementation.md \
 	docs/03c-sampling-patterns.md \
+	docs/03d-decision-trees.md \
+	docs/03e-integration-patterns.md \
 	docs/04-testing-strategy.md \
 	docs/05-observability.md \
 	docs/06-development-lifecycle.md \
 	docs/06a-performance-scalability.md \
 	docs/07-deployment-patterns.md \
 	docs/08-operational-runbooks.md \
-	docs/09-integration-patterns.md \
-	docs/10-agentic-best-practices.md \
-	docs/11-decision-trees.md \
-	docs/12-migration-guides.md \
+	docs/09-agentic-best-practices.md \
+	docs/10-migration-guides.md \
+	docs/11-troubleshooting.md \
+	docs/12-cost-optimization.md \
+	docs/13-metrics-kpis.md \
+	docs/14-performance-benchmarks.md \
+	docs/15-mcp-protocol-compatibility.md \
 	docs/99-quick-reference.md
 
 # Preface sections (generated or static)
