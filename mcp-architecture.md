@@ -2755,7 +2755,7 @@ ADRs are immutable once accepted. To change a decision:
 # Security Architecture
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Implementation Standards > Security Architecture  
-**Related**: [← Previous: Architecture Decisions](#architecture-decision-records-adrs) | [Next: Data Privacy & Compliance →](#data-privacy--compliance) | [Testing Security](04-testing-strategy.md#security-testing)
+**Related**: [← Previous: Architecture Decisions](#architecture-decision-records-adrs) | [Next: Data Privacy & Compliance →](#data-privacy--compliance) | [Testing Security](docs/04-testing-strategy.md#security-testing)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -4424,7 +4424,7 @@ Enterprise MCP servers require comprehensive security controls:
 # Data Privacy & Compliance
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Implementation Standards > Data Privacy & Compliance  
-**Related**: [← Previous: Security Architecture](#security-architecture) | [Next: Requirements Engineering →](#requirements-engineering-standards) | [Security Audit](02-security-architecture.md#audit-logging)
+**Related**: [← Previous: Security Architecture](#security-architecture) | [Next: Requirements Engineering →](#requirements-engineering-standards) | [Security Audit](docs/02-security-architecture.md#audit-logging)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -6368,7 +6368,7 @@ Effective requirements engineering for MCP servers combines:
 # Tool Implementation Standards
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Implementation Standards > Tool Implementation  
-**Related**: [← Previous: Requirements Engineering](#requirements-engineering-standards) | [Next: Prompt Implementation →](#prompt-implementation-standards) | [Decision Trees](03d-decision-trees.md#tool-vs-prompt-vs-resource-selection)
+**Related**: [← Previous: Requirements Engineering](#requirements-engineering-standards) | [Next: Prompt Implementation →](#prompt-implementation-standards) | [Decision Trees](docs/03d-decision-trees.md#tool-vs-prompt-vs-resource-selection)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -7093,7 +7093,7 @@ Consistent tool implementation ensures:
 # Prompt Implementation Standards
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Implementation Standards > Prompt Implementation  
-**Related**: [← Previous: Tool Implementation](#tool-implementation-standards) | [Next: Resource Implementation →](#resource-implementation-standards) | [Agentic Best Practices](09-agentic-best-practices.md#prompt-system-design)
+**Related**: [← Previous: Tool Implementation](#tool-implementation-standards) | [Next: Resource Implementation →](#resource-implementation-standards) | [Agentic Best Practices](docs/09-agentic-best-practices.md#prompt-engineering-for-tools)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -8359,7 +8359,7 @@ By following these standards, MCP prompts become discoverable, maintainable, and
 # Resource Implementation Standards
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Implementation Standards > Resource Implementation  
-**Related**: [← Previous: Prompt Implementation](#prompt-implementation-standards) | [Next: Sampling Patterns →](#sampling-patterns-and-llm-interaction) | [Agentic Best Practices](09-agentic-best-practices.md#resource-template-architecture)
+**Related**: [← Previous: Prompt Implementation](#prompt-implementation-standards) | [Next: Sampling Patterns →](#sampling-patterns-and-llm-interaction) | [Agentic Best Practices](docs/09-agentic-best-practices.md#resource-templates)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -9751,7 +9751,7 @@ By following these standards, MCP resources become discoverable, efficient, and 
 # Sampling Patterns and LLM Interaction
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Implementation Standards > Sampling Patterns  
-**Related**: [← Previous: Resource Implementation](#resource-implementation-standards) | [Next: Decision Trees →](#decision-trees) | [Agentic Best Practices](09-agentic-best-practices.md#llm-specific-considerations)
+**Related**: [← Previous: Resource Implementation](#resource-implementation-standards) | [Next: Decision Trees →](#decision-trees) | [Agentic Best Practices](docs/09-agentic-best-practices.md#tool-design-principles)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -12038,7 +12038,7 @@ For multi-phase transition planning (e.g., REST → MCP, protocol negotiation, a
 # Integration Patterns
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Decision Support > Integration Patterns  
-**Related**: [← Previous: Decision Trees](#decision-trees) | [Next: Testing Strategy →](#testing-strategy) | [Cost Optimization](12-cost-optimization.md#caching-strategies-for-cost-reduction)
+**Related**: [← Previous: Decision Trees](#decision-trees) | [Next: Testing Strategy →](#testing-strategy) | [Cost Optimization](docs/12-cost-optimization.md#caching-strategies-for-cost-reduction)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
@@ -26856,7 +26856,7 @@ This benchmark document provides comprehensive performance data for MCP servers:
 # MCP Protocol Version Compatibility
 
 **Navigation**: [Home](#model-context-protocol-mcp-server-architecture-and-design-guidelines) > Metrics & Reference > MCP Protocol Compatibility  
-**Related**: [← Previous: Performance Benchmarks](#performance-benchmarks) | [Migration Guides](10-migration-guides.md#mcp-protocol-version-upgrades) | [Index by Topic](#index-by-topic)
+**Related**: [← Previous: Performance Benchmarks](#performance-benchmarks) | [Migration Guides](docs/10-migration-guides.md#2-upgrading-between-mcp-protocol-versions) | [Index by Topic](#index-by-topic)
 
 **Version:** 1.4.0  
 **Last Updated:** November 20, 2025  
