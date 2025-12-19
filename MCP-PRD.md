@@ -1,6 +1,6 @@
 # Product Requirements Document: MCP Server for [Product Name]
 
-**Document Version:** 2.3  
+**Document Version:** 2.4  
 **Last Updated:** December 2025  
 **Document Owner:** [Product Manager Name]  
 **Status:** Draft for Review
@@ -16,6 +16,7 @@
 | 2.1 | 2025-12 | [Author] | Added MCP best practices, STDIO dev-only constraint, enhanced primitive control models, user consent mechanisms, multi-server orchestration |
 | 2.2 | 2025-12 | [Author] | Updated to MCP spec 2025-11-25: OIDC Discovery, icon support, elicitation, tasks, tool calling in sampling, JSON Schema 2020-12 |
 | 2.3 | 2025-12 | [Author] | Added Core Principles: client portability, MCP Registry distribution, AI provider agnostic deployment, separation of concerns |
+| 2.4 | 2025-12 | [Author] | Added Error Handling Requirements (5.1.3), ADR references (9.5), Architecture cross-references |
 
 ---
 
@@ -548,6 +549,78 @@ Per the [MCP specification changelog](https://modelcontextprotocol.io/specificat
 | Version format | Semantic versioning (MAJOR.MINOR.PATCH) |
 | Protocol compatibility | MCP specification 2025-11-25 |
 | Description field | Optional human-readable description |
+
+#### 5.1.3 Error Handling (MUST HAVE)
+
+**Requirement:** Implement consistent, secure, and actionable error handling across all operations.
+
+**Error Categories:**
+
+| Error Type | JSON-RPC Code | Use Case | Example |
+|------------|---------------|----------|---------|
+| Parse Error | -32700 | Invalid JSON | Malformed request body |
+| Invalid Request | -32600 | Missing required fields | No `method` field |
+| Method Not Found | -32601 | Unknown method | `tools/unknown` |
+| Invalid Params | -32602 | Schema validation failed | Missing required parameter |
+| Internal Error | -32603 | Server-side failures | Database connection error |
+| Tool Execution Error | (in result) | Tool-specific failures | API rate limit exceeded |
+
+**Error Handling Requirements:**
+
+| Requirement ID | Description | Priority |
+|---------------|-------------|----------|
+| REQ-ERR-001 | All errors MUST use standard JSON-RPC 2.0 error codes | MUST |
+| REQ-ERR-002 | Tool input validation errors MUST return as Tool Execution Errors (in result.isError), not Protocol Errors | MUST |
+| REQ-ERR-003 | Error messages MUST NOT expose internal implementation details, stack traces, or sensitive data | MUST |
+| REQ-ERR-004 | Transient errors SHOULD include retry guidance (retry-after, backoff hints) | SHOULD |
+| REQ-ERR-005 | Errors MUST include correlation IDs for traceability | MUST |
+| REQ-ERR-006 | Error responses MUST be logged with full context for debugging | MUST |
+
+**Tool Execution Error Format (per MCP 2025-11-25):**
+
+Per the [MCP specification](https://modelcontextprotocol.io/specification/2025-11-25/changelog), input validation errors in tools should be returned as Tool Execution Errors rather than Protocol Errors:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Error: Invalid date format. Expected YYYY-MM-DD, got '2025/12/19'"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+**Protocol Error Format:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "Invalid params",
+    "data": {
+      "correlation_id": "req-abc123",
+      "details": "Missing required field: 'query'"
+    }
+  }
+}
+```
+
+**Acceptance Criteria:**
+
+| Criteria | Target |
+|----------|--------|
+| Error code compliance | 100% use of standard JSON-RPC codes |
+| No information leakage | Zero stack traces or internal paths in responses |
+| Correlation ID coverage | 100% of errors include correlation ID |
+| Tool validation errors | Use isError flag, not protocol errors |
 
 ### 5.2 Resource Management
 
@@ -1916,6 +1989,27 @@ STDIO transport is explicitly prohibited for production deployments:
 | Metrics Backend | Outbound | Prometheus/OTLP | Service account |
 | Log Aggregator | Outbound | Syslog/HTTPS | API Key |
 
+### 9.5 Architecture Decision References
+
+Key technical decisions are documented in Architecture Decision Records (ADRs) in the [MCP Architecture Guide](./MCP-ARCHITECTURE.md). These ADRs provide rationale for major architectural choices:
+
+| Decision | ADR | Summary | PRD Alignment |
+|----------|-----|---------|---------------|
+| **MCP Framework Selection** | ADR-001 | Choice of MCP implementation framework | Enables rapid development while meeting requirements |
+| **Authentication Method** | ADR-002 | JWT/JWKS vs mTLS authentication | Aligns with PRD 6.1 Security Requirements |
+| **Stateless Design** | ADR-003 | Stateless vs stateful server architecture | Supports PRD 6.2 Performance (horizontal scaling) |
+| **Database Selection** | ADR-004 | Database for tool metadata | Supports PRD operational requirements |
+| **Transport Protocol** | ADR-005 | HTTP/SSE vs WebSocket | Aligns with PRD 5.1.1 Transport Layer |
+
+**ADR Process for New Decisions:**
+
+When implementation introduces new architectural decisions, teams should:
+
+1. Document the decision using the ADR template in the Architecture Guide
+2. Map the decision to relevant PRD requirements
+3. Review with stakeholders before implementation
+4. Update the Requirements Traceability matrix
+
 ---
 
 ## 10. Development Phases and Timeline
@@ -2127,6 +2221,14 @@ A feature is considered complete when:
 
 ### 14.2 References
 
+**Related Project Documents:**
+
+| Document | Path | Description |
+|----------|------|-------------|
+| MCP Architecture Guide | [./MCP-ARCHITECTURE.md](./MCP-ARCHITECTURE.md) | Implementation patterns and architecture decisions |
+
+**External References:**
+
 | Reference | URL |
 |-----------|-----|
 | MCP Specification | https://modelcontextprotocol.io/docs/ |
@@ -2225,6 +2327,7 @@ services:
 | 2.1 | 2025-12 | Added MCP best practices; STDIO dev-only constraint; enhanced primitive definitions with control models, protocol operations, and user interaction patterns; user consent mechanisms; multi-server orchestration |
 | 2.2 | 2025-12 | Updated to MCP specification 2025-11-25: OIDC Discovery, incremental scope consent, icon support for primitives, elicitation feature, experimental tasks, tool calling in sampling, JSON Schema 2020-12, Origin header validation, Tool Execution Errors for input validation |
 | 2.3 | 2025-12 | **Core Principles**: Client portability (GitHub Copilot, Cursor, Claude, VS Code); MCP Registry distribution; AI provider agnostic deployment (AWS Bedrock, Azure, Google, OpenAI, Anthropic, vLLM); Separation of concerns (single integration domain per server) |
+| 2.4 | 2025-12 | **Architecture Alignment**: Error Handling Requirements (5.1.3); ADR references (9.5); Cross-references to Architecture Guide; Requirements traceability support |
 
 ---
 

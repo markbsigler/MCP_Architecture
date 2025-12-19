@@ -1676,6 +1676,137 @@ Date: 2025-11-18
 
 This document provides a comprehensive overview of the enterprise MCP (Model Context Protocol) server architecture. It establishes the foundational patterns and components that enable secure, scalable, and maintainable agentic services.
 
+This architecture implements the requirements defined in the [MCP Server PRD](./MCP-PRD.md). See the PRD for business context, success metrics, and acceptance criteria.
+
+## Specification Versions
+
+| Specification | Version | Reference |
+|--------------|---------|-----------|
+| MCP Protocol | 2025-11-25 | [modelcontextprotocol.io/specification/2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) |
+| JSON Schema | 2020-12 | [json-schema.org](https://json-schema.org/) |
+| OAuth | 2.1 | [oauth.net/2.1](https://oauth.net/2.1/) |
+| JSON-RPC | 2.0 | [jsonrpc.org/specification](https://www.jsonrpc.org/specification) |
+
+## Core Architectural Principles
+
+The following principles are **foundational requirements** that guide all architectural decisions. These align with the PRD Core Principles (Section 1.4).
+
+### Client Portability
+
+MCP servers MUST be portable and function with **any MCP-compliant client** without modification:
+
+**Design Patterns:**
+
+- **Transport Abstraction**: Use a transport layer that abstracts stdio vs HTTP/SSE
+- **No Client Detection**: Never check for specific client implementations
+- **Standard Capabilities**: Use only MCP specification capabilities
+- **Protocol Compliance**: Strict adherence to JSON-RPC 2.0 and MCP message formats
+
+```python
+# ✅ CORRECT: Transport-agnostic server initialization
+class MCPServer:
+    def __init__(self, transport: Transport):
+        self.transport = transport  # Could be StdioTransport or HttpTransport
+    
+    async def handle_request(self, request: JsonRpcRequest) -> JsonRpcResponse:
+        # Same logic regardless of transport or client
+        ...
+
+# ❌ WRONG: Client-specific code paths
+if client_name == "cursor":
+    # Never do this
+    ...
+```
+
+### Separation of Concerns
+
+Each MCP server MUST focus on a **single integration domain** with cohesive capabilities:
+
+**Design Patterns:**
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| Single Domain | One server = one integration | `mcp-github`, `mcp-slack` |
+| Cohesive Tools | All tools relate to same domain | GitHub: repos, issues, PRs |
+| Shared Context | Resources/tools share domain context | All access same backend |
+| Composable | Clients orchestrate multiple servers | Cross-domain workflows |
+
+```yaml
+# ✅ CORRECT: Focused servers
+mcp-github:    # Source control domain only
+mcp-slack:     # Communication domain only
+mcp-postgres:  # Database domain only
+
+# ❌ WRONG: Monolithic server
+mcp-enterprise-all:  # Mixing unrelated integrations
+```
+
+### Registry Distribution
+
+MCP servers MUST be distributable via the [MCP Registry](https://registry.modelcontextprotocol.io) and compatible sub-registries:
+
+**Implementation Requirements:**
+
+1. **Server Metadata**: Complete `server.json` for registry listing
+2. **Container Images**: Published to ghcr.io and/or Docker Hub
+3. **Moderation Compliance**: Follow MCP registry guidelines
+4. **API Schema**: Compatible with registry OpenAPI specification
+
+```json
+{
+  "name": "your-mcp-server",
+  "version": "1.0.0",
+  "description": "Human-readable description of capabilities",
+  "repository": "https://github.com/org/repo",
+  "license": "MIT",
+  "categories": ["database", "analytics"],
+  "capabilities": {
+    "resources": true,
+    "tools": true,
+    "prompts": true
+  },
+  "container": {
+    "image": "ghcr.io/org/your-mcp-server",
+    "tags": ["latest", "1.0.0"]
+  }
+}
+```
+
+### AI Provider Agnostic
+
+MCP servers MUST be deployable with **any AI service provider** without modification:
+
+**Design Patterns:**
+
+- **No Provider Dependencies**: No hardcoded AI provider SDKs in core logic
+- **Sampling Abstraction**: Use MCP sampling interface for LLM interactions
+- **Configuration-Driven**: Provider selection via environment variables
+- **Authentication Adapters**: Support multiple auth mechanisms
+
+```python
+# ✅ CORRECT: Provider-agnostic sampling
+@server.sampling_handler
+async def handle_sampling(request: SamplingRequest) -> SamplingResponse:
+    # Let the client handle provider selection
+    # Server just defines the request
+    return await self.client.create_message(request)
+
+# ❌ WRONG: Hardcoded provider
+import anthropic
+client = anthropic.Client()  # Don't do this in server code
+```
+
+**Deployment Compatibility:**
+
+| Provider | Container Platform | Authentication |
+|----------|-------------------|----------------|
+| AWS Bedrock | ECS, EKS | IAM Roles |
+| Azure OpenAI | AKS, ACI | Azure AD/Entra ID |
+| Google Vertex AI | GKE, Cloud Run | Service Accounts |
+| OpenAI | Any | API Keys |
+| Anthropic | Any | API Keys |
+| vLLM/Ollama | Any | Optional |
+
 ## Executive Summary
 
 ### Key Highlights
@@ -2104,6 +2235,167 @@ Independent MCP servers with individual authentication:
 - Simplified architecture
 - Direct client connections
 
+## MCP Registry Publishing
+
+MCP servers should be published to the [MCP Registry](https://registry.modelcontextprotocol.io) for discoverability and distribution. The registry serves as the primary source of truth for publicly available MCP servers.
+
+### Registry Types
+
+| Registry Type | Description | Use Case |
+|---------------|-------------|----------|
+| **MCP Registry** | Official registry at `registry.modelcontextprotocol.io` | Public servers |
+| **Public Sub-registries** | Client-specific marketplaces (GitHub, Cursor) | Client ecosystems |
+| **Private Sub-registries** | Enterprise internal registries | Internal servers |
+
+### Server Metadata Structure
+
+Create a `server.json` file in your repository root:
+
+```json
+{
+  "name": "mcp-your-server",
+  "version": "1.0.0",
+  "description": "Brief description of what this server provides",
+  "longDescription": "Detailed description with features and use cases",
+  "repository": "https://github.com/org/mcp-your-server",
+  "homepage": "https://your-server-docs.example.com",
+  "license": "MIT",
+  "author": {
+    "name": "Your Organization",
+    "url": "https://example.com"
+  },
+  "categories": ["database", "analytics", "productivity"],
+  "keywords": ["mcp", "database", "sql"],
+  "capabilities": {
+    "resources": {
+      "count": 5,
+      "examples": ["db://schema", "db://tables/{table}"]
+    },
+    "tools": {
+      "count": 10,
+      "examples": ["query", "insert", "update"]
+    },
+    "prompts": {
+      "count": 3,
+      "examples": ["analyze-schema", "optimize-query"]
+    }
+  },
+  "container": {
+    "image": "ghcr.io/org/mcp-your-server",
+    "platforms": ["linux/amd64", "linux/arm64"],
+    "tags": ["latest", "1.0.0", "1.0"]
+  },
+  "requirements": {
+    "authentication": ["oauth2", "api-key"],
+    "environment": ["DATABASE_URL"]
+  }
+}
+```
+
+### Container Image Requirements
+
+For registry distribution, container images must meet these standards:
+
+```dockerfile
+# Multi-stage build for minimal image
+FROM python:3.12-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.12-slim AS runtime
+# Security: Non-root user
+RUN useradd --create-home --shell /bin/bash mcp
+USER mcp
+WORKDIR /app
+
+# Copy application
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY src/ ./src/
+
+# Labels for registry
+LABEL org.opencontainers.image.title="MCP Your Server"
+LABEL org.opencontainers.image.description="Description for registry"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.source="https://github.com/org/repo"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL io.mcp.server.capabilities="resources,tools,prompts"
+
+# Health check for orchestrators
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+CMD ["python", "-m", "src.server"]
+```
+
+### Publishing Workflow
+
+```yaml
+# .github/workflows/publish.yml
+name: Publish to Registry
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          exit-code: 1
+          severity: CRITICAL,HIGH
+```
+
+### Registry Moderation Guidelines
+
+To maintain registry listing, servers must:
+
+1. **No Malicious Code**: No malware, backdoors, or data exfiltration
+2. **Accurate Descriptions**: Capabilities match actual functionality
+3. **No Impersonation**: Don't impersonate other servers or organizations
+4. **Responsive Maintenance**: Address reported security issues promptly
+5. **License Clarity**: Clear, permissive licensing for public servers
+
 ## Scalability Patterns
 
 ### Horizontal Scaling
@@ -2269,6 +2561,65 @@ graph TB
 - No access back to production systems
 - Separate authentication realm
 - Audit log immutability
+
+## Requirements Traceability
+
+This section maps PRD requirements to architecture implementation patterns. See the [MCP Server PRD](./MCP-PRD.md) for complete requirement definitions.
+
+### Core Principles Traceability
+
+| PRD Requirement | PRD Section | Architecture Section | Implementation Pattern |
+|-----------------|-------------|---------------------|------------------------|
+| Client Portability | 1.4.1 | [Core Architectural Principles](#core-architectural-principles) | Transport abstraction, no client detection |
+| Separation of Concerns | 1.4.4 | [Core Architectural Principles](#core-architectural-principles) | Single domain per server |
+| Registry Distribution | 1.4.2 | [MCP Registry Publishing](#mcp-registry-publishing) | server.json, container images |
+| AI Provider Agnostic | 1.4.3 | [Core Architectural Principles](#core-architectural-principles) | Sampling abstraction |
+
+### Security Requirements Traceability
+
+| PRD Requirement | PRD Section | Architecture Section | Implementation Pattern |
+|-----------------|-------------|---------------------|------------------------|
+| OAuth 2.1 Authorization | 6.1.1 | [Authentication Patterns](#authentication-patterns) | OAuth2Middleware, PKCE flow |
+| JWT Validation | 6.1.2 | [Authentication Patterns](#authentication-patterns) | JWTAuthenticator class |
+| RBAC | 6.1.3 | [Authorization Framework](#authorization-framework) | Role hierarchy, permission checks |
+| Rate Limiting | 6.1.4 | [Rate Limiting](#rate-limiting) | Token bucket algorithm |
+| Audit Logging | 6.1.5 | [Audit Logging](#audit-logging) | Structured audit events |
+| Input Validation | 6.1.6 | [Input Validation](#input-validation) | Pydantic models, sanitization |
+
+### Performance Requirements Traceability
+
+| PRD Requirement | PRD Section | Architecture Section | Implementation Pattern |
+|-----------------|-------------|---------------------|------------------------|
+| Response Time <200ms p95 | 6.2 | [Performance Benchmarks](#performance-benchmarks) | Caching, connection pooling |
+| Concurrent Connections | 6.2 | [Scalability Patterns](#scalability-patterns) | Horizontal scaling, async |
+| High Availability | 6.2 | [High Availability](#high-availability) | Multi-instance, health checks |
+
+### Observability Requirements Traceability
+
+| PRD Requirement | PRD Section | Architecture Section | Implementation Pattern |
+|-----------------|-------------|---------------------|------------------------|
+| Structured Logging | 6.3.1 | [Observability](#observability) | JSON logs, correlation IDs |
+| Prometheus Metrics | 6.3.2 | [Observability](#observability) | OpenTelemetry, /metrics endpoint |
+| Distributed Tracing | 6.3.3 | [Observability](#observability) | OTLP, trace propagation |
+
+### Testing Requirements Traceability
+
+| PRD Requirement | PRD Section | Architecture Section | Implementation Pattern |
+|-----------------|-------------|---------------------|------------------------|
+| Unit Testing >80% | 8.2 | [Testing Strategy](#testing-strategy) | pytest, coverage enforcement |
+| Integration Testing | 8.4 | [Testing Strategy](#testing-strategy) | Component integration tests |
+| Contract Testing | 8.5 | [Contract Testing](#contract-testing) | MCP protocol compliance |
+| Security Testing | 8.6 | [Security Testing Tools](#security-testing-tools) | Bandit, SAST, DAST |
+| Performance Testing | 8.7 | [Performance Benchmarks](#performance-benchmarks) | Locust, pytest-benchmark |
+
+### Primitive Implementation Traceability
+
+| PRD Requirement | PRD Section | Architecture Section | Implementation Pattern |
+|-----------------|-------------|---------------------|------------------------|
+| Tool Execution | 5.3 | [Tool Implementation Standards](#tool-implementation-standards) | Naming, validation, response format |
+| Resource Management | 5.2 | [Resource Implementation Standards](#resource-implementation-standards) | URI design, MIME types, pagination |
+| Prompt Management | 5.4 | [Prompt Implementation Standards](#prompt-implementation-standards) | Parameter design, message construction |
+| Sampling (Optional) | 5.5 | [Sampling Patterns](#sampling-patterns-and-llm-interaction) | LLM interaction patterns |
 
 ## Summary
 
