@@ -1458,7 +1458,7 @@ python -m json.tool ~/Library/Application\ Support/Claude/claude_desktop_config.
 python -m json.tool %APPDATA%\Claude\claude_desktop_config.json
 ```
 
-2. **Verify absolute paths:**
+1. **Verify absolute paths:**
 
 ```json
 {
@@ -1472,11 +1472,12 @@ python -m json.tool %APPDATA%\Claude\claude_desktop_config.json
 ```
 
 **Common path issues:**
+
 - Using `~` instead of full path (`/Users/username/...`)
 - Using relative paths (`./server.py` instead of absolute)
 - Missing Python path on Windows
 
-3. **Test server runs standalone:**
+1. **Test server runs standalone:**
 
 ```bash
 # Should start without errors
@@ -1486,7 +1487,7 @@ python /absolute/path/to/server.py
 uvx mcp-server-myserver
 ```
 
-4. **Check Claude Desktop logs:**
+1. **Check Claude Desktop logs:**
 
 ```bash
 # macOS - MCP connection logs
@@ -1496,7 +1497,7 @@ tail -f ~/Library/Logs/Claude/mcp.log
 tail -f ~/Library/Logs/Claude/mcp-server-my-server.log
 ```
 
-5. **Restart Claude Desktop completely:**
+1. **Restart Claude Desktop completely:**
    - macOS: Cmd+Q (not just close window)
    - Windows: Right-click system tray icon → Quit
 
@@ -1690,6 +1691,7 @@ python server.py 2>&1 | tee debug.log
 ```
 
 **Environment variable expansion:**
+
 - macOS/Linux: Use full paths, `~` is not expanded
 - Windows: Use forward slashes or escaped backslashes
 

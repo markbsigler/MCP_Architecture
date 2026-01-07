@@ -1795,7 +1795,7 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 code %APPDATA%\Claude\claude_desktop_config.json
 ```
 
-2. Add your server:
+1. Add your server:
 
 ```json
 {
@@ -1812,7 +1812,7 @@ code %APPDATA%\Claude\claude_desktop_config.json
 }
 ```
 
-3. Restart Claude Desktop completely (Cmd+Q on macOS, not just close window)
+1. Restart Claude Desktop completely (Cmd+Q on macOS, not just close window)
 
 **Verification Checklist:**
 

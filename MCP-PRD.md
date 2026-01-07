@@ -235,8 +235,9 @@ mcp-enterprise-everything:
 **In Scope:**
 - MCP server implementation compliant with MCP specification (2025-11-25)
 - Resources, tools, and prompts for [specify target domain/systems]
-- OAuth 2.1 authorization and JWT authentication for HTTP transport
-- Containerized deployment via Docker and container registries
+- **Production Transport:** Streamable HTTP with SSE (STDIO for development only)
+- **Production Authentication:** OAuth 2.1 with PKCE, JWT validation
+- **Production Packaging:** Containerized deployment via Docker/OCI
 - **Portability across all MCP clients** (GitHub Copilot, Cursor, Claude Desktop, VS Code, etc.)
 - **Distribution via MCP Registry** and compatible sub-registries/marketplaces
 - **AI provider agnostic** deployment (AWS Bedrock, Azure, Google, OpenAI, Anthropic, vLLM, etc.)
@@ -466,15 +467,16 @@ The Model Context Protocol is an open standard emerging as the preferred method 
 
 #### 5.1.1 Transport Layer (MUST HAVE)
 
-**Requirement:** Support multiple transport mechanisms per the MCP specification, with HTTP transport required for production deployments.
+**Requirement:** Support multiple transport mechanisms per the MCP specification, with Streamable HTTP required for production deployments.
+
+> **Opinionated Guidance:** STDIO is for **development and testing only**. Production deployments **MUST** use Streamable HTTP with OAuth 2.1 authentication and container packaging. See [Getting Started: Development vs Production](docs/00-getting-started.md#development-vs-production-requirements) for comprehensive guidance.
 
 **Transport Options:**
 
-| Transport | Environment | Use Case | Priority |
-|-----------|-------------|----------|----------|
-| **HTTP with SSE** | **Production** | Remote servers, containerized deployments | MUST |
-| **Streamable HTTP** | **Production** | Modern HTTP transport with streaming | SHOULD |
-| **stdio** | Development Only | Local testing, IDE integrations | SHOULD |
+| Transport | Environment | Use Case | Production Status |
+|-----------|-------------|----------|-------------------|
+| **Streamable HTTP with SSE** | **Production** | Containerized services, multi-client access | **REQUIRED** |
+| **STDIO** | Development Only | Local testing, Claude Desktop, MCP Inspector | **NOT ALLOWED** |
 
 **Production Deployment Requirement (CRITICAL):**
 

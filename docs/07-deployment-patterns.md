@@ -9,6 +9,7 @@
 
 ## Quick Links
 
+- [Production Transport Requirements](#production-transport-requirements)
 - [Container Best Practices](#container-best-practices)
 - [Kubernetes Deployment](#kubernetes-deployment-patterns)
 - [CI/CD Pipeline](#cicd-pipeline-stages)
@@ -22,6 +23,73 @@
 Deploying MCP servers to production requires careful attention to containerization, orchestration, networking, and deployment strategies. This document covers Docker best practices, Kubernetes patterns, CI/CD pipelines, and rollout strategies.
 
 For phased production rollouts and zero-downtime upgrade sequencing across versions and infrastructure, reference the **Migration Guides (12)**.
+
+---
+
+## Production Transport Requirements
+
+> **Important:** STDIO transport is for **development and testing only**. All production deployments **MUST** use Streamable HTTP with OAuth 2.1 authentication.
+
+### Transport Protocol: Streamable HTTP with SSE
+
+| Requirement | Specification |
+|-------------|---------------|
+| **Protocol** | HTTP/1.1 or HTTP/2 with Server-Sent Events (SSE) |
+| **Authentication** | OAuth 2.1 with PKCE (REQUIRED) |
+| **Encryption** | TLS 1.2+ (REQUIRED) |
+| **Health Endpoints** | `/health` and `/health/ready` (REQUIRED) |
+| **Metrics Endpoint** | `/metrics` (Prometheus format) |
+
+### Why Not STDIO in Production?
+
+| STDIO Limitation | Production Impact |
+|------------------|-------------------|
+| Single client only | Cannot serve multiple AI applications |
+| No network access | Requires local process execution |
+| No health checks | Orchestrators cannot verify readiness |
+| No load balancing | Cannot scale horizontally |
+| Process coupling | Crashes affect parent process |
+
+### Server Configuration for HTTP Transport
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("production-server")
+
+@mcp.tool()
+async def example_tool(query: str) -> str:
+    """Example tool implementation."""
+    return f"Processed: {query}"
+
+if __name__ == "__main__":
+    # Production: HTTP transport with SSE
+    mcp.run(
+        transport="http",
+        host="0.0.0.0",
+        port=8000,
+        # OAuth 2.1 configuration
+        auth_issuer="https://auth.example.com",
+        auth_audience="mcp-server-production"
+    )
+```
+
+### OAuth 2.1 Requirements
+
+Production MCP servers **MUST** implement OAuth 2.1 with PKCE:
+
+| Component | Requirement |
+|-----------|-------------|
+| **Authorization Server** | External IdP (Auth0, Okta, Keycloak, Azure AD) |
+| **Token Validation** | JWKS endpoint for public key retrieval |
+| **Token Claims** | `iss`, `aud`, `exp`, `iat`, `sub` required |
+| **Token Lifetime** | 15-60 minutes recommended |
+| **Refresh Flow** | Required for long-running clients |
+| **PKCE** | Required for public clients |
+
+See [Security Architecture](02-security-architecture.md) for detailed OAuth 2.1 implementation patterns.
+
+---
 
 ## Containerization
 

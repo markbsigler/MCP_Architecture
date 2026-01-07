@@ -21,11 +21,143 @@ This guide provides a fast path to building your first enterprise-grade MCP serv
 
 ## Quick Links
 
+- [Development vs Production Requirements](#development-vs-production-requirements)
 - [SDK Selection](#sdk-selection)
 - [Environment Setup](#environment-setup)
 - [Your First MCP Server](#your-first-mcp-server)
 - [Testing with Claude Desktop](#testing-with-claude-desktop)
 - [Next Steps](#next-steps)
+
+---
+
+## Development vs Production Requirements
+
+> **Opinionated Guidance:** This section establishes clear boundaries between development/testing and production environments. Following these guidelines ensures your MCP server is secure, scalable, and production-ready.
+
+### Transport Layer
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Transport Protocol** | STDIO | Streamable HTTP with SSE |
+| **Use Case** | Local testing, Claude Desktop, MCP Inspector | Deployed services, multi-client access |
+| **Why** | Simple setup, no network config | Scalable, firewall-friendly, supports concurrent clients |
+
+**STDIO is for development only.** It works well for:
+
+- Local testing with Claude Desktop
+- Interactive debugging with MCP Inspector  
+- Unit and integration testing in CI/CD
+
+**Streamable HTTP is required for production.** It provides:
+
+- Concurrent client connections
+- Network-accessible endpoints
+- Load balancer compatibility
+- Health check endpoints
+- Graceful shutdown handling
+
+### Authentication & Authorization
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Authentication** | Optional / API keys in `.env` | **OAuth 2.1 with PKCE** (REQUIRED) |
+| **Token Format** | N/A | JWT with short expiry (15-60 min) |
+| **Secret Storage** | `.env` files (gitignored) | Secret management service (Vault, AWS Secrets Manager) |
+| **TLS** | Optional (localhost) | **TLS 1.2+ required** |
+| **CORS** | Permissive (`*`) | Strict origin allowlist |
+
+**Production Authentication Requirements:**
+
+- OAuth 2.1 with PKCE for client authentication
+- JWT tokens validated against JWKS endpoint
+- Tokens must include `iss`, `aud`, `exp`, `iat` claims
+- Token refresh flow for long-running clients
+- See [Security Architecture](02-security-architecture.md) for implementation details
+
+### Deployment & Packaging
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Packaging** | Local Python/Node.js execution | **Container image (Docker/OCI)** |
+| **Orchestration** | Direct process execution | Kubernetes, ECS, Cloud Run |
+| **Scaling** | Single instance | Horizontal auto-scaling |
+| **Configuration** | `.env` files, CLI args | Environment variables from orchestrator |
+
+**Container Packaging Requirements:**
+
+- Multi-stage Dockerfile for minimal image size
+- Non-root user execution
+- Health check endpoints (`/health`, `/health/ready`)
+- Graceful shutdown handling (SIGTERM)
+- See [Deployment Patterns](07-deployment-patterns.md) for reference implementations
+
+### Logging & Observability
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Log Format** | Human-readable, stderr | **Structured JSON** |
+| **Log Level** | DEBUG | INFO (DEBUG on-demand) |
+| **Metrics** | Optional | **Prometheus/OpenTelemetry** |
+| **Tracing** | Optional | **Distributed tracing required** |
+| **Alerting** | None | PagerDuty/Opsgenie integration |
+
+**Production Observability Requirements:**
+
+- Structured JSON logs with correlation IDs
+- Prometheus metrics endpoint (`/metrics`)
+- OpenTelemetry tracing with span propagation
+- No sensitive data in logs (PII masking)
+- See [Observability](05-observability.md) for implementation details
+
+### Error Handling
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Error Detail** | Full stack traces | **Sanitized messages only** |
+| **Internal Errors** | Expose for debugging | Hide implementation details |
+| **Error Codes** | Descriptive | Standardized MCP error codes |
+
+**Production Error Handling:**
+
+- Return user-friendly error messages
+- Log full details internally with correlation ID
+- Never expose stack traces, file paths, or internal state
+- Use MCP-standard error codes (-32700 to -32600 range)
+
+### Resource Limits
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Rate Limiting** | Disabled or generous | **Multi-tier enforcement** |
+| **Timeouts** | Relaxed (60s+) | Strict (5-30s per operation) |
+| **Memory Limits** | Unrestricted | Container resource limits |
+| **Connection Pools** | Default | Tuned for expected load |
+
+### External Dependencies
+
+| Aspect | Development/Testing | Production |
+|--------|---------------------|------------|
+| **Databases** | Local instances, SQLite | Managed services with failover |
+| **APIs** | Test/sandbox environments | Production endpoints with retries |
+| **Circuit Breakers** | Optional | Required for external calls |
+| **Connection Handling** | Simple | Connection pooling, retry with backoff |
+
+### Quick Checklist
+
+Before deploying to production, verify:
+
+- [ ] **Transport**: HTTP with SSE (not STDIO)
+- [ ] **Auth**: OAuth 2.1 with PKCE configured
+- [ ] **TLS**: HTTPS with valid certificates
+- [ ] **Secrets**: All credentials in secret management service
+- [ ] **Container**: Docker image with health checks
+- [ ] **Logging**: Structured JSON, no sensitive data
+- [ ] **Metrics**: Prometheus endpoint exposed
+- [ ] **Tracing**: OpenTelemetry configured
+- [ ] **Rate Limits**: Multi-tier limits configured
+- [ ] **Errors**: Sanitized error messages
+
+---
 
 ## SDK Selection
 
@@ -220,16 +352,18 @@ python server.py
 1. Open Claude Desktop configuration file:
 
 **macOS:**
+
 ```bash
 code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 ```
 
 **Windows:**
+
 ```bash
 code %APPDATA%\Claude\claude_desktop_config.json
 ```
 
-2. Add your server configuration:
+1. Add your server configuration:
 
 ```json
 {
@@ -245,12 +379,13 @@ code %APPDATA%\Claude\claude_desktop_config.json
 }
 ```
 
-**Important:** 
+**Important:**
+
 - Use the **virtual environment's Python**, not the system Python
 - Use absolute paths, not relative paths
 - On Windows, use `.venv/Scripts/python.exe`
 
-3. **Restart Claude Desktop completely:**
+1. **Restart Claude Desktop completely:**
    - macOS: Cmd+Q (don't just close the window)
    - Windows: Right-click system tray icon → Quit
 
@@ -266,27 +401,32 @@ code %APPDATA%\Claude\claude_desktop_config.json
 If your server doesn't appear:
 
 1. **Check logs:**
+
    ```bash
    # macOS
    tail -f ~/Library/Logs/Claude/mcp*.log
    ```
 
 2. **Verify the server runs standalone:**
+
    ```bash
    python /absolute/path/to/server.py
    # Should start without errors
    ```
 
 3. **Check JSON syntax:**
+
    ```bash
    python -m json.tool ~/Library/Application\ Support/Claude/claude_desktop_config.json
    ```
 
 See [Troubleshooting Guide](11-troubleshooting.md) for more debugging tips.
 
-## STDIO Logging Constraint
+## STDIO Logging Constraint (Development Only)
 
-**Critical:** When using STDIO transport, never write to stdout except for JSON-RPC messages:
+> **Reminder:** STDIO transport is for **development and testing only**. Production deployments must use Streamable HTTP with OAuth 2.1. See [Development vs Production Requirements](#development-vs-production-requirements).
+
+**Critical:** When using STDIO transport for local development, never write to stdout except for JSON-RPC messages:
 
 ```python
 # ❌ BAD - Corrupts JSON-RPC protocol
@@ -384,4 +524,3 @@ mypy src/
 ---
 
 **Next:** [Architecture Overview](01-architecture-overview.md) | [Tool Implementation Standards](03-tool-implementation.md)
-

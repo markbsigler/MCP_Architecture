@@ -350,9 +350,18 @@ FASTMCP_CONFIG = {
 
 ## Communication Protocols
 
-### JSON-RPC over HTTP
+MCP supports multiple transport mechanisms. **For production deployments, Streamable HTTP with OAuth 2.1 is required.** STDIO is for development and testing only.
 
-MCP servers communicate using JSON-RPC 2.0 over HTTP/HTTPS:
+| Transport | Use Case | Authentication | Production |
+|-----------|----------|----------------|------------|
+| **Streamable HTTP** | Production services | OAuth 2.1 with PKCE | **REQUIRED** |
+| **STDIO** | Local development, testing | N/A | ❌ Not allowed |
+
+See [Deployment Patterns: Production Transport Requirements](07-deployment-patterns.md#production-transport-requirements) for detailed configuration.
+
+### JSON-RPC over HTTP (Production)
+
+Production MCP servers communicate using JSON-RPC 2.0 over HTTP/HTTPS with SSE for streaming:
 
 ```json
 {
