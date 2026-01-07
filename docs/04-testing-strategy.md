@@ -1753,8 +1753,8 @@ The [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) is an 
 **Installation and Usage:**
 
 ```bash
-# Run MCP Inspector with your server
-npx @modelcontextprotocol/inspector python server.py
+# Run MCP Inspector with your server (use venv Python path)
+npx @modelcontextprotocol/inspector .venv/bin/python server.py
 
 # For TypeScript servers
 npx @modelcontextprotocol/inspector node dist/server.js
@@ -1772,7 +1772,7 @@ npx @modelcontextprotocol/inspector node dist/server.js
 
 **Example Inspector Session:**
 
-1. Start inspector: `npx @modelcontextprotocol/inspector python server.py`
+1. Start inspector: `npx @modelcontextprotocol/inspector .venv/bin/python server.py`
 2. Open browser to `http://localhost:5173`
 3. Click "Connect" to initialize server
 4. Navigate to "Tools" tab to see available tools
@@ -1801,7 +1801,7 @@ code %APPDATA%\Claude\claude_desktop_config.json
 {
   "mcpServers": {
     "my-server": {
-      "command": "python",
+      "command": "/absolute/path/to/project/.venv/bin/python",
       "args": ["/absolute/path/to/server.py"],
       "env": {
         "PYTHONPATH": "/absolute/path/to/project",

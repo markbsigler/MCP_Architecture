@@ -1540,8 +1540,8 @@ See [Tool Implementation Standards - STDIO Logging Constraints](03-tool-implemen
 **Diagnosis with MCP Inspector:**
 
 ```bash
-# Start inspector
-npx @modelcontextprotocol/inspector python server.py
+# Start inspector (use venv Python path)
+npx @modelcontextprotocol/inspector .venv/bin/python server.py
 
 # In browser at http://localhost:5173:
 # 1. Connect to server
@@ -1657,6 +1657,8 @@ logging.getLogger("mcp").setLevel(logging.DEBUG)
 
 ```bash
 # Use tee to capture STDIO messages (development only)
+# Ensure venv is activated first
+source .venv/bin/activate
 python server.py 2>&1 | tee debug.log
 ```
 
@@ -1668,7 +1670,7 @@ python server.py 2>&1 | tee debug.log
 {
   "mcpServers": {
     "my-python-server": {
-      "command": "python",
+      "command": "/absolute/path/to/project/.venv/bin/python",
       "args": ["/absolute/path/to/server.py"],
       "env": {
         "PYTHONPATH": "/absolute/path/to/project",
@@ -1698,11 +1700,11 @@ When your MCP server isn't working:
 | Check | Command | Expected Result |
 |-------|---------|-----------------|
 | Config syntax valid | `python -m json.tool config.json` | No errors |
-| Server runs standalone | `python server.py` | Starts without errors |
+| Server runs standalone | `.venv/bin/python server.py` | Starts without errors |
 | No stdout pollution | `grep -r "print(" src/` | No unguarded prints |
 | Tools have type hints | Review tool definitions | All parameters typed |
 | Logs accessible | `tail ~/Library/Logs/Claude/mcp*.log` | Log files exist |
-| Inspector connects | `npx @modelcontextprotocol/inspector python server.py` | Tools visible |
+| Inspector connects | `npx @modelcontextprotocol/inspector .venv/bin/python server.py` | Tools visible |
 | Claude Desktop restarted | Cmd+Q and reopen | Fresh start |
 
 ## Summary

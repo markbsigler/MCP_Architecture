@@ -203,6 +203,10 @@ if __name__ == "__main__":
 ### Run Your Server
 
 ```bash
+# Ensure virtual environment is activated
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate   # Windows
+
 # Test the server runs without errors
 python server.py
 
@@ -231,7 +235,7 @@ code %APPDATA%\Claude\claude_desktop_config.json
 {
   "mcpServers": {
     "my-first-server": {
-      "command": "python",
+      "command": "/absolute/path/to/your/project/.venv/bin/python",
       "args": ["/absolute/path/to/your/server.py"],
       "env": {
         "PYTHONPATH": "/absolute/path/to/your/project"
@@ -241,7 +245,10 @@ code %APPDATA%\Claude\claude_desktop_config.json
 }
 ```
 
-**Important:** Use absolute paths, not relative paths.
+**Important:** 
+- Use the **virtual environment's Python**, not the system Python
+- Use absolute paths, not relative paths
+- On Windows, use `.venv/Scripts/python.exe`
 
 3. **Restart Claude Desktop completely:**
    - macOS: Cmd+Q (don't just close the window)
@@ -348,11 +355,15 @@ Before deploying to production:
 ### Common Commands
 
 ```bash
+# Activate virtual environment first
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate   # Windows
+
 # Run server locally
 python server.py
 
 # Run with MCP Inspector for debugging
-npx @modelcontextprotocol/inspector python server.py
+npx @modelcontextprotocol/inspector .venv/bin/python server.py
 
 # Run tests
 pytest tests/ -v
