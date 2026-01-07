@@ -147,6 +147,17 @@ The MCP server MUST be deployable with **any AI service provider** and LLM backe
 | Anthropic | ✅ Any | API keys | Direct API |
 | vLLM/Ollama | ✅ Any | Optional | Self-hosted |
 
+**Enterprise Gateway Pattern:**
+
+For enterprise deployments requiring centralized governance, cost tracking, and zero-code provider migration, MCP servers can integrate with an **AI Service Provider Gateway** (see [section 5.9](#59-ai-service-provider-gateway-should-have)). The gateway pattern enables:
+
+- **Zero-Code Provider Migration**: Switch between providers (OpenAI, Azure, vLLM) via configuration changes
+- **Enterprise Governance**: Centralized rate limiting, cost tracking, and compliance controls
+- **Automatic Fallback**: Failover to secondary providers on errors
+- **Secret Management**: Secure credential storage and rotation without code changes
+
+MCP servers using the [sampling interface](#55-sampling-optional) can route LLM requests through the gateway, maintaining provider-agnostic code while gaining enterprise capabilities.
+
 #### 1.4.4 Separation of Concerns (MUST HAVE)
 
 Each MCP server MUST focus on a **single integration domain** with cohesive, related capabilities. This is a fundamental MCP best practice that enables composability, maintainability, and clear ownership.
@@ -1135,6 +1146,146 @@ User Request: "Plan a vacation to Barcelona"
 | Error handling | Graceful handling of cross-server failures |
 | Context preservation | Context maintained across server interactions |
 
+### 5.9 AI Service Provider Gateway (SHOULD HAVE)
+
+**Requirement:** Support enterprise gateway pattern for provisioning and managing OpenAI-compatible AI service providers, enabling zero-code provider migration and enterprise governance.
+
+The AI Service Provider Gateway is a complementary infrastructure component that sits between MCP servers and LLM providers. It abstracts provider-specific logic, enabling MCP servers to use any OpenAI-compatible provider (OpenAI, Azure OpenAI, vLLM, etc.) without code changes. This pattern is particularly valuable when MCP servers use the [sampling interface](#55-sampling-optional) to request LLM completions.
+
+**Architecture Pattern:**
+
+The gateway uses an **Enterprise Gateway** pattern to abstract provider-specific logic:
+
+```mermaid
+sequenceDiagram
+    participant Client as Client Application
+    participant MCPServer as MCP Server
+    participant Gateway as Enterprise AI Gateway
+    participant Secrets as Key Vault/Secret Store
+    participant LLM as Provider (OpenAI/Azure/vLLM)
+
+    Client->>MCPServer: MCP Request (sampling)
+    MCPServer->>Gateway: POST /v1/chat/completions
+    
+    Gateway->>Secrets: Fetch Upstream Provider Key
+    Secrets-->>Gateway: Return API Key
+    
+    rect rgb(245, 245, 245)
+    Note over Gateway: Governance Logic
+    Gateway->>Gateway: Validate Quota & Map Model IDs
+    end
+
+    Gateway->>LLM: Forward OpenAI-Standard Payload
+    
+    LLM-->>Gateway: Stream Tokens (SSE)
+    Gateway-->>MCPServer: Forward Streamed Tokens
+    MCPServer-->>Client: MCP Response
+```
+
+**Relationship to MCP Sampling:**
+
+When an MCP server implements the [sampling interface](#55-sampling-optional), it can route LLM requests through the gateway instead of directly to providers. This enables:
+
+- **Provider Abstraction**: MCP server code remains provider-agnostic
+- **Zero-Code Migration**: Switch providers via configuration changes
+- **Enterprise Governance**: Centralized rate limiting, cost tracking, and compliance
+- **Automatic Fallback**: Failover to secondary providers on errors
+
+**Functional Requirements (EARS Syntax):**
+
+| ID | Requirement (EARS Format) |
+| :---- | :---- |
+| **REQ-GW-01** | **The system shall** provide a configurable base_url parameter to redirect API calls to any OpenAI-compatible endpoint. |
+| **REQ-GW-02** | **When** an administrator saves a new endpoint, **the system shall** execute an automated /v1/models handshake to verify connectivity. |
+| **REQ-GW-03** | **While** an internal proxy is configured, **the system shall** inject mandatory enterprise headers (e.g., X-Project-ID) into every request. |
+| **REQ-GW-04** | **If** the primary provider returns a 429 (Rate Limit) error, **the system shall** trigger an automatic fallback to the secondary provider if configured. |
+| **REQ-GW-05** | **The system shall** store all LLM provider credentials in an encrypted secret management service, never in plain-text config files. |
+
+**Configuration Schema:**
+
+The gateway uses a JSON structure to define service instance provisioning:
+
+```json
+{
+  "service_instance": {
+    "instance_id": "prod-us-east-01",
+    "protocol": "openai-v1",
+    "endpoint": {
+      "base_url": "https://ai-proxy.acme.corp/v1",
+      "auth_type": "bearer_token",
+      "secret_ref": "KV_AI_PROXY_KEY"
+    },
+    "routing_table": [
+      {
+        "app_model_id": "fast-llm",
+        "upstream_model_id": "gpt-3.5-turbo",
+        "streaming_enabled": true
+      },
+      {
+        "app_model_id": "reasoning-llm",
+        "upstream_model_id": "gpt-4-turbo",
+        "streaming_enabled": true
+      }
+    ],
+    "governance": {
+      "rate_limits": { "tpm": 100000, "rpm": 1000 },
+      "metadata": { "cost_center": "R&D-2026", "environment": "production" }
+    }
+  }
+}
+```
+
+**Gateway Capabilities:**
+
+| Capability | Description | Priority |
+|-----------|-------------|----------|
+| **Provider Abstraction** | Decouple MCP servers from specific LLM providers | MUST |
+| **Model ID Mapping** | Map application model IDs to upstream provider model IDs | MUST |
+| **Automatic Fallback** | Failover to secondary providers on errors (429, 5xx) | SHOULD |
+| **Enterprise Headers** | Inject mandatory headers (X-Project-ID, X-Cost-Center) | SHOULD |
+| **Rate Limiting** | Enforce per-instance rate limits (TPM, RPM) | SHOULD |
+| **Cost Tracking** | Track usage by cost center, project, environment | SHOULD |
+| **Secret Management** | Secure credential storage and rotation | MUST |
+| **Connectivity Validation** | Automated /v1/models handshake on configuration | MUST |
+
+**Integration with MCP Servers:**
+
+MCP servers that use the sampling interface can integrate with the gateway by:
+
+1. **Configuration**: Set gateway base_url as the sampling endpoint
+2. **Authentication**: Use gateway authentication (API key, OAuth) instead of provider credentials
+3. **Model Selection**: Use app_model_id aliases defined in gateway routing table
+4. **Error Handling**: Gateway handles provider errors and fallback automatically
+
+**Example MCP Server Configuration:**
+
+```json
+{
+  "sampling": {
+    "enabled": true,
+    "endpoint": "https://ai-gateway.acme.corp/v1",
+    "auth": {
+      "type": "bearer_token",
+      "secret_ref": "MCP_GATEWAY_KEY"
+    },
+    "default_model": "fast-llm"
+  }
+}
+```
+
+**Acceptance Criteria:**
+
+| Criteria | Target |
+|----------|--------|
+| Provider abstraction | MCP server works with any OpenAI-compatible provider via gateway |
+| Configuration validation | Gateway validates connectivity on endpoint save |
+| Model ID mapping | App model IDs correctly map to upstream provider models |
+| Fallback mechanism | Automatic failover to secondary provider on 429/5xx errors |
+| Secret management | All credentials stored in encrypted secret store |
+| Enterprise headers | Mandatory headers injected into all requests |
+| Gateway overhead | Added latency < 30ms (p95) |
+| Zero-code migration | Provider switch via configuration change only |
+
 ---
 
 ## 6. Non-Functional Requirements
@@ -1390,6 +1541,58 @@ Referrer-Policy: no-referrer
 - Limit allowed headers
 - Cache preflight responses appropriately
 
+#### 6.1.9 Provider Credential Management (SHOULD HAVE)
+
+**Requirement:** Securely manage AI service provider credentials when using the [AI Service Provider Gateway](#59-ai-service-provider-gateway-should-have) pattern.
+
+**Secret Management Requirements:**
+
+| Requirement | Description | Priority |
+|-------------|-------------|----------|
+| **Encrypted Storage** | All LLM provider credentials stored in encrypted secret management service (AWS Secrets Manager, HashiCorp Vault, Azure Key Vault) | MUST |
+| **No Plain-Text Config** | Never store API keys, tokens, or credentials in plain-text configuration files or environment variables | MUST |
+| **Secret References** | Use secret references (e.g., `KV_AI_PROXY_KEY`) instead of direct credential values | MUST |
+| **Credential Rotation** | Support automatic credential rotation without service restart or code changes | SHOULD |
+| **Access Control** | Restrict secret access to authorized services and users only | MUST |
+| **Audit Trail** | Log all secret access attempts (success/failure) with user/service identity | MUST |
+
+**Enterprise Header Injection:**
+
+When using an internal proxy or gateway, the system MUST inject mandatory enterprise headers into every request:
+
+| Header | Purpose | Example |
+|--------|---------|---------|
+| `X-Project-ID` | Cost allocation and project tracking | `X-Project-ID: project-12345` |
+| `X-Cost-Center` | Financial reporting and chargeback | `X-Cost-Center: R&D-2026` |
+| `X-Environment` | Environment identification | `X-Environment: production` |
+| `X-Request-ID` | Request correlation and tracing | `X-Request-ID: req-abc123` |
+
+**Header Injection Requirements:**
+- Headers injected automatically by gateway/proxy layer
+- Headers cannot be overridden by client requests
+- Header values validated against allowed values/environments
+- Missing required headers result in request rejection (401 Unauthorized)
+
+**Credential Rotation Process:**
+
+1. **Preparation**: New credentials generated and stored in secret management service
+2. **Update**: Gateway configuration updated with new secret reference
+3. **Validation**: Gateway validates connectivity with new credentials via `/v1/models` handshake
+4. **Activation**: New credentials activated, old credentials marked for rotation
+5. **Cleanup**: Old credentials revoked after grace period (configurable, default 24 hours)
+
+**Acceptance Criteria:**
+
+| Criteria | Target |
+|----------|--------|
+| Secret storage | All credentials in encrypted secret management service |
+| Plain-text prevention | Zero credentials in config files or environment variables |
+| Header injection | Mandatory enterprise headers injected into all requests |
+| Credential rotation | Rotation completed without service downtime |
+| Access control | Secret access restricted to authorized services only |
+| Audit coverage | 100% of secret access attempts logged |
+| Header validation | Missing required headers result in 401 Unauthorized |
+
 ### 6.2 Performance
 
 #### 6.2.1 Response Times
@@ -1401,6 +1604,7 @@ Referrer-Policy: no-referrer
 | Tool execution (typical) | < 2s |
 | Protocol overhead | < 50ms per request |
 | Authentication | < 100ms (with cached JWKS) |
+| Gateway overhead | < 30ms (when using AI Service Provider Gateway) |
 
 #### 6.2.2 Scalability
 
@@ -1418,6 +1622,23 @@ Referrer-Policy: no-referrer
 - Automatic reconnection for transient failures
 - Circuit breaker pattern for failing dependencies
 - Clear health status reporting
+
+**Provider Fallback Performance (Gateway Pattern):**
+
+When using the [AI Service Provider Gateway](#59-ai-service-provider-gateway-should-have), the system MUST support automatic fallback to secondary providers:
+
+| Scenario | Behavior | Performance Target |
+|----------|----------|-------------------|
+| **429 Rate Limit** | Automatic failover to secondary provider | < 100ms failover latency |
+| **5xx Server Error** | Exponential backoff with retry, then failover | < 500ms total retry + failover |
+| **Timeout** | Immediate failover to secondary provider | < 50ms failover latency |
+| **Connectivity Loss** | Circuit breaker opens, failover to secondary | < 200ms circuit breaker detection |
+
+**Fallback Requirements:**
+- Exponential backoff for transient errors (5xx): 1s, 2s, 4s, 8s
+- Immediate failover for rate limits (429) and timeouts
+- Circuit breaker pattern: Open after 5 consecutive failures, half-open after 30s
+- Health check validation before routing to recovered provider
 
 ### 6.3 Observability
 
@@ -1903,6 +2124,76 @@ The server must be verified working with Claude for Desktop via `claude_desktop_
 - Successful tool execution
 - Error handling and recovery
 
+### 8.11 Provider Gateway Testing (SHOULD HAVE)
+
+**Requirement:** Validate AI Service Provider Gateway functionality and integration with MCP servers.
+
+**Test Group 1: Connectivity & Discovery**
+
+| Test ID | Scenario | Expected Result |
+| :---- | :---- | :---- |
+| **UAT-GW-1.1** | Change base_url to a local vLLM endpoint. | Application successfully fetches model list from the new source. |
+| **UAT-GW-1.2** | Input an invalid URL. | System returns a "Connection Failed" error during the handshake phase. |
+| **UAT-GW-1.3** | Configure new endpoint via gateway API. | Gateway executes automated /v1/models handshake to verify connectivity. |
+| **UAT-GW-1.4** | Gateway handshake with invalid credentials. | Gateway rejects configuration with clear error message. |
+
+**Test Group 2: Security & Governance**
+
+| Test ID | Scenario | Expected Result |
+| :---- | :---- | :---- |
+| **UAT-GW-2.1** | Send request without X-Project-ID header. | Gateway rejects request with 401 Unauthorized before LLM processing. |
+| **UAT-GW-2.2** | Exceed configured TPM (Tokens Per Minute). | System enforces local rate limiting and returns a structured 429 error. |
+| **UAT-GW-2.3** | Access gateway with invalid API key. | Gateway returns 401 Unauthorized with clear error message. |
+| **UAT-GW-2.4** | Rotate provider credentials via secret management. | Gateway seamlessly switches to new credentials without downtime. |
+| **UAT-GW-2.5** | Verify secret storage encryption. | All credentials stored in encrypted secret management service. |
+
+**Test Group 3: Model Parity & Routing**
+
+| Test ID | Scenario | Expected Result |
+| :---- | :---- | :---- |
+| **UAT-GW-3.1** | Request a chat completion with stream: true. | Client receives a valid Server-Sent Event (SSE) stream. |
+| **UAT-GW-3.2** | Use app_model_id alias in request. | Gateway correctly maps and forwards request to the upstream_model_id. |
+| **UAT-GW-3.3** | Request with invalid app_model_id. | Gateway returns 400 Bad Request with available model list. |
+| **UAT-GW-3.4** | Verify model ID mapping accuracy. | All app_model_id aliases correctly route to upstream providers. |
+
+**Test Group 4: Fallback & Resiliency**
+
+| Test ID | Scenario | Expected Result |
+| :---- | :---- | :---- |
+| **UAT-GW-4.1** | Primary provider returns 429 (Rate Limit). | Gateway automatically fails over to secondary provider within 100ms. |
+| **UAT-GW-4.2** | Primary provider returns 5xx error. | Gateway implements exponential backoff, then fails over to secondary. |
+| **UAT-GW-4.3** | Primary provider timeout. | Gateway immediately fails over to secondary provider within 50ms. |
+| **UAT-GW-4.4** | Both primary and secondary providers unavailable. | Gateway returns 503 Service Unavailable with clear error message. |
+| **UAT-GW-4.5** | Circuit breaker opens after 5 failures. | Gateway stops routing to failed provider, routes to secondary. |
+| **UAT-GW-4.6** | Provider recovers after circuit breaker opens. | Gateway validates health check, then resumes routing after 30s. |
+
+**Test Group 5: Performance & Latency**
+
+| Test ID | Scenario | Expected Result |
+| :---- | :---- | :---- |
+| **UAT-GW-5.1** | Measure gateway overhead latency. | Added latency from gateway layer < 30ms (p95). |
+| **UAT-GW-5.2** | Concurrent requests through gateway. | Gateway handles 100+ concurrent requests without degradation. |
+| **UAT-GW-5.3** | Large payload streaming. | Gateway streams large responses without buffering or memory issues. |
+
+**Test Group 6: Integration with MCP Sampling**
+
+| Test ID | Scenario | Expected Result |
+| :---- | :---- | :---- |
+| **UAT-GW-6.1** | MCP server uses sampling interface with gateway. | Sampling requests successfully route through gateway to provider. |
+| **UAT-GW-6.2** | Gateway model ID mapping with sampling. | App model IDs correctly map when used in sampling requests. |
+| **UAT-GW-6.3** | Sampling request with gateway fallback. | Gateway fallback works correctly for sampling requests. |
+
+**Acceptance Criteria:**
+
+| Criteria | Target |
+|----------|--------|
+| Test coverage | All test groups executed and passing |
+| Connectivity validation | Gateway handshake validates all endpoint configurations |
+| Security enforcement | All security and governance tests pass |
+| Fallback reliability | Automatic failover works in all error scenarios |
+| Performance targets | Gateway overhead and fallback latency meet targets |
+| Integration validation | MCP server integration with gateway verified |
+
 ---
 
 ## 9. Technical Constraints and Dependencies
@@ -1988,6 +2279,7 @@ STDIO transport is explicitly prohibited for production deployments:
 | Authorization Server | Outbound | OAuth 2.1/OIDC | Client credentials |
 | Metrics Backend | Outbound | Prometheus/OTLP | Service account |
 | Log Aggregator | Outbound | Syslog/HTTPS | API Key |
+| AI Service Gateway | Outbound | OpenAI-compatible HTTP | Bearer token, API key |
 
 ### 9.5 Architecture Decision References
 
@@ -2328,6 +2620,187 @@ services:
 | 2.2 | 2025-12 | Updated to MCP specification 2025-11-25: OIDC Discovery, incremental scope consent, icon support for primitives, elicitation feature, experimental tasks, tool calling in sampling, JSON Schema 2020-12, Origin header validation, Tool Execution Errors for input validation |
 | 2.3 | 2025-12 | **Core Principles**: Client portability (GitHub Copilot, Cursor, Claude, VS Code); MCP Registry distribution; AI provider agnostic deployment (AWS Bedrock, Azure, Google, OpenAI, Anthropic, vLLM); Separation of concerns (single integration domain per server) |
 | 2.4 | 2025-12 | **Architecture Alignment**: Error Handling Requirements (5.1.3); ADR references (9.5); Cross-references to Architecture Guide; Requirements traceability support |
+
+### 14.6 AI Service Provider Gateway Configuration
+
+**Gateway Service Instance Configuration:**
+
+Complete example of gateway service instance provisioning configuration:
+
+```json
+{
+  "service_instance": {
+    "instance_id": "prod-us-east-01",
+    "protocol": "openai-v1",
+    "endpoint": {
+      "base_url": "https://ai-proxy.acme.corp/v1",
+      "auth_type": "bearer_token",
+      "secret_ref": "KV_AI_PROXY_KEY"
+    },
+    "routing_table": [
+      {
+        "app_model_id": "fast-llm",
+        "upstream_model_id": "gpt-3.5-turbo",
+        "streaming_enabled": true,
+        "provider": "openai",
+        "fallback_provider": "azure-openai"
+      },
+      {
+        "app_model_id": "reasoning-llm",
+        "upstream_model_id": "gpt-4-turbo",
+        "streaming_enabled": true,
+        "provider": "openai",
+        "fallback_provider": null
+      },
+      {
+        "app_model_id": "local-llm",
+        "upstream_model_id": "llama-3-70b",
+        "streaming_enabled": true,
+        "provider": "vllm",
+        "fallback_provider": "openai"
+      }
+    ],
+    "governance": {
+      "rate_limits": {
+        "tpm": 100000,
+        "rpm": 1000,
+        "tpd": 1000000
+      },
+      "metadata": {
+        "cost_center": "R&D-2026",
+        "environment": "production",
+        "project_id": "project-12345"
+      }
+    },
+    "fallback_config": {
+      "enabled": true,
+      "retry_policy": {
+        "max_retries": 3,
+        "backoff_multiplier": 2,
+        "initial_delay_ms": 1000
+      },
+      "circuit_breaker": {
+        "failure_threshold": 5,
+        "half_open_timeout_seconds": 30,
+        "open_timeout_seconds": 60
+      }
+    }
+  }
+}
+```
+
+**MCP Server Integration Configuration:**
+
+Example MCP server configuration for integrating with the gateway:
+
+```json
+{
+  "mcp_server": {
+    "name": "my-mcp-server",
+    "sampling": {
+      "enabled": true,
+      "endpoint": "https://ai-gateway.acme.corp/v1",
+      "auth": {
+        "type": "bearer_token",
+        "secret_ref": "MCP_GATEWAY_KEY"
+      },
+      "default_model": "fast-llm",
+      "timeout_seconds": 30
+    }
+  }
+}
+```
+
+**Environment Variable Configuration:**
+
+Gateway configuration via environment variables (12-factor app pattern):
+
+```bash
+# Gateway Endpoint
+AI_GATEWAY_BASE_URL=https://ai-gateway.acme.corp/v1
+AI_GATEWAY_AUTH_TYPE=bearer_token
+AI_GATEWAY_SECRET_REF=KV_AI_GATEWAY_KEY
+
+# Provider Configuration
+AI_PROVIDER_PRIMARY=openai
+AI_PROVIDER_SECONDARY=azure-openai
+AI_PROVIDER_FALLBACK_ENABLED=true
+
+# Rate Limiting
+AI_GATEWAY_RATE_LIMIT_TPM=100000
+AI_GATEWAY_RATE_LIMIT_RPM=1000
+
+# Governance
+AI_GATEWAY_COST_CENTER=R&D-2026
+AI_GATEWAY_PROJECT_ID=project-12345
+AI_GATEWAY_ENVIRONMENT=production
+
+# Circuit Breaker
+AI_GATEWAY_CIRCUIT_BREAKER_ENABLED=true
+AI_GATEWAY_CIRCUIT_BREAKER_THRESHOLD=5
+AI_GATEWAY_CIRCUIT_BREAKER_TIMEOUT=30
+```
+
+**Secret Management Integration:**
+
+Example secret references for different secret management systems:
+
+```yaml
+# AWS Secrets Manager
+secret_ref: "arn:aws:secretsmanager:us-east-1:123456789:secret:ai-gateway-key"
+
+# HashiCorp Vault
+secret_ref: "vault://secret/data/ai-gateway-key"
+
+# Azure Key Vault
+secret_ref: "https://myvault.vault.azure.net/secrets/ai-gateway-key"
+
+# Kubernetes Secrets
+secret_ref: "kubernetes://default/ai-gateway-secret/api-key"
+```
+
+**Multi-Provider Configuration:**
+
+Example configuration with multiple provider endpoints:
+
+```json
+{
+  "service_instance": {
+    "instance_id": "multi-provider-01",
+    "providers": [
+      {
+        "provider_id": "openai",
+        "base_url": "https://api.openai.com/v1",
+        "auth_type": "bearer_token",
+        "secret_ref": "KV_OPENAI_KEY",
+        "priority": 1
+      },
+      {
+        "provider_id": "azure-openai",
+        "base_url": "https://my-resource.openai.azure.com",
+        "auth_type": "api_key",
+        "secret_ref": "KV_AZURE_OPENAI_KEY",
+        "priority": 2
+      },
+      {
+        "provider_id": "vllm",
+        "base_url": "https://vllm.internal.corp/v1",
+        "auth_type": "none",
+        "secret_ref": null,
+        "priority": 3
+      }
+    ],
+    "routing_table": [
+      {
+        "app_model_id": "fast-llm",
+        "upstream_model_id": "gpt-3.5-turbo",
+        "primary_provider": "openai",
+        "fallback_providers": ["azure-openai", "vllm"]
+      }
+    ]
+  }
+}
+```
 
 ---
 
