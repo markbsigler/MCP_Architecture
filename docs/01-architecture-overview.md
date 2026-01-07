@@ -9,6 +9,7 @@
 
 ## Quick Links
 
+- [Core Principle: Single Integration Domain](#core-architectural-principle-single-integration-domain)
 - [Enterprise MCP Architecture Layers](#enterprise-mcp-architecture-layers)
 - [Layer Descriptions](#layer-descriptions)
 - [When to Use Each Layer](#when-to-use-each-layer)
@@ -19,6 +20,94 @@
 ## Introduction
 
 This document provides a comprehensive overview of the enterprise MCP (Model Context Protocol) server architecture. It establishes the foundational patterns and components that enable secure, scalable, and maintainable agentic services.
+
+---
+
+## Core Architectural Principle: Single Integration Domain
+
+> **The power of agentic AI comes from composing multiple focused MCP servers, not from building monolithic servers that do everything.**
+
+Each MCP server **MUST** focus on a **single integration domain**. This is a foundational architectural principle that enables the composability, maintainability, and scalability that makes MCP powerful.
+
+### Why Single Integration Domain?
+
+| Benefit | Description |
+|---------|-------------|
+| **Composability** | AI agents combine multiple focused servers for complex, cross-domain workflows |
+| **Maintainability** | Smaller, focused codebases are easier to understand, test, and update |
+| **Scalability** | Scale each integration independently based on its specific load patterns |
+| **Ownership** | Clear team ownership per domain (e.g., Platform team owns `mcp-github`) |
+| **Reliability** | Failure in one server doesn't cascade to unrelated integrations |
+| **Reusability** | Focused servers are reusable across different AI applications and workflows |
+
+### Correct: Focused MCP Servers
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        AI Agent / LLM                           │
+└─────────────────────────────────────────────────────────────────┘
+         │              │              │              │
+         ▼              ▼              ▼              ▼
+   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+   │mcp-github│  │mcp-slack │  │mcp-jira  │  │mcp-db    │
+   │          │  │          │  │          │  │          │
+   │- repos   │  │- channels│  │- tickets │  │- query   │
+   │- issues  │  │- messages│  │- sprints │  │- schema  │
+   │- PRs     │  │- users   │  │- boards  │  │- tables  │
+   └──────────┘  └──────────┘  └──────────┘  └──────────┘
+        │              │              │              │
+        ▼              ▼              ▼              ▼
+   [GitHub API]  [Slack API]   [Jira API]   [Database]
+```
+
+**Agentic Workflow Example:**
+
+```text
+User: "Create a GitHub issue from the bug report in Slack #incidents, 
+       link it to the Jira epic, and update the team"
+
+AI Agent orchestrates:
+1. mcp-slack  → get_message(channel: "#incidents", id: "...")
+2. mcp-github → create_issue(repo: "...", title: "...", body: "...")
+3. mcp-jira   → link_issue(epic: "...", external_url: "...")
+4. mcp-slack  → post_message(channel: "#team", text: "Issue created...")
+```
+
+### Anti-Pattern: Monolithic Server
+
+```text
+❌ DON'T: One server combining multiple unrelated integrations
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    mcp-enterprise-everything                     │
+├─────────────────────────────────────────────────────────────────┤
+│  github_create_issue()    slack_post_message()                  │
+│  jira_get_ticket()        database_query()                      │
+│  email_send()             calendar_create_event()               │
+│  s3_upload()              confluence_get_page()                 │
+└─────────────────────────────────────────────────────────────────┘
+
+Problems:
+- Single point of failure for all integrations
+- Difficult to maintain and test
+- Cannot scale integrations independently
+- Unclear ownership and responsibilities
+- Bloated dependencies and security surface
+```
+
+### Design Checklist
+
+Before building an MCP server, verify:
+
+- [ ] **Single Domain**: Server addresses ONE integration (e.g., GitHub, not "DevOps")
+- [ ] **Cohesive Tools**: All tools relate to the same domain context
+- [ ] **Cohesive Resources**: All resources expose data from the same integration
+- [ ] **Clear Naming**: Server name clearly indicates its domain (`mcp-github`, not `mcp-dev-tools`)
+- [ ] **No Cross-Domain Logic**: Cross-domain workflows are handled by AI agents, not the server
+
+See [MCP-PRD Section 1.4.4: Separation of Concerns](../MCP-PRD.md#144-separation-of-concerns-must-have) for detailed requirements.
+
+---
 
 ## Executive Summary
 

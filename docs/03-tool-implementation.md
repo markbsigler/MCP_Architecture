@@ -9,6 +9,7 @@
 
 ## Quick Links
 
+- [Domain Focus Reminder](#domain-focus-reminder)
 - [Naming Conventions](#naming-conventions)
 - [Parameter Design](#parameter-design)
 - [Response Standards](#response-standards)
@@ -31,6 +32,47 @@ Consistent tool implementation is critical for maintainability and user experien
 - [Resource Implementation Standards](03b-resource-implementation.md) - Application-driven data access
 - [Sampling Patterns](03c-sampling-patterns.md) - Server-initiated LLM interactions
 - [Testing Strategy](04-testing-strategy.md) - Testing approaches for tools
+
+---
+
+## Domain Focus Reminder
+
+> **All tools in an MCP server MUST relate to a single integration domain.**
+
+Before implementing tools, verify they belong in this server:
+
+| Check | Question |
+|-------|----------|
+| **Same Domain** | Do all tools interact with the same external system? |
+| **Cohesive Context** | Can tools be described without "and also..."? |
+| **Clear Ownership** | Is there one team responsible for the underlying integration? |
+
+**Example:** A `mcp-github` server should only have GitHub-related tools:
+
+```python
+# ✅ CORRECT: All tools relate to GitHub
+@mcp.tool()
+async def create_issue(...): ...    # GitHub Issues
+
+@mcp.tool()
+async def list_pull_requests(...): ...    # GitHub PRs
+
+@mcp.tool()
+async def get_repository(...): ...    # GitHub Repos
+
+# ❌ WRONG: Cross-domain tools don't belong here
+@mcp.tool()
+async def send_slack_message(...): ...    # Should be in mcp-slack
+
+@mcp.tool()
+async def create_jira_ticket(...): ...    # Should be in mcp-jira
+```
+
+Cross-domain workflows are handled by AI agents orchestrating multiple focused servers.
+
+See [Architecture: Single Integration Domain](01-architecture-overview.md#core-architectural-principle-single-integration-domain) for details.
+
+---
 
 ## Naming Conventions
 

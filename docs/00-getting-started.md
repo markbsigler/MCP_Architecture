@@ -19,8 +19,36 @@ This guide provides a fast path to building your first enterprise-grade MCP serv
 - Basic understanding of async/await patterns
 - Familiarity with JSON and REST APIs
 
+---
+
+## Before You Start: Single Integration Domain
+
+> **Key Principle:** Each MCP server should focus on **one integration domain**. The power of agentic AI comes from **composing multiple focused servers**, not building one server that does everything.
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| `mcp-github` (repos, issues, PRs) | `mcp-devops` (GitHub + Jira + Slack) |
+| `mcp-slack` (channels, messages) | `mcp-communications` (Slack + Email + Teams) |
+| `mcp-postgres` (queries, schema) | `mcp-data` (Postgres + MongoDB + Redis) |
+
+**Why?** AI agents combine focused servers for complex workflows:
+
+```text
+User: "Create a GitHub issue from this Slack thread and link it in Jira"
+
+AI orchestrates:
+1. mcp-slack  → get_message(...)
+2. mcp-github → create_issue(...)
+3. mcp-jira   → link_issue(...)
+```
+
+See [Architecture: Single Integration Domain](01-architecture-overview.md#core-architectural-principle-single-integration-domain) for details.
+
+---
+
 ## Quick Links
 
+- [Single Integration Domain](#before-you-start-single-integration-domain)
 - [Development vs Production Requirements](#development-vs-production-requirements)
 - [SDK Selection](#sdk-selection)
 - [Environment Setup](#environment-setup)
