@@ -1,14 +1,14 @@
 # Model Context Protocol (MCP) Server Architecture and Design Guidelines
 
-**Version:** 1.4.0  
-**Last Updated:** November 20, 2025  
+**Version:** 1.5.0  
+**Last Updated:** January 2026  
 **Status:** Production Ready  
 **Repository:** MCP_Architecture  
 **Author:** Mark Sigler
 
 [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 [![Documentation](https://img.shields.io/badge/docs-comprehensive-blue.svg)](docs/)
-[![MCP Protocol](https://img.shields.io/badge/MCP-2.0-green.svg)](https://modelcontextprotocol.io)
+[![MCP Protocol](https://img.shields.io/badge/MCP-2025--11--25-green.svg)](https://modelcontextprotocol.io/specification/2025-11-25)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
 [![FastMCP](https://img.shields.io/badge/FastMCP-enabled-orange.svg)](https://github.com/jlowin/fastmcp)
 [![Tests](https://img.shields.io/badge/coverage-80%25+-success.svg)](docs/04-testing-strategy.md)
@@ -25,10 +25,51 @@ This repository contains comprehensive architectural and systems design guidelin
 - **Production-ready code examples** in Python with FastMCP
 - **Decision trees and flowcharts** for architectural choices
 - **Complete testing strategies** with 80%+ coverage targets
-- **Security hardening guides** with RBAC, OAuth 2.0, and audit logging
+- **Security hardening guides** with RBAC, OAuth 2.1, and audit logging
 - **Observability patterns** with Prometheus, Grafana, and OpenTelemetry
 - **DORA metrics tracking** for deployment excellence
 - **Migration guides** for REST API → MCP transitions
+- **MCP Specification 2025-11-25 alignment** with latest protocol features
+
+## Core Principles
+
+> **These opinionated guidelines are fundamental to building production-grade MCP servers.**
+
+### 🎯 Single Integration Domain
+
+**Each MCP server MUST focus on ONE integration domain.** The power of agentic AI comes from composing multiple focused servers, not building monolithic servers.
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| `mcp-github` (repos, issues, PRs) | `mcp-devops` (GitHub + Jira + Slack) |
+| `mcp-slack` (channels, messages) | `mcp-communications` (Slack + Email) |
+| `mcp-postgres` (queries, schema) | `mcp-data` (Postgres + MongoDB + Redis) |
+
+AI agents orchestrate multiple focused servers for complex cross-domain workflows. See [Architecture: Single Integration Domain](docs/01-architecture-overview.md#core-architectural-principle-single-integration-domain).
+
+### 🔧 Development vs Production
+
+| Aspect | Development | Production |
+|--------|-------------|------------|
+| **Transport** | STDIO | Streamable HTTP with SSE |
+| **Authentication** | Optional | OAuth 2.1 with PKCE (REQUIRED) |
+| **Packaging** | Local execution | Container image (Docker/OCI) |
+| **Logging** | stderr, DEBUG | Structured JSON, INFO |
+
+**STDIO is for development and testing only.** Production deployments require Streamable HTTP with OAuth 2.1 and containerized packaging. See [Getting Started: Dev vs Prod](docs/00-getting-started.md#development-vs-production-requirements).
+
+### 🔒 MCP Security Best Practices
+
+Per the [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25):
+
+| Principle | Requirement |
+|-----------|-------------|
+| **User Consent** | Users must explicitly consent to all data access and tool executions |
+| **Tool Safety** | Tool annotations should be considered untrusted unless from a trusted server |
+| **Data Privacy** | Hosts must obtain consent before exposing user data to servers |
+| **LLM Sampling** | Users must explicitly approve any sampling requests |
+
+See [Security Architecture: MCP Security Best Practices](docs/02-security-architecture.md#mcp-security-best-practices).
 
 ## Purpose
 
@@ -87,11 +128,12 @@ These guidelines are designed to help engineering teams:
 
 **[Security Architecture](docs/02-security-architecture.md)**
 
-- Authentication patterns (JWT, OAuth 2.0, WorkOS)
+- MCP Security Best Practices (user consent, tool safety, data privacy, LLM sampling controls)
+- Authentication patterns (JWT, OAuth 2.1 with PKCE, OIDC Discovery)
 - Authorization frameworks (RBAC, capability-based)
 - Rate limiting with token bucket algorithm
 - Input validation and sanitization
-- Security headers and CORS
+- Security headers, CORS, and Origin validation
 - Audit logging requirements
 
 **[Data Privacy & Compliance](docs/02a-data-privacy-compliance.md)**
@@ -111,14 +153,15 @@ These guidelines are designed to help engineering teams:
 
 **[Tool Implementation Standards](docs/03-tool-implementation.md)**
 
-- Naming conventions (verb-noun pattern)
+- Domain focus principle (all tools must relate to single integration)
+- Naming conventions (verb-noun pattern, MCP SEP-986 guidance)
 - Parameter design standards
 - Response format consistency
-- Error handling framework
+- Error handling framework (input validation as Tool Execution Errors)
 - STDIO logging constraints (critical for Claude Desktop)
 - External API integration patterns (timeouts, retries, circuit breakers)
-- Pagination patterns
-- Versioning strategies
+- Icon metadata for UI presentation (MCP 2025-11-25)
+- Pagination patterns and versioning strategies
 
 **[Prompt Implementation Standards](docs/03a-prompt-implementation.md)**
 
@@ -277,6 +320,7 @@ These guidelines are designed to help engineering teams:
 
 **[MCP Protocol Compatibility](docs/15-mcp-protocol-compatibility.md)**
 
+- MCP Specification 2025-11-25 key changes and alignment
 - Supported protocol versions and feature matrix
 - Version negotiation and upgrade paths
 - Deprecation policy and lifecycle management
@@ -463,7 +507,9 @@ While these guidelines are language-agnostic in principle, examples and patterns
 
 - **Framework**: FastMCP (Python)
 - **Language**: Python 3.11+
-- **Authentication**: JWT/JWKS, OAuth 2.0
+- **Protocol**: MCP Specification 2025-11-25
+- **Transport**: Streamable HTTP with SSE (production), STDIO (development)
+- **Authentication**: OAuth 2.1 with PKCE, JWT/JWKS
 - **Observability**: OpenTelemetry, Prometheus
 - **Container Runtime**: Docker
 - **Orchestration**: Kubernetes (examples are generic)
@@ -543,7 +589,7 @@ We welcome contributions from the community! Here's how you can help:
 
 ## Roadmap
 
-### ✅ Completed (v1.4.0)
+### ✅ Completed (v1.5.0)
 
 **Core Documentation (v1.0.0 - v1.3.0)**
 
@@ -568,13 +614,26 @@ We welcome contributions from the community! Here's how you can help:
 - ✅ Content enhancements: decision tables, traceability matrices, error recovery trees, flame graph analysis
 - ✅ All documents updated to Production Ready status
 
-### 🚧 In Progress (v1.5.0)
+**MCP Specification Alignment & Core Principles (v1.5.0)**
+
+- ✅ MCP Specification 2025-11-25 alignment across all documents
+- ✅ Single Integration Domain as core architectural principle
+- ✅ Development vs Production requirements (STDIO dev-only, HTTP/OAuth for prod)
+- ✅ MCP Security Best Practices (user consent, tool safety, data privacy, LLM sampling controls)
+- ✅ OIDC Discovery 1.0 and RFC 9728 alignment
+- ✅ Tool name guidance (SEP-986) and input validation errors (SEP-1303)
+- ✅ Icon metadata support for tools, resources, prompts (SEP-973)
+- ✅ Enhanced Getting Started guide with SDK selection and Claude Desktop testing
+- ✅ Virtual environment best practices for Python execution
+
+### 🚧 In Progress (v1.6.0)
 
 - Interactive decision flow tools
 - Video tutorials and walkthroughs
 - Compliance checklists (SOC2, ISO 27001)
 - Real-world case studies and implementation examples
 - Community contributions showcase
+- AI Service Provider Gateway patterns
 
 ### 🎯 Planned (v2.0.0)
 
@@ -586,6 +645,7 @@ We welcome contributions from the community! Here's how you can help:
 - Multi-tenancy architecture patterns
 - Performance optimization playbooks
 - Disaster recovery procedures
+- MCP experimental tasks feature documentation
 
 ### 💡 Under Consideration
 
@@ -622,7 +682,7 @@ A: Follow the [Migration Guides](docs/10-migration-guides.md) for phased approac
 A: 80%+ for enterprise applications. See [Testing Strategy](docs/04-testing-strategy.md) for details.
 
 **Q: How do I handle authentication?**
-A: We recommend JWT with JWKS or OAuth 2.0. See [Security Architecture](docs/02-security-architecture.md) for implementation patterns.
+A: For production, OAuth 2.1 with PKCE is required for HTTP transport. JWT with JWKS validation is recommended. See [Security Architecture](docs/02-security-architecture.md) for implementation patterns.
 
 ### Operational Questions
 
@@ -647,7 +707,7 @@ A: Follow [Data Privacy & Compliance](docs/02a-data-privacy-compliance.md) for P
 A: Implement encryption (transit/rest), audit logging, access controls, and data retention per [Data Privacy & Compliance](docs/02a-data-privacy-compliance.md).
 
 **Q: How do I handle security audits?**
-A: Use security checklists (coming in v1.4.0) and review [Security Architecture](docs/02-security-architecture.md) for hardening measures.
+A: Review [Security Architecture](docs/02-security-architecture.md) for security checklists and hardening measures, including MCP-specific security best practices.
 
 ## Support
 
