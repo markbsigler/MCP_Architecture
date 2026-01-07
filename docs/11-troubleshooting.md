@@ -14,6 +14,7 @@
 - [Performance Degradation](#performance-degradation)
 - [Memory Leaks](#memory-leaks)
 - [Database Connection Issues](#database-connection-issues)
+- [MCP Protocol Issues](#mcp-protocol-issues)
 - [Log Analysis Patterns](#log-analysis-patterns)
 - [Flame Graph Analysis](#understanding-flame-graphs)
 - [Summary](#summary)
@@ -1437,11 +1438,279 @@ def find_memory_leaks():
 await find_memory_leaks()
 ```
 
+## MCP Protocol Issues
+
+This section covers troubleshooting issues specific to the Model Context Protocol and MCP client integrations.
+
+### Server Not Appearing in Claude Desktop
+
+**Symptom:** Your MCP server doesn't appear in Claude Desktop's connector list.
+
+**Diagnosis Steps:**
+
+1. **Check configuration file syntax:**
+
+```bash
+# macOS
+python -m json.tool ~/Library/Application\ Support/Claude/claude_desktop_config.json
+
+# Windows
+python -m json.tool %APPDATA%\Claude\claude_desktop_config.json
+```
+
+2. **Verify absolute paths:**
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "/usr/bin/python3",
+      "args": ["/Users/myuser/projects/my-mcp-server/server.py"]
+    }
+  }
+}
+```
+
+**Common path issues:**
+- Using `~` instead of full path (`/Users/username/...`)
+- Using relative paths (`./server.py` instead of absolute)
+- Missing Python path on Windows
+
+3. **Test server runs standalone:**
+
+```bash
+# Should start without errors
+python /absolute/path/to/server.py
+
+# If using uvx or other runners
+uvx mcp-server-myserver
+```
+
+4. **Check Claude Desktop logs:**
+
+```bash
+# macOS - MCP connection logs
+tail -f ~/Library/Logs/Claude/mcp.log
+
+# Server-specific stderr output
+tail -f ~/Library/Logs/Claude/mcp-server-my-server.log
+```
+
+5. **Restart Claude Desktop completely:**
+   - macOS: Cmd+Q (not just close window)
+   - Windows: Right-click system tray icon → Quit
+
+### STDIO Protocol Corruption
+
+**Symptom:** Server starts but tools fail silently, or you see JSON parsing errors in logs.
+
+**Cause:** Writing to stdout corrupts the JSON-RPC protocol.
+
+**Diagnosis:**
+
+```bash
+# Check for stdout writes in your code
+grep -r "print(" src/ --include="*.py"
+grep -r "console.log" src/ --include="*.ts"
+```
+
+**Fix:**
+
+```python
+# ❌ BAD - Corrupts protocol
+print("Debug message")
+
+# ✅ GOOD - Use stderr
+import sys
+print("Debug message", file=sys.stderr)
+
+# ✅ BETTER - Use logging
+import logging
+logging.basicConfig(stream=sys.stderr)
+logger = logging.getLogger(__name__)
+logger.info("Debug message")
+```
+
+See [Tool Implementation Standards - STDIO Logging Constraints](03-tool-implementation.md#stdio-logging-constraints) for detailed guidance.
+
+### Tool Schema Validation Errors
+
+**Symptom:** Claude says "I don't have access to that tool" or tool calls fail with validation errors.
+
+**Diagnosis with MCP Inspector:**
+
+```bash
+# Start inspector
+npx @modelcontextprotocol/inspector python server.py
+
+# In browser at http://localhost:5173:
+# 1. Connect to server
+# 2. Go to Tools tab
+# 3. Check tool schemas are valid
+# 4. Try executing a tool with test parameters
+```
+
+**Common schema issues:**
+
+```python
+# ❌ Missing type hints - no schema generated
+@mcp.tool()
+async def bad_tool(data):  # No type hint!
+    return data
+
+# ✅ GOOD - Type hints generate schema
+@mcp.tool()
+async def good_tool(data: str) -> str:
+    """Process data.
+    
+    Args:
+        data: The input data to process
+    """
+    return data
+```
+
+### Connection Timeout During Tool Execution
+
+**Symptom:** Long-running tools timeout before completing.
+
+**Diagnosis:**
+
+```python
+# Check if external API calls have timeouts
+async def make_request(url: str):
+    # ❌ No timeout - can hang forever
+    async with httpx.AsyncClient() as client:
+        return await client.get(url)
+    
+    # ✅ Explicit timeout
+    async with httpx.AsyncClient() as client:
+        return await client.get(url, timeout=30.0)
+```
+
+**Fix for long operations:**
+
+```python
+@mcp.tool()
+async def long_running_tool(task_id: str) -> str:
+    """Process a long-running task.
+    
+    Returns progress updates for tasks taking more than 30 seconds.
+    """
+    # For very long operations, consider:
+    # 1. Implementing progress notifications
+    # 2. Using background tasks with polling
+    # 3. Breaking into smaller operations
+    
+    try:
+        result = await asyncio.wait_for(
+            process_task(task_id),
+            timeout=60.0  # Reasonable timeout
+        )
+        return result
+    except asyncio.TimeoutError:
+        return f"Task {task_id} is still processing. Check status later."
+```
+
+### Resource Discovery Failures
+
+**Symptom:** Resources don't appear in client or return empty content.
+
+**Diagnosis:**
+
+```python
+# Test resource listing
+@mcp.resource("data://items")
+async def list_items() -> str:
+    items = await fetch_items()
+    
+    # ❌ Returning None breaks discovery
+    if not items:
+        return None  # BAD
+    
+    # ✅ Return empty but valid response
+    if not items:
+        return "No items found."  # GOOD
+    
+    return format_items(items)
+```
+
+### Debugging MCP Message Flow
+
+For complex protocol issues, enable verbose logging:
+
+```python
+import logging
+import sys
+
+# Enable DEBUG level for MCP library
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
+)
+
+# Set MCP library to debug
+logging.getLogger("mcp").setLevel(logging.DEBUG)
+```
+
+**Capture raw messages:**
+
+```bash
+# Use tee to capture STDIO messages (development only)
+python server.py 2>&1 | tee debug.log
+```
+
+### Claude Desktop Configuration Reference
+
+**Correct configuration format:**
+
+```json
+{
+  "mcpServers": {
+    "my-python-server": {
+      "command": "python",
+      "args": ["/absolute/path/to/server.py"],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/project",
+        "LOG_LEVEL": "DEBUG"
+      }
+    },
+    "my-node-server": {
+      "command": "node",
+      "args": ["/absolute/path/to/dist/server.js"]
+    },
+    "my-docker-server": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "my-mcp-server:latest"]
+    }
+  }
+}
+```
+
+**Environment variable expansion:**
+- macOS/Linux: Use full paths, `~` is not expanded
+- Windows: Use forward slashes or escaped backslashes
+
+### Quick Diagnostic Checklist
+
+When your MCP server isn't working:
+
+| Check | Command | Expected Result |
+|-------|---------|-----------------|
+| Config syntax valid | `python -m json.tool config.json` | No errors |
+| Server runs standalone | `python server.py` | Starts without errors |
+| No stdout pollution | `grep -r "print(" src/` | No unguarded prints |
+| Tools have type hints | Review tool definitions | All parameters typed |
+| Logs accessible | `tail ~/Library/Logs/Claude/mcp*.log` | Log files exist |
+| Inspector connects | `npx @modelcontextprotocol/inspector python server.py` | Tools visible |
+| Claude Desktop restarted | Cmd+Q and reopen | Fresh start |
+
 ## Summary
 
 This troubleshooting guide provides systematic approaches to common MCP server issues:
 
 - **Common Issues**: Authentication failures, rate limiting, performance degradation, memory leaks, database connections
+- **MCP Protocol Issues**: STDIO corruption, client integration, tool schema validation, Claude Desktop configuration
 - **Diagnostic Commands**: Health checks, network diagnostics, dependency verification
 - **Log Analysis**: Structured queries, correlation, anomaly detection
 - **Performance Profiling**: CPU profiling with py-spy, application profiling, flame graphs

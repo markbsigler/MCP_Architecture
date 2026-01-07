@@ -9,7 +9,153 @@
 
 ## Introduction
 
-Establishing a consistent development lifecycle ensures maintainability, collaboration, and quality across MCP server projects. This document covers project structure, configuration management, dependency management, version control, and development workflows.
+Establishing a consistent development lifecycle ensures maintainability, collaboration, and quality across MCP server projects. This document covers SDK selection, project structure, configuration management, dependency management, version control, and development workflows.
+
+**New to MCP development?** Start with the [Getting Started Guide](00-getting-started.md) for a quick path to your first working server.
+
+## SDK Selection and Environment Setup
+
+### Recommended MCP SDKs
+
+Choose your MCP SDK based on your team's expertise and project requirements:
+
+| Language | SDK Package | Framework | Recommended For |
+|----------|-------------|-----------|-----------------|
+| **Python** | `mcp[cli]` | FastMCP | Rapid development, auto-schema generation from type hints |
+| **TypeScript** | `@modelcontextprotocol/sdk` | Native | Full type safety, Node.js/Deno applications |
+| **Java** | `io.modelcontextprotocol:sdk` | Native | Enterprise Java, Spring Boot integration |
+| **Kotlin** | `io.modelcontextprotocol:sdk` | Native | Android, JVM applications |
+| **C#** | `ModelContextProtocol.Sdk` | Native | .NET Core/.NET 8+ applications |
+| **Rust** | `mcp-server` (rmcp) | rmcp | Performance-critical, low-latency applications |
+
+**Primary Recommendation:** Python with FastMCP for most enterprise use cases due to:
+
+- Automatic JSON Schema generation from Python type hints
+- Docstrings become tool descriptions automatically
+- Mature ecosystem for enterprise integrations
+- Fastest development velocity
+
+### SDK Version Requirements
+
+| SDK | Minimum Version | MCP Spec Support | Notes |
+|-----|-----------------|------------------|-------|
+| Python `mcp` | 1.2.0+ | 2025-11-25 | Required for elicitation, tasks, tool calling in sampling |
+| TypeScript | 1.0.0+ | 2025-11-25 | Full specification support |
+| Java | 1.0.0+ | 2025-11-25 | Maven Central distribution |
+| Rust | 0.1.0+ | 2025-11-25 | Crates.io distribution |
+
+### Environment Setup
+
+#### Python Environment (Recommended)
+
+We recommend `uv` for fast, reliable Python package management:
+
+```bash
+# Install uv (macOS/Linux)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install uv (Windows PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Restart terminal after installation
+```
+
+**Project Initialization:**
+
+```bash
+# Create new project
+uv init my-mcp-server
+cd my-mcp-server
+
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate   # Windows
+
+# Install MCP SDK with CLI tools and common dependencies
+uv add "mcp[cli]" httpx pydantic pydantic-settings
+
+# Install development dependencies
+uv add --dev pytest pytest-asyncio pytest-cov ruff mypy
+
+# Verify installation
+python -c "import mcp; print(f'MCP SDK: {mcp.__version__}')"
+```
+
+#### TypeScript Environment
+
+```bash
+# Create project
+mkdir my-mcp-server && cd my-mcp-server
+npm init -y
+
+# Install MCP SDK and dependencies
+npm install @modelcontextprotocol/sdk zod
+
+# Install development dependencies
+npm install -D typescript @types/node ts-node vitest
+
+# Initialize TypeScript
+npx tsc --init --strict --target ES2022 --module NodeNext
+```
+
+#### Rust Environment
+
+```bash
+# Create project
+cargo new my-mcp-server
+cd my-mcp-server
+
+# Add dependencies to Cargo.toml
+cargo add rmcp tokio serde serde_json
+cargo add --dev tokio-test
+```
+
+### pyproject.toml Template
+
+For Python projects, use this standardized `pyproject.toml`:
+
+```toml
+[project]
+name = "my-mcp-server"
+version = "1.0.0"
+description = "Enterprise MCP Server"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.2.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+mcp-server = "mcp_server:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --cov=src --cov-report=term-missing"
+```
 
 ## Project Structure
 

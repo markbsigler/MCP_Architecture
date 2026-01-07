@@ -53,7 +53,15 @@ These guidelines are designed to help engineering teams:
 
 ### Foundation & Reference
 
-**[Terminology Guide](docs/00-terminology-guide.md)** ⭐ **NEW**
+**[Getting Started Guide](docs/00-getting-started.md)** ⭐ **START HERE**
+
+- Quick path to your first working MCP server in 15 minutes
+- SDK selection (Python/FastMCP, TypeScript, Java, Rust)
+- Environment setup with uv/npm
+- Claude Desktop integration testing
+- Links to detailed documentation for next steps
+
+**[Terminology Guide](docs/00-terminology-guide.md)**
 
 - Standard terminology definitions (MCP server, tool, resource, prompt)
 - Consistent naming conventions across all documentation
@@ -107,6 +115,8 @@ These guidelines are designed to help engineering teams:
 - Parameter design standards
 - Response format consistency
 - Error handling framework
+- STDIO logging constraints (critical for Claude Desktop)
+- External API integration patterns (timeouts, retries, circuit breakers)
 - Pagination patterns
 - Versioning strategies
 
@@ -158,6 +168,7 @@ These guidelines are designed to help engineering teams:
 
 - Unit testing patterns with mocking
 - Integration testing approaches
+- MCP client integration testing (Claude Desktop, MCP Inspector)
 - Security testing procedures
 - Performance testing guidelines
 - Coverage requirements (80%+ for enterprise)
@@ -176,6 +187,8 @@ These guidelines are designed to help engineering teams:
 
 **[Development Lifecycle](docs/06-development-lifecycle.md)**
 
+- SDK selection (Python/FastMCP, TypeScript, Java, Rust)
+- Environment setup (uv, npm, cargo)
 - Project structure standards
 - Configuration management patterns
 - Environment handling (dev/staging/prod)
@@ -229,6 +242,7 @@ These guidelines are designed to help engineering teams:
 
 **[Troubleshooting Guide](docs/11-troubleshooting.md)**
 
+- MCP protocol issues (STDIO corruption, client integration, Claude Desktop)
 - Common authentication and rate limiting issues
 - Performance degradation diagnostics
 - Memory leak detection and resolution

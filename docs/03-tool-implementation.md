@@ -11,10 +11,13 @@
 
 - [Naming Conventions](#naming-conventions)
 - [Parameter Design](#parameter-design)
-- [Response Format](#response-format-consistency)
-- [Error Handling](#error-handling-patterns)
-- [Pagination Patterns](#pagination-patterns)
-- [Versioning Strategies](#versioning-strategies)
+- [Response Standards](#response-standards)
+- [Error Handling](#error-handling)
+- [STDIO Logging Constraints](#stdio-logging-constraints)
+- [External API Integration](#external-api-integration-patterns)
+- [Documentation Standards](#documentation-standards)
+- [Versioning Strategy](#versioning-strategy)
+- [Testing Standards](#testing-standards)
 - [Summary](#summary)
 
 ## Introduction
@@ -508,6 +511,319 @@ Include actionable information in error messages:
     "error": "error",
     "message": "Something went wrong"
 }
+```
+
+## STDIO Logging Constraints
+
+When implementing MCP servers with STDIO transport (used for local development and Claude Desktop integration), you must follow strict logging rules to avoid corrupting the JSON-RPC protocol.
+
+### The Problem
+
+STDIO-based MCP servers communicate via stdin/stdout using JSON-RPC messages. Any non-JSON-RPC output to stdout (like `print()` statements) corrupts the protocol and breaks your server.
+
+Per [MCP best practices](https://modelcontextprotocol.io/docs/develop/build-server):
+
+> For STDIO-based servers: Never write to standard output (stdout). This includes `print()` statements in Python, `console.log()` in JavaScript, `fmt.Println()` in Go.
+
+### Language-Specific Constraints
+
+| Language | Prohibited | Recommended |
+|----------|------------|-------------|
+| **Python** | `print()` | `logging.info()` to stderr |
+| **TypeScript** | `console.log()` | `console.error()` or structured logger |
+| **Go** | `fmt.Println()` | `log.SetOutput(os.Stderr)` |
+| **Rust** | `println!()` | `eprintln!()` or `tracing` to stderr |
+| **Java** | `System.out.println()` | `Logger` to stderr or file |
+
+### Python Logging Setup
+
+```python
+import logging
+import sys
+
+# ✅ RECOMMENDED: Configure logging to stderr
+def setup_logging():
+    """Configure logging for STDIO MCP server."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        stream=sys.stderr  # Critical: use stderr, not stdout
+    )
+    return logging.getLogger(__name__)
+
+logger = setup_logging()
+
+# ✅ RECOMMENDED: Use logger throughout
+@mcp.tool()
+async def process_data(data: str) -> str:
+    """Process data with proper logging."""
+    logger.info(f"Processing data: {len(data)} bytes")
+    
+    try:
+        result = await do_processing(data)
+        logger.debug(f"Processing complete: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Processing failed: {e}")
+        return f"Error: Unable to process data"
+
+# ❌ AVOID: print() corrupts JSON-RPC protocol
+@mcp.tool()
+async def bad_example(data: str) -> str:
+    print(f"Processing: {data}")  # BREAKS THE SERVER
+    return "done"
+```
+
+### TypeScript Logging Setup
+
+```typescript
+// ✅ RECOMMENDED: Use stderr for logging
+const log = {
+  info: (msg: string) => console.error(`[INFO] ${msg}`),
+  error: (msg: string) => console.error(`[ERROR] ${msg}`),
+  debug: (msg: string) => console.error(`[DEBUG] ${msg}`)
+};
+
+// ❌ AVOID: console.log() writes to stdout
+console.log("Debug message");  // BREAKS THE SERVER
+```
+
+### HTTP Transport Exception
+
+This constraint only applies to STDIO transport. HTTP-based servers can log to stdout normally since HTTP responses are separate from log output:
+
+```python
+# For HTTP transport, stdout logging is fine
+if transport_type == "http":
+    logging.basicConfig(stream=sys.stdout)  # OK for HTTP
+else:
+    logging.basicConfig(stream=sys.stderr)  # Required for STDIO
+```
+
+## External API Integration Patterns
+
+When tools integrate with external APIs, follow these patterns for reliability and maintainability.
+
+### Helper Function Pattern
+
+Create reusable helper functions for external API calls:
+
+```python
+from typing import Any
+import httpx
+
+# Constants
+API_BASE = "https://api.example.com"
+USER_AGENT = "my-mcp-server/1.0"
+DEFAULT_TIMEOUT = 30.0
+
+async def make_api_request(
+    url: str,
+    method: str = "GET",
+    headers: dict | None = None,
+    json_data: dict | None = None,
+    timeout: float = DEFAULT_TIMEOUT
+) -> dict[str, Any] | None:
+    """Make an HTTP request to external API with proper error handling.
+    
+    This helper implements best practices:
+    - Explicit timeout handling (prevents hanging)
+    - User-Agent header (API etiquette)
+    - Graceful error handling (returns None on failure)
+    - Async for non-blocking I/O
+    
+    Args:
+        url: Full URL to request
+        method: HTTP method (GET, POST, PUT, DELETE)
+        headers: Additional headers to include
+        json_data: JSON body for POST/PUT requests
+        timeout: Request timeout in seconds
+        
+    Returns:
+        Parsed JSON response or None on error
+    """
+    default_headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json"
+    }
+    
+    if headers:
+        default_headers.update(headers)
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.request(
+                method=method,
+                url=url,
+                headers=default_headers,
+                json=json_data,
+                timeout=timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.TimeoutException:
+            logger.error(f"Request timeout: {url}")
+            return None
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error {e.response.status_code}: {url}")
+            return None
+        except Exception as e:
+            logger.error(f"Request failed: {url} - {e}")
+            return None
+```
+
+### Tool with External API
+
+```python
+@mcp.tool()
+async def get_weather(city: str) -> str:
+    """Get current weather for a city.
+    
+    Args:
+        city: City name (e.g., "New York", "London")
+    """
+    url = f"{API_BASE}/weather?city={city}"
+    data = await make_api_request(url)
+    
+    if not data:
+        # User-friendly error message, not technical details
+        return f"Unable to fetch weather data for {city}. Please try again later."
+    
+    return format_weather_response(data)
+```
+
+### Retry Pattern with Exponential Backoff
+
+For transient failures, implement retry logic:
+
+```python
+import asyncio
+from typing import TypeVar, Callable, Awaitable
+
+T = TypeVar('T')
+
+async def with_retry(
+    func: Callable[[], Awaitable[T]],
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0
+) -> T | None:
+    """Execute async function with exponential backoff retry.
+    
+    Args:
+        func: Async function to execute
+        max_retries: Maximum retry attempts
+        base_delay: Initial delay in seconds
+        max_delay: Maximum delay between retries
+        
+    Returns:
+        Function result or None after all retries exhausted
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return await func()
+        except Exception as e:
+            if attempt == max_retries:
+                logger.error(f"All retries exhausted: {e}")
+                return None
+            
+            delay = min(base_delay * (2 ** attempt), max_delay)
+            logger.warning(f"Attempt {attempt + 1} failed, retrying in {delay}s: {e}")
+            await asyncio.sleep(delay)
+    
+    return None
+
+# Usage in a tool
+@mcp.tool()
+async def fetch_data_with_retry(resource_id: str) -> str:
+    """Fetch data with automatic retry on failure."""
+    
+    async def _fetch():
+        url = f"{API_BASE}/resources/{resource_id}"
+        response = await make_api_request(url)
+        if response is None:
+            raise Exception("Request failed")
+        return response
+    
+    data = await with_retry(_fetch, max_retries=3)
+    
+    if data is None:
+        return f"Unable to fetch resource {resource_id} after multiple attempts."
+    
+    return format_resource(data)
+```
+
+### Circuit Breaker Pattern
+
+For services that may be unavailable for extended periods:
+
+```python
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+
+class CircuitState(Enum):
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"          # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing if service recovered
+
+@dataclass
+class CircuitBreaker:
+    """Simple circuit breaker implementation."""
+    
+    failure_threshold: int = 5
+    recovery_timeout: float = 30.0
+    
+    _state: CircuitState = CircuitState.CLOSED
+    _failure_count: int = 0
+    _last_failure_time: datetime | None = None
+    
+    def can_execute(self) -> bool:
+        """Check if request should be allowed."""
+        if self._state == CircuitState.CLOSED:
+            return True
+        
+        if self._state == CircuitState.OPEN:
+            if self._last_failure_time:
+                elapsed = (datetime.now() - self._last_failure_time).total_seconds()
+                if elapsed > self.recovery_timeout:
+                    self._state = CircuitState.HALF_OPEN
+                    return True
+            return False
+        
+        return True  # HALF_OPEN allows one request
+    
+    def record_success(self):
+        """Record successful request."""
+        self._failure_count = 0
+        self._state = CircuitState.CLOSED
+    
+    def record_failure(self):
+        """Record failed request."""
+        self._failure_count += 1
+        self._last_failure_time = datetime.now()
+        
+        if self._failure_count >= self.failure_threshold:
+            self._state = CircuitState.OPEN
+
+# Usage
+weather_circuit = CircuitBreaker(failure_threshold=5, recovery_timeout=30.0)
+
+@mcp.tool()
+async def get_weather_with_circuit_breaker(city: str) -> str:
+    """Get weather with circuit breaker protection."""
+    
+    if not weather_circuit.can_execute():
+        return "Weather service temporarily unavailable. Please try again later."
+    
+    data = await make_api_request(f"{API_BASE}/weather?city={city}")
+    
+    if data is None:
+        weather_circuit.record_failure()
+        return f"Unable to fetch weather for {city}."
+    
+    weather_circuit.record_success()
+    return format_weather_response(data)
 ```
 
 ## Documentation Standards

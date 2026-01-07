@@ -15,6 +15,7 @@
 - [Contract Testing](#contract-testing)
 - [Security Testing](#security-testing)
 - [Performance Testing](#performance-testing)
+- [MCP Client Integration Testing](#mcp-client-integration-testing)
 - [Coverage Requirements](#coverage-requirements)
 - [Summary](#summary)
 
@@ -1740,6 +1741,193 @@ def test_load_test_slo():
     throughput = assignments_get["requests_per_second"]
     assert throughput > 100
 ```
+
+## MCP Client Integration Testing
+
+Testing your MCP server with real MCP clients ensures end-to-end compatibility and validates the user experience.
+
+### MCP Inspector
+
+The [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) is an interactive debugging tool for testing MCP servers during development.
+
+**Installation and Usage:**
+
+```bash
+# Run MCP Inspector with your server
+npx @modelcontextprotocol/inspector python server.py
+
+# For TypeScript servers
+npx @modelcontextprotocol/inspector node dist/server.js
+```
+
+**Inspector Capabilities:**
+
+| Feature | Description | Use Case |
+|---------|-------------|----------|
+| **Tool Testing** | Interactive tool invocation with parameter input | Validate tool schemas and responses |
+| **Resource Browsing** | Browse and read available resources | Verify resource discovery and content |
+| **Prompt Testing** | Test prompt templates with arguments | Validate prompt interpolation |
+| **Message Inspection** | View raw JSON-RPC messages | Debug protocol issues |
+| **Error Debugging** | Inspect error responses | Troubleshoot failures |
+
+**Example Inspector Session:**
+
+1. Start inspector: `npx @modelcontextprotocol/inspector python server.py`
+2. Open browser to `http://localhost:5173`
+3. Click "Connect" to initialize server
+4. Navigate to "Tools" tab to see available tools
+5. Click a tool, enter parameters, and execute
+6. View response and any errors
+
+### Claude Desktop Integration Testing
+
+Claude Desktop provides real-world validation of your MCP server with an actual LLM client.
+
+**Configuration:**
+
+1. Open Claude Desktop configuration:
+
+```bash
+# macOS
+code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+
+# Windows
+code %APPDATA%\Claude\claude_desktop_config.json
+```
+
+2. Add your server:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "python",
+      "args": ["/absolute/path/to/server.py"],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/project",
+        "LOG_LEVEL": "DEBUG"
+      }
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop completely (Cmd+Q on macOS, not just close window)
+
+**Verification Checklist:**
+
+| Test | Expected Result | How to Verify |
+|------|-----------------|---------------|
+| Server discovery | Server appears in connector list | Look for plug icon, hover over "Connectors" |
+| Tool visibility | All tools listed with descriptions | Click connector icon, verify tools listed |
+| Tool execution | Tools execute successfully | Ask Claude to use a specific tool |
+| Error handling | Graceful error messages | Trigger an error condition |
+| Parameter validation | Invalid inputs rejected | Provide invalid parameters |
+
+**Test Scenarios:**
+
+```markdown
+# Test 1: Basic tool execution
+Prompt: "Use my-server to [action]"
+Expected: Tool executes, returns result
+
+# Test 2: Error handling
+Prompt: "Use my-server to do something with invalid input"
+Expected: Clear error message, not technical exception
+
+# Test 3: Multi-tool workflow
+Prompt: "First list items, then get details for the first one"
+Expected: Sequential tool calls work correctly
+```
+
+**Debugging Claude Desktop Issues:**
+
+```bash
+# View MCP logs (macOS)
+tail -f ~/Library/Logs/Claude/mcp.log
+
+# View server-specific logs
+tail -f ~/Library/Logs/Claude/mcp-server-my-server.log
+```
+
+### Automated Client Integration Tests
+
+Create automated tests that simulate MCP client interactions:
+
+```python
+import pytest
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+@pytest.fixture
+async def mcp_client():
+    """Create MCP client connected to test server."""
+    server_params = StdioServerParameters(
+        command="python",
+        args=["src/server.py"],
+        env={"LOG_LEVEL": "DEBUG"}
+    )
+    
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            yield session
+
+@pytest.mark.asyncio
+async def test_tool_discovery(mcp_client):
+    """Test that all expected tools are discoverable."""
+    tools = await mcp_client.list_tools()
+    
+    tool_names = [tool.name for tool in tools.tools]
+    
+    assert "create_assignment" in tool_names
+    assert "list_assignments" in tool_names
+    assert "get_release" in tool_names
+
+@pytest.mark.asyncio
+async def test_tool_execution(mcp_client):
+    """Test tool execution through MCP protocol."""
+    result = await mcp_client.call_tool(
+        "hello_world",
+        arguments={"name": "Test User"}
+    )
+    
+    assert result.content[0].text == "Hello, Test User! Welcome to MCP."
+
+@pytest.mark.asyncio
+async def test_tool_error_handling(mcp_client):
+    """Test that tool errors are handled gracefully."""
+    result = await mcp_client.call_tool(
+        "get_assignment",
+        arguments={"id": "nonexistent-id"}
+    )
+    
+    # Should return error in content, not raise exception
+    assert "not found" in result.content[0].text.lower() or result.isError
+```
+
+### Client Compatibility Matrix
+
+Test your server with multiple MCP clients to ensure portability:
+
+| Client | Type | Test Priority | Configuration |
+|--------|------|---------------|---------------|
+| **Claude Desktop** | Desktop App | High | `claude_desktop_config.json` |
+| **MCP Inspector** | Debug Tool | High | Command line |
+| **Cursor** | IDE | Medium | Settings → MCP |
+| **VS Code** | IDE Extension | Medium | Extension settings |
+| **Custom Client** | Enterprise | Medium | Per implementation |
+
+**Compatibility Test Checklist:**
+
+- [ ] Server connects successfully
+- [ ] Tool discovery returns all tools
+- [ ] Tool schemas are valid JSON Schema
+- [ ] Tool execution works correctly
+- [ ] Error responses are well-formed
+- [ ] Resources are discoverable (if implemented)
+- [ ] Prompts are retrievable (if implemented)
 
 ## Summary
 
