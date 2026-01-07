@@ -11,6 +11,53 @@
 
 The Model Context Protocol (MCP) evolves through versioned releases to add features, improve security, and enhance performance. This document defines supported protocol versions, feature compatibility, upgrade paths, and deprecation timelines to ensure smooth transitions between versions.
 
+**Official MCP Specification:** [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) (latest)
+
+---
+
+## MCP Specification 2025-11-25 Key Changes
+
+Per the [official changelog](https://modelcontextprotocol.io/specification/2025-11-25/changelog), the following changes were introduced:
+
+### Major Changes
+
+| Feature | Description | Reference |
+|---------|-------------|-----------|
+| **OIDC Discovery 1.0** | Enhanced authorization server discovery with OpenID Connect Discovery | SEP-973, PR #797 |
+| **Icon Metadata** | Icons for tools, resources, resource templates, and prompts | SEP-973 |
+| **Incremental Scope Consent** | Enhanced authorization flows via `WWW-Authenticate` | SEP-835 |
+| **Tool Name Guidance** | Standardized tool naming conventions | SEP-986 |
+| **Enhanced Elicitation** | URL mode, titled/untitled enums, default values | SEP-1330, SEP-1036, SEP-1034 |
+| **Tool Calling in Sampling** | `tools` and `toolChoice` parameters in sampling requests | SEP-1577 |
+| **OAuth Client ID Metadata** | Recommended client registration mechanism | SEP-991, PR #1296 |
+| **Experimental Tasks** | Durable requests with polling and deferred result retrieval | SEP-1686 |
+
+### Minor Changes
+
+| Feature | Description | Reference |
+|---------|-------------|-----------|
+| **STDIO stderr logging** | Servers may use stderr for all logging types | PR #670 |
+| **Implementation description** | Optional `description` field in `Implementation` interface | — |
+| **Origin validation** | HTTP 403 Forbidden for invalid Origin headers | PR #1439 |
+| **Security Best Practices** | Updated security guidance | — |
+| **Tool Execution Errors** | Input validation errors returned as Tool Execution Errors | SEP-1303 |
+| **Polling SSE streams** | Servers can disconnect at will, clients reconnect | SEP-1699 |
+| **RFC 9728 alignment** | `WWW-Authenticate` header optional with `.well-known` fallback | SEP-985 |
+| **JSON Schema 2020-12** | Default dialect for MCP schema definitions | SEP-1613 |
+
+### Security & Trust Principles (from spec)
+
+Per the [specification](https://modelcontextprotocol.io/specification/2025-11-25):
+
+| Principle | Requirement |
+|-----------|-------------|
+| **User Consent** | Users must explicitly consent to all data access and operations |
+| **Data Privacy** | Hosts must obtain consent before exposing user data to servers |
+| **Tool Safety** | Tool annotations should be considered untrusted unless from trusted server |
+| **LLM Sampling** | Users must explicitly approve sampling requests |
+
+---
+
 ## Supported Protocol Versions
 
 ### Current Support Matrix

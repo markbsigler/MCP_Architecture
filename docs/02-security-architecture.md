@@ -9,6 +9,7 @@
 
 ## Quick Links
 
+- [MCP Security Best Practices](#mcp-security-best-practices)
 - [Authentication Patterns](#authentication-patterns)
 - [JWT Token Validation](#jwt-token-validation)
 - [OAuth 2.0 Integration](#oauth-20-integration)
@@ -23,6 +24,100 @@
 Security is foundational to enterprise MCP servers. This document establishes comprehensive security patterns covering authentication, authorization, rate limiting, input validation, and audit logging.
 
 For guidance on transitioning existing REST authentication flows or rotating identity providers during modernization efforts, see the **Migration Guides (12)**.
+
+---
+
+## MCP Security Best Practices
+
+Per the [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25), MCP enables powerful capabilities through arbitrary data access and code execution paths. All implementors **MUST** address the following security and trust considerations.
+
+### Key Principles
+
+#### 1. User Consent and Control
+
+Users **MUST** retain explicit control over all MCP server operations:
+
+| Principle | Requirement | Implementation |
+|-----------|-------------|----------------|
+| **Explicit Consent** | Users must explicitly consent to and understand all data access and operations | Approval dialogs before tool execution |
+| **Retained Control** | Users must retain control over what data is shared and what actions are taken | Enable/disable toggles per tool |
+| **Clear UIs** | Implementors should provide clear UIs for reviewing and authorizing activities | Activity logs, execution history |
+
+#### 2. Data Privacy
+
+Hosts (MCP clients) **MUST** protect user data:
+
+| Principle | Requirement | Implementation |
+|-----------|-------------|----------------|
+| **Explicit Consent** | Hosts must obtain explicit user consent before exposing user data to servers | Consent prompts before data sharing |
+| **No Unauthorized Transmission** | Hosts must not transmit resource data elsewhere without user consent | Data flow controls, audit logging |
+| **Access Controls** | User data should be protected with appropriate access controls | RBAC, encryption at rest |
+
+#### 3. Tool Safety
+
+Tools represent **arbitrary code execution** and must be treated with appropriate caution:
+
+| Principle | Requirement | Implementation |
+|-----------|-------------|----------------|
+| **Untrusted Annotations** | Tool descriptions and annotations should be considered untrusted unless from a trusted server | Server verification, allowlists |
+| **Explicit Consent** | Hosts must obtain explicit user consent before invoking any tool | Pre-execution approval |
+| **User Understanding** | Users should understand what each tool does before authorizing its use | Clear documentation, descriptions |
+
+**Warning:** Tool annotations (descriptions, behavior hints) can be manipulated by malicious servers. Do not rely on them for security decisions unless the server is explicitly trusted.
+
+#### 4. LLM Sampling Controls
+
+When servers use the [sampling interface](03c-sampling-patterns.md) to request LLM completions:
+
+| Principle | Requirement | Implementation |
+|-----------|-------------|----------------|
+| **Explicit Approval** | Users must explicitly approve any LLM sampling requests | Approval UI before sampling |
+| **Prompt Control** | Users should control the actual prompt that will be sent | Prompt preview, editing |
+| **Result Visibility** | Users should control what results the server can see | Result filtering, redaction |
+| **Limited Server Visibility** | The protocol intentionally limits server visibility into prompts | Server only sees sanitized results |
+
+### Implementation Checklist
+
+Per the [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25), implementors **SHOULD**:
+
+- [ ] Build robust consent and authorization flows into applications
+- [ ] Provide clear documentation of security implications
+- [ ] Implement appropriate access controls and data protections
+- [ ] Follow security best practices in integrations
+- [ ] Consider privacy implications in feature designs
+
+### Origin Header Validation (Streamable HTTP)
+
+Per the [MCP Specification 2025-11-25 changelog](https://modelcontextprotocol.io/specification/2025-11-25/changelog), servers using Streamable HTTP transport **MUST**:
+
+- Respond with **HTTP 403 Forbidden** for invalid `Origin` headers
+- Validate `Origin` headers to prevent cross-origin attacks
+
+```python
+from fastapi import Request, HTTPException
+
+ALLOWED_ORIGINS = [
+    "https://app.example.com",
+    "https://claude.ai",
+    "https://cursor.sh"
+]
+
+@app.middleware("http")
+async def validate_origin(request: Request, call_next):
+    """Validate Origin header to prevent cross-origin attacks."""
+    origin = request.headers.get("Origin")
+    
+    if origin and origin not in ALLOWED_ORIGINS:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid Origin header"
+        )
+    
+    response = await call_next(request)
+    return response
+```
+
+---
 
 ## Defense in Depth
 
@@ -462,6 +557,120 @@ auth_provider = WorkOSProvider(
     client_id=os.getenv("WORKOS_CLIENT_ID"),
     organization_id=os.getenv("WORKOS_ORG_ID")
 )
+```
+
+#### OpenID Connect Discovery 1.0 (MCP 2025-11-25)
+
+Per the [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/changelog), MCP servers **SHOULD** support OIDC Discovery for authorization server metadata:
+
+```python
+from httpx import AsyncClient
+from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+class OIDCDiscovery:
+    """OIDC Discovery 1.0 client for authorization server metadata."""
+    
+    def __init__(self, issuer: str):
+        self.issuer = issuer.rstrip("/")
+        self._metadata: Optional[dict] = None
+    
+    async def discover(self) -> dict:
+        """Fetch OIDC metadata from well-known endpoint."""
+        if self._metadata:
+            return self._metadata
+        
+        async with AsyncClient() as client:
+            # OIDC Discovery endpoint
+            response = await client.get(
+                f"{self.issuer}/.well-known/openid-configuration",
+                timeout=10.0
+            )
+            response.raise_for_status()
+            self._metadata = response.json()
+            
+            logger.info(f"Discovered OIDC endpoints for {self.issuer}")
+            return self._metadata
+    
+    async def get_jwks_uri(self) -> str:
+        """Get JWKS URI from discovery."""
+        metadata = await self.discover()
+        return metadata["jwks_uri"]
+    
+    async def get_authorization_endpoint(self) -> str:
+        """Get authorization endpoint from discovery."""
+        metadata = await self.discover()
+        return metadata["authorization_endpoint"]
+    
+    async def get_token_endpoint(self) -> str:
+        """Get token endpoint from discovery."""
+        metadata = await self.discover()
+        return metadata["token_endpoint"]
+```
+
+**RFC 9728 Alignment (Protected Resource Metadata):**
+
+Per [MCP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/changelog), OAuth 2.0 Protected Resource Metadata discovery aligns with [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728):
+
+- `WWW-Authenticate` header is **optional**
+- Fallback to `/.well-known/oauth-protected-resource` endpoint
+
+```python
+from fastapi import Request, Response
+
+async def add_oauth_discovery_headers(request: Request, response: Response):
+    """Add OAuth 2.0 Protected Resource Metadata headers."""
+    
+    # Option 1: WWW-Authenticate header (optional per RFC 9728)
+    response.headers["WWW-Authenticate"] = (
+        'Bearer realm="mcp-server", '
+        'scope="tools:read tools:execute", '
+        'resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"'
+    )
+
+@app.get("/.well-known/oauth-protected-resource")
+async def oauth_protected_resource_metadata():
+    """RFC 9728 Protected Resource Metadata endpoint."""
+    return {
+        "resource": "https://mcp.example.com",
+        "authorization_servers": [
+            "https://auth.example.com"
+        ],
+        "scopes_supported": [
+            "tools:read",
+            "tools:execute",
+            "resources:read",
+            "prompts:read"
+        ],
+        "bearer_methods_supported": ["header"],
+        "resource_documentation": "https://docs.example.com/mcp"
+    }
+```
+
+**Incremental Scope Consent (WWW-Authenticate):**
+
+Per [MCP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/changelog), servers can request additional scopes via `WWW-Authenticate`:
+
+```python
+from fastapi import HTTPException
+
+def require_scope(required_scope: str, user_scopes: list[str]):
+    """Check if user has required scope, request via WWW-Authenticate if not."""
+    if required_scope not in user_scopes:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Scope '{required_scope}' required",
+            headers={
+                "WWW-Authenticate": (
+                    f'Bearer realm="mcp-server", '
+                    f'scope="{required_scope}", '
+                    f'error="insufficient_scope", '
+                    f'error_description="The access token requires additional scope: {required_scope}"'
+                )
+            }
+        )
 ```
 
 ### API Key Authentication

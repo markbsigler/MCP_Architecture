@@ -15,6 +15,7 @@
 - [Error Handling](#error-handling)
 - [STDIO Logging Constraints](#stdio-logging-constraints)
 - [External API Integration](#external-api-integration-patterns)
+- [Icon Metadata](#icon-metadata-mcp-2025-11-25)
 - [Documentation Standards](#documentation-standards)
 - [Versioning Strategy](#versioning-strategy)
 - [Testing Standards](#testing-standards)
@@ -32,6 +33,8 @@ Consistent tool implementation is critical for maintainability and user experien
 - [Testing Strategy](04-testing-strategy.md) - Testing approaches for tools
 
 ## Naming Conventions
+
+Per the [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/changelog) (SEP-986), tool names should follow these guidelines for discoverability and clarity.
 
 ### Verb-Noun Pattern
 
@@ -378,6 +381,52 @@ async def list_assignments(
 ```
 
 ## Error Handling
+
+### Input Validation Errors (MCP 2025-11-25)
+
+Per the [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/changelog) (SEP-1303), **input validation errors MUST be returned as Tool Execution Errors**, not Protocol Errors.
+
+**Why?** Returning validation errors as Tool Execution Errors allows the LLM to:
+
+- Understand what went wrong
+- Self-correct and retry with valid parameters
+- Provide meaningful feedback to the user
+
+```python
+@mcp.tool()
+async def create_assignment(title: str, priority: int) -> str:
+    """Create an assignment with validation."""
+    
+    # ❌ BAD: Raising exception causes Protocol Error
+    # if priority < 1 or priority > 5:
+    #     raise ValueError("Priority must be between 1 and 5")
+    
+    # ✅ GOOD: Return validation error as Tool Execution Error
+    if priority < 1 or priority > 5:
+        return json.dumps({
+            "isError": True,
+            "content": [{
+                "type": "text",
+                "text": "Validation failed: priority must be between 1 and 5"
+            }]
+        })
+    
+    # ✅ GOOD: FastMCP pattern - return error message directly
+    if not title.strip():
+        return "Error: title cannot be empty. Please provide a descriptive title."
+    
+    # Proceed with valid input
+    assignment = await db.create_assignment(title=title, priority=priority)
+    return f"Created assignment {assignment.id}: {title}"
+```
+
+**Error Response Pattern:**
+
+| Error Type | Return As | LLM Behavior |
+|------------|-----------|--------------|
+| **Input Validation** | Tool Execution Error | LLM can self-correct |
+| **Protocol Error** | JSON-RPC Error | LLM cannot recover |
+| **External Service Failure** | Tool Execution Error | LLM can retry or inform user |
 
 ### Error Code Framework
 
@@ -824,6 +873,58 @@ async def get_weather_with_circuit_breaker(city: str) -> str:
     
     weather_circuit.record_success()
     return format_weather_response(data)
+```
+
+## Icon Metadata (MCP 2025-11-25)
+
+Per the [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/changelog) (SEP-973), servers can expose **icons as additional metadata** for tools, resources, resource templates, and prompts. This improves UI presentation in MCP clients.
+
+### Tool Icon Definition
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("my-server")
+
+@mcp.tool(
+    icon="https://example.com/icons/search.svg"  # Optional icon URL
+)
+async def search_documents(query: str) -> str:
+    """Search for documents matching the query."""
+    # Implementation
+    return f"Found results for: {query}"
+```
+
+### Icon Requirements
+
+| Requirement | Specification |
+|-------------|---------------|
+| **Format** | SVG, PNG, or data URI |
+| **Size** | Recommended: 24x24 or 32x32 pixels |
+| **Accessibility** | HTTPS URLs only (no HTTP) |
+| **Caching** | Clients should cache icons |
+| **Fallback** | Clients should handle missing/invalid icons gracefully |
+
+### Icon Best Practices
+
+| Practice | Recommendation |
+|----------|----------------|
+| **Consistent Style** | Use consistent icon style across all tools |
+| **Semantic Icons** | Choose icons that represent the tool's action |
+| **SVG Preferred** | SVGs scale better and are smaller |
+| **CDN Hosting** | Host icons on a CDN for performance |
+| **Versioning** | Include version in icon URL for cache busting |
+
+**Example with Data URI:**
+
+```python
+# Inline SVG as data URI (no external dependency)
+SEARCH_ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48bGluZSB4MT0iMjEiIHkxPSIyMSIgeDI9IjE2LjY1IiB5Mj0iMTYuNjUiLz48L3N2Zz4="
+
+@mcp.tool(icon=SEARCH_ICON)
+async def search_documents(query: str) -> str:
+    """Search for documents."""
+    pass
 ```
 
 ## Documentation Standards
