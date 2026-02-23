@@ -3,8 +3,8 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Security Architecture  
 **Related**: [← Previous: Architecture Decisions](01b-architecture-decisions.md) | [Next: Data Privacy & Compliance →](02a-data-privacy-compliance.md) | [Testing Security](04-testing-strategy.md#security-testing)
 
-**Version:** 1.4.0  
-**Last Updated:** November 20, 2025  
+**Version:** 2.0.0  
+**Last Updated:** July 19, 2025  
 **Status:** Production Ready
 
 ## Quick Links
@@ -350,6 +350,86 @@ async def delete_user(requester_id: str, target_user_id: str, db):
 
 ## Authentication Patterns
 
+### OAuth 2.1 Authorization (HTTP Transport)
+
+For HTTP transport, MCP servers **must** implement OAuth 2.1 authorization with mandatory PKCE per the [MCP Authorization specification](https://modelcontextprotocol.io/docs/tutorials/security/authorization). The OAuth implicit flow is prohibited.
+
+> **SRS References:** NFR-SEC-001 through NFR-SEC-009
+
+**Key Requirements:**
+
+- **PKCE mandatory** for all public clients (Authorization Code + PKCE flow)
+- **OIDC Discovery** support via `/.well-known/openid-configuration`
+- **Protected Resource Metadata** exposed at `/.well-known/oauth-protected-resource` per [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728)
+- **Client registration** via Client ID Metadata Documents or Dynamic Client Registration (DCR)
+- **Incremental scope consent** via `WWW-Authenticate` header
+- **Per-capability scopes:** `mcp:tools`, `mcp:resources`, `mcp:prompts`
+
+**OAuth 2.1 Authorization Flow:**
+
+```mermaid
+sequenceDiagram
+    participant C as AI Client
+    participant MCP as MCP Server
+    participant AS as Authorization Server
+    participant JWKS as JWKS Endpoint
+
+    C->>MCP: 1. Request (no token)
+    MCP-->>C: 401 + WWW-Authenticate (resource_metadata)
+    C->>MCP: 2. GET /.well-known/oauth-protected-resource
+    MCP-->>C: Protected Resource Metadata (RFC 9728)
+    C->>AS: 3. GET /.well-known/openid-configuration
+    AS-->>C: OIDC Discovery metadata
+    C->>AS: 4. Authorization Code + PKCE (code_challenge)
+    AS-->>C: Authorization code
+    C->>AS: 5. Token Exchange (code + code_verifier)
+    AS-->>C: Access token (JWT) + refresh token
+    C->>MCP: 6. Request + Bearer token
+    MCP->>JWKS: 7. Fetch public keys (cached)
+    JWKS-->>MCP: JWKS
+    MCP->>MCP: 8. Validate: signature, iss, aud, exp, scopes
+    MCP-->>C: 200 OK + response
+```
+
+**Protected Resource Metadata Example:**
+
+```json
+{
+  "resource": "https://mcp-server.example.com",
+  "authorization_servers": ["https://auth.example.com"],
+  "scopes_supported": ["mcp:tools", "mcp:resources", "mcp:prompts"],
+  "bearer_methods_supported": ["header"]
+}
+```
+
+**Implementation:**
+
+```python
+from fastmcp import FastMCP
+from fastmcp.server.auth import OAuthProvider
+
+# Configure OAuth 2.1 with PKCE
+oauth_provider = OAuthProvider(
+    issuer=os.getenv("AUTH_ISSUER"),
+    jwks_uri=os.getenv("AUTH_JWKS_URI"),
+    audience=os.getenv("AUTH_AUDIENCE"),
+    scopes_supported=["mcp:tools", "mcp:resources", "mcp:prompts"],
+    require_pkce=True,  # Mandatory for OAuth 2.1
+)
+
+mcp = FastMCP("Enterprise MCP Server", auth_provider=oauth_provider)
+
+@mcp.route("/.well-known/oauth-protected-resource")
+async def protected_resource_metadata():
+    """RFC 9728 Protected Resource Metadata endpoint."""
+    return {
+        "resource": os.getenv("MCP_SERVER_URL"),
+        "authorization_servers": [os.getenv("AUTH_ISSUER")],
+        "scopes_supported": ["mcp:tools", "mcp:resources", "mcp:prompts"],
+        "bearer_methods_supported": ["header"],
+    }
+```
+
 ### Multi-Provider Support
 
 MCP servers support multiple authentication mechanisms based on deployment context.
@@ -492,15 +572,18 @@ async def service_operation(api_key: str = Header(...)) -> dict:
 
 ### Role-Based Access Control (RBAC)
 
-Define standard roles for MCP server access:
+> **SRS References:** NFR-SEC-017 through NFR-SEC-021
 
-| Role | Permissions | Use Case |
-|------|-------------|----------|
-| `admin` | Full access to all tools and resources | System administrators |
-| `developer` | Read/write access to development tools | Engineering teams |
-| `viewer` | Read-only access to resources | Auditors, stakeholders |
-| `service` | Limited programmatic access | CI/CD systems, automation |
-| `analyst` | Data query and reporting tools | Business analysts |
+MCP servers implement a **deny-by-default** authorization policy: all access is denied unless explicitly granted (NFR-SEC-019). Authorization is validated on every protected endpoint request (NFR-SEC-021).
+
+Define the four standard roles for MCP server access:
+
+| Role | MCP Capabilities | Description | Use Case |
+|------|-----------------|-------------|----------|
+| `admin` | `tools:execute`, `resources:read`, `prompts:get` + all management ops | Full access to all capabilities | System administrators |
+| `developer` | `tools:execute`, `resources:read`, `prompts:get` | Read/write development access | Engineering teams |
+| `viewer` | `resources:read`, `prompts:get` | Read-only access | Auditors, stakeholders |
+| `service` | Configurable per-service subset | Limited programmatic access | CI/CD systems, automation |
 
 **Implementation:**
 
@@ -1650,6 +1733,103 @@ Before deploying an MCP server to production:
 - [ ] Secrets stored securely (not in code)
 - [ ] Dependencies scanned for vulnerabilities
 - [ ] Error messages don't leak sensitive info
+
+## MCP Transport Security (2025-11-25)
+
+The MCP specification defines transport-level security requirements that go beyond general application security.
+
+### Origin Header Validation
+
+Servers running on Streamable HTTP **MUST** validate the `Origin` header on all incoming requests:
+
+```python
+ALLOWED_ORIGINS = {"https://app.example.com", "https://client.example.com"}
+
+async def validate_origin(request):
+    origin = request.headers.get("Origin")
+    if origin and origin not in ALLOWED_ORIGINS:
+        return Response(status_code=403, body="Forbidden: invalid origin")
+```
+
+- If the origin is not on the allow-list, the server MUST return **403 Forbidden**
+- When running locally, the server MUST bind to `localhost` (not `0.0.0.0`) to limit network exposure
+
+### Token Audience Binding (RFC 8707)
+
+MCP clients MUST include the `resource` parameter in authorization and token requests to bind tokens to a specific MCP server:
+
+```python
+# Client includes resource indicator in token request
+token_request = {
+    "grant_type": "authorization_code",
+    "code": auth_code,
+    "code_verifier": pkce_verifier,
+    "resource": "https://mcp-server.example.com"  # RFC 8707
+}
+```
+
+- Servers MUST validate that the token's audience matches their own resource URI
+- **Token passthrough is forbidden**: MCP servers MUST NOT forward client-issued tokens to downstream APIs
+
+### Scope Minimization
+
+MCP implements incremental scope consent. Servers use `WWW-Authenticate` with `scope` hints to request specific permissions:
+
+```http
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource", scope="mcp:tools mcp:resources"
+```
+
+- Clients should request the **minimum scopes** needed for the current operation
+- Servers should challenge for additional scopes only when the current operation requires them
+
+### SSRF Mitigation for MCP Tools
+
+MCP tools that accept URLs or make outbound HTTP requests are vulnerable to Server-Side Request Forgery (SSRF). Mitigate by:
+
+1. **Validating URL schemes** — Allow only `https://`; block `file://`, `ftp://`, `gopher://`
+2. **Blocking internal networks** — Deny requests to `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`
+3. **DNS rebinding protection** — Resolve DNS before connecting and re-check the IP
+4. **Using allowlists** — Prefer allowlisted domains over denylisted IPs
+
+```python
+import ipaddress
+from urllib.parse import urlparse
+
+BLOCKED_NETWORKS = [
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("169.254.0.0/16"),
+]
+
+def validate_url(url: str) -> bool:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("https",):
+        return False
+    # Resolve and check IP
+    ip = ipaddress.ip_address(socket.gethostbyname(parsed.hostname))
+    return not any(ip in net for net in BLOCKED_NETWORKS)
+```
+
+### Session Hijacking and Prompt Injection
+
+MCP sessions can be targeted by prompt injection attacks where an attacker manipulates AI model output to impersonate a different user or bypass access controls:
+
+- **Session-context binding**: Bind session IDs to authenticated user context; do not rely on session alone for identity
+- **Input sanitization**: Treat all tool inputs as untrusted, especially those generated by AI models
+- **Output filtering**: Validate tool outputs before returning to the client to prevent data exfiltration
+- **Confused deputy defense**: Always verify human consent before executing privileged operations; do not trust AI-generated authorization claims
+
+### Local MCP Server Security
+
+Local MCP servers (running on `stdio` transport) have a unique threat profile:
+
+- **Process isolation**: Run each MCP server in a separate process with minimal permissions
+- **File system access**: Restrict file access to declared root directories only
+- **No network exposure**: Local servers should not open network ports
+- **Environment isolation**: Do not inherit sensitive environment variables; use explicit configuration
 
 ## Summary
 

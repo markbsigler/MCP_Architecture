@@ -791,6 +791,49 @@ async def load_test_tool(
     }
 ```
 
+## Performance Targets (SRS Alignment)
+
+> **SRS References:** NFR-PERF-001 through NFR-PERF-023
+
+The following quantitative targets are mandated by the [SRS](IEEE-29148/SRS.md):
+
+### Latency Budget
+
+| Metric | Target | SRS |
+|--------|--------|-----|
+| p50 response time | < 100 ms | NFR-PERF-012 |
+| p95 resource read | < 500 ms | NFR-PERF-002 |
+| p95 resource listing | < 200 ms | NFR-PERF-001 |
+| p95 tool execution | < 2 s | NFR-PERF-003 |
+| p99 response time | < 1000 ms | NFR-PERF-013 |
+| Protocol overhead | < 50 ms | NFR-PERF-004 |
+| Auth (cached JWKS) | < 100 ms | NFR-PERF-005 |
+| AI Gateway overhead | < 30 ms (p95) | NFR-PERF-006 |
+| Connection handshake | < 2 s | FR-PROTO-008 |
+
+### Capacity Targets
+
+| Metric | Target | SRS |
+|--------|--------|-----|
+| Concurrent connections | 100+ per instance | NFR-PERF-007 |
+| Resource set size | 10,000+ items | NFR-PERF-008 |
+| Memory baseline | < 500 MB per instance | NFR-PERF-009 |
+| Throughput | > 100 req/s | NFR-PERF-011 |
+| Error rate | < 0.1% | NFR-PERF-014 |
+| Availability | 99.9% | NFR-PERF-023 |
+
+### Resilience Targets
+
+| Pattern | Configuration | SRS |
+|---------|--------------|-----|
+| Circuit breaker | Open after 5 consecutive failures, half-open after 30 s | NFR-PERF-017 |
+| Failover (429 rate limit) | Immediate to secondary, within 100 ms | NFR-PERF-019 |
+| Failover (5xx) | Backoff 1s→2s→4s→8s then failover within 500 ms total | NFR-PERF-020 |
+| Failover (timeout) | Immediate, within 50 ms | NFR-PERF-021 |
+| Failure detection | Within 200 ms | NFR-PERF-022 |
+| Graceful degradation | Continue serving available capabilities | NFR-PERF-015 |
+| Auto-reconnect | On transient failures | NFR-PERF-016 |
+
 ## Summary
 
 Key performance principles:
@@ -802,3 +845,4 @@ Key performance principles:
 5. **Implement backpressure before overload occurs**
 6. **Monitor and alert on performance metrics**
 7. **Load test before production deployment**
+8. **Validate against quantitative SRS targets above before release**

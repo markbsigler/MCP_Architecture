@@ -128,25 +128,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive production architecture visualization
 - Full observability stack with all integration points
 
-## [Unreleased]
-
-### Planned
-
-- Interactive decision trees
-- Additional integration examples
-- Performance benchmarking guidelines
-- Multi-language code examples
+## [2.0.0] - 2026-02-23
 
 ### Added
 
-- Decision Trees section integrated (docs/11-decision-trees.md) pending build inclusion
-- Migration Guides scaffold (docs/12-migration-guides.md) covering five transition scenarios
+- **IEEE-29148 Software Requirements Specification** (`docs/IEEE-29148/SRS.md`)
+  - Formal requirements using EARS syntax (FR-PROTO, FR-RSRC, FR-TOOL, FR-PROMPT, FR-SAMP, FR-ELIC, FR-TASK, FR-ORCH, FR-GWWY, NFR-SEC, NFR-PERF, NFR-OBS, NFR-CNTR, DC)
+  - Verification method mapping for all requirements
+  - Full traceability matrix (requirements → architecture → tests)
+  - Core principles: Client Portability, Registry Distribution, AI Service Provider Agnostic, Separation of Concerns
+- **IEEE-42010 Architecture Description** (`docs/IEEE-42010/AD.md`)
+  - Six viewpoints: Functional, Information, Deployment, Security, Operational, Development
+  - Mermaid diagrams for every view
+  - Correspondence rules and SRS traceability
+  - Known issues and gap tracking
+- **Elicitation Patterns** (`docs/03f-elicitation-patterns.md`) — Human-in-the-loop structured input
+- **Task Patterns** (`docs/03g-task-patterns.md`) — Durable long-running operation tracking (experimental)
+- **Multi-Server Orchestration** (`docs/03h-multi-server-orchestration.md`) — Cross-server workflow composition
+- **AI Service Provider Gateway** (`docs/03i-ai-service-provider-gateway.md`) — Provider-agnostic LLM routing with failover
+
+### Changed
+
+- **Security Architecture** (`docs/02-security-architecture.md`)
+  - Added OAuth 2.1 Authorization section (PKCE, OIDC Discovery, RFC 9728)
+  - Aligned RBAC to 4 roles per SRS (admin, developer, viewer, service)
+  - Added deny-by-default authorization policy
+- **Tool Implementation** (`docs/03-tool-implementation.md`)
+  - Added Protocol Errors vs Tool Execution Errors section
+- **Deployment Patterns** (`docs/07-deployment-patterns.md`)
+  - Added Container Security Hardening (CIS benchmark, Cosign, Syft, Trivy)
+  - Added MCP Marketplace Distribution patterns
+- **Performance & Scalability** (`docs/06a-performance-scalability.md`)
+  - Added quantitative Performance Targets aligned to SRS
+- **MCP Protocol Compatibility** (`docs/15-mcp-protocol-compatibility.md`)
+  - Complete rewrite with actual MCP spec versions (2024-11-05 through 2025-11-25)
+  - Replaced fabricated version history with real feature progression
+
+### Removed
+
+- **MCP-PRD.md** — Superseded by `docs/IEEE-29148/SRS.md`
+- **MCP-ARCHITECTURE.md** — Superseded by `docs/IEEE-42010/AD.md`
 
 ---
 
 ## Version History
 
-- **1.0.0** (2025-11-18): Initial release with comprehensive MCP architecture documentation
+- **2.0.0** (2026-02-23): IEEE standards adoption, new pattern docs, legacy file deletion
+- **1.4.0** (2025-11-20): Navigation, terminology, cross-references
+- **1.2.0** (2025-11-19): Enhanced Mermaid diagrams
+- **1.1.0** (2025-11-18): Requirements engineering
+- **1.0.0** (2025-11-18): Initial release
 
 ## Contributing
 

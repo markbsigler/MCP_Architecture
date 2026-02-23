@@ -3,8 +3,8 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Tool Implementation  
 **Related**: [← Previous: Requirements Engineering](02b-requirements-engineering.md) | [Next: Prompt Implementation →](03a-prompt-implementation.md) | [Decision Trees](03d-decision-trees.md#tool-vs-prompt-vs-resource-selection)
 
-**Version:** 1.4.0  
-**Last Updated:** November 20, 2025  
+**Version:** 2.0.0  
+**Last Updated:** July 19, 2025  
 **Status:** Production Ready
 
 ## Quick Links
@@ -109,6 +109,126 @@ list_cicd_pipelines
 # ❌ Bad - Unclear abbreviations
 create_app  # Use create_application
 get_cfg     # Use get_configuration
+```
+
+### MCP 2025-11-25 Naming Rules
+
+Per the MCP specification, tool names have strict constraints:
+
+| Rule | Value |
+|------|-------|
+| Length | 1–128 characters |
+| Allowed characters | `A-Za-z0-9_-.` |
+| Case sensitivity | Case-sensitive |
+
+Names outside these constraints will be rejected by compliant clients and servers.
+
+## Tool Metadata (MCP 2025-11-25)
+
+> **Added in MCP 2025-11-25**
+
+### Title, Icons, and Display Metadata
+
+Tools now support human-readable display metadata:
+
+```json
+{
+  "name": "deploy_application",
+  "title": "Deploy Application",
+  "description": "Deploy an application to the specified environment.",
+  "icons": [
+    { "src": "https://cdn.example.com/deploy-icon.png", "mimeType": "image/png", "sizes": "32x32" }
+  ],
+  "inputSchema": { ... }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | Machine-readable identifier (1–128 chars, `A-Za-z0-9_-.`) |
+| `title` | `string` | Human-readable display name |
+| `description` | `string` | Description of what the tool does |
+| `icons` | `array` | Array of `{ src, mimeType, sizes }` icon objects |
+| `inputSchema` | `object` | JSON Schema for input parameters |
+| `outputSchema` | `object` | JSON Schema for structured output (optional) |
+
+### Output Schema and Structured Content
+
+Tools can declare an `outputSchema` to return typed, machine-readable results alongside human-readable content:
+
+```json
+{
+  "name": "get_metrics",
+  "description": "Get application metrics.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "app_name": { "type": "string" }
+    },
+    "required": ["app_name"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "cpu_percent": { "type": "number" },
+      "memory_mb": { "type": "number" },
+      "request_count": { "type": "integer" }
+    },
+    "required": ["cpu_percent", "memory_mb", "request_count"]
+  }
+}
+```
+
+When `outputSchema` is declared, the tool response includes `structuredContent`:
+
+```json
+{
+  "content": [
+    { "type": "text", "text": "CPU: 42%, Memory: 512 MB, Requests: 1234" }
+  ],
+  "structuredContent": {
+    "cpu_percent": 42.0,
+    "memory_mb": 512,
+    "request_count": 1234
+  }
+}
+```
+
+- `content` is always present (human-readable fallback)
+- `structuredContent` is present only when the tool declares `outputSchema`
+- Clients should prefer `structuredContent` for programmatic use
+
+### JSON Schema Dialect
+
+MCP uses **JSON Schema 2020-12** as the default dialect. If a schema does not include a `$schema` field, clients and servers MUST assume `https://json-schema.org/draft/2020-12/schema`.
+
+### Content Types in Tool Results
+
+Tool results can now include the following content types:
+
+| Type | Description | Added |
+|------|-------------|-------|
+| `text` | Plain text content | 2024-11-05 |
+| `image` | Base64-encoded image with MIME type | 2024-11-05 |
+| `audio` | Base64-encoded audio with MIME type | 2025-11-25 |
+| `resource_link` | Reference to an MCP resource by URI | 2025-06-18 |
+
+```python
+# Audio content in tool result
+return {
+    "content": [
+        {"type": "text", "text": "Generated audio summary."},
+        {"type": "audio", "data": base64_audio, "mimeType": "audio/mp3"}
+    ]
+}
+
+# Resource link in tool result
+return {
+    "content": [
+        {"type": "text", "text": "Created report."},
+        {"type": "resource_link", "uri": "resource:///reports/2025-q3.pdf", "name": "Q3 Report", "mimeType": "application/pdf"}
+    ]
+}
 ```
 
 ## Parameter Design
@@ -375,6 +495,57 @@ async def list_assignments(
 ```
 
 ## Error Handling
+
+> **SRS References:** FR-PROTO-019 through FR-PROTO-024, FR-TOOL-004, FR-TOOL-013
+
+### Protocol Errors vs Tool Execution Errors
+
+MCP distinguishes two error categories. Using the wrong one breaks client error handling:
+
+| Category | When to Use | Transport | Key |
+|----------|-------------|-----------|-----|
+| **Protocol Error** | Invalid JSON-RPC, unknown method, transport failure | JSON-RPC `error` field | Standard error codes |
+| **Tool Execution Error** | Tool logic failure, validation, backend error | JSON-RPC `result` with `isError: true` | `result.content[].text` |
+
+**Protocol Error Codes (JSON-RPC 2.0):**
+
+| Code | Name | When |
+|------|------|------|
+| `-32700` | Parse Error | Malformed JSON received |
+| `-32600` | Invalid Request | Request is not valid JSON-RPC |
+| `-32601` | Method Not Found | Tool/method does not exist |
+| `-32602` | Invalid Params | Params fail JSON Schema validation at protocol level |
+| `-32603` | Internal Error | Unexpected server crash |
+
+**Tool Execution Error (isError pattern):**
+
+```python
+@mcp.tool()
+async def get_forecast(city: str) -> dict:
+    """Get weather forecast — returns isError on business failure."""
+    try:
+        data = await weather_api.get(city, timeout=30)
+        return {"content": [{"type": "text", "text": json.dumps(data)}]}
+    except ValidationError as e:
+        # Tool execution error — NOT a protocol error
+        return {
+            "content": [{"type": "text", "text": f"Invalid input: {e}"}],
+            "isError": True,
+        }
+    except ExternalAPIError as e:
+        return {
+            "content": [{"type": "text", "text": f"Service unavailable: {e}"}],
+            "isError": True,
+        }
+```
+
+**Critical rule:** Input validation failures **must** return `isError: true` in the result, not a JSON-RPC error code (FR-TOOL-004, FR-PROTO-020). Protocol error codes are reserved for protocol-level failures.
+
+**All error responses must:**
+
+- Include a correlation ID (FR-PROTO-023)
+- Never expose stack traces, internal paths, or secrets (FR-PROTO-021, FR-TOOL-013)
+- Log full context server-side: correlation ID, user, endpoint, parameters (FR-PROTO-024)
 
 ### Error Code Framework
 

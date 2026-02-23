@@ -3,8 +3,8 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Sampling Patterns  
 **Related**: [← Previous: Resource Implementation](03b-resource-implementation.md) | [Next: Decision Trees →](03d-decision-trees.md) | [Agentic Best Practices](09-agentic-best-practices.md#llm-specific-considerations)
 
-**Version:** 1.4.0  
-**Last Updated:** November 20, 2025  
+**Version:** 2.0.0  
+**Last Updated:** July 19, 2025  
 **Status:** Production Ready
 
 ## Overview
@@ -1392,6 +1392,109 @@ For more information on MCP sampling and server implementation:
 - **[Resource Implementation Standards](./03b-resource-implementation.md)** - Resource implementation guide
 
 ---
+
+## Tools in Sampling (MCP 2025-11-25)
+
+> **Added in MCP 2025-11-25**
+
+Servers can now include `tools` and `toolChoice` in `sampling/createMessage` requests, enabling **multi-turn tool-use loops** within sampling. The client declares support for this via the `sampling.tools` sub-capability.
+
+### Client Capability
+
+```json
+{
+  "capabilities": {
+    "sampling": {
+      "tools": {}
+    }
+  }
+}
+```
+
+### Sampling Request with Tools
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": { "type": "text", "text": "Look up the current stock price for ACME Corp." }
+      }
+    ],
+    "tools": [
+      {
+        "name": "lookup_stock",
+        "description": "Look up current stock price by ticker symbol.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticker": { "type": "string" }
+          },
+          "required": ["ticker"]
+        }
+      }
+    ],
+    "toolChoice": "auto",
+    "maxTokens": 500
+  }
+}
+```
+
+### toolChoice Modes
+
+| Value | Behavior |
+|-------|----------|
+| `"auto"` | Model decides whether to use tools |
+| `"required"` | Model MUST invoke at least one tool |
+| `"none"` | Model MUST NOT invoke tools (normal completion) |
+
+### Multi-Turn Tool Loop
+
+When the model invokes a tool during sampling, the client runs the tool and feeds the result back into the conversation for a follow-up completion:
+
+```python
+@mcp.tool()
+async def research_topic(question: str) -> dict:
+    """Research a topic using LLM + tool loop."""
+    
+    completion = await mcp.create_message(
+        messages=[
+            SamplingMessage(
+                role="user",
+                content=TextContent(type="text", text=question)
+            )
+        ],
+        tools=[
+            {
+                "name": "web_search",
+                "description": "Search the web for current information.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                    "required": ["query"]
+                }
+            }
+        ],
+        tool_choice="auto",
+        max_tokens=1000
+    )
+    
+    return {"content": [{"type": "text", "text": completion.content.text}]}
+```
+
+The client handles the tool invocation loop internally — the server receives only the final text result.
+
+### Message Content Constraints
+
+When tools are involved in sampling, message content has ordering constraints:
+
+- **Tool results** must appear as the sole content in their message (not mixed with text)
+- **Tool use and tool result** messages must be balanced — every tool use must have a corresponding result
+- Messages alternate between `user` and `assistant` roles
 
 ## Summary
 

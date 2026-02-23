@@ -1,7 +1,7 @@
 # Model Context Protocol (MCP) Server Architecture and Design Guidelines
 
-**Version:** 1.4.0  
-**Last Updated:** November 20, 2025  
+**Version:** 2.0.0  
+**Last Updated:** February 23, 2026  
 **Status:** Production Ready  
 **Repository:** MCP_Architecture  
 **Author:** Mark Sigler
@@ -21,11 +21,13 @@ This repository contains comprehensive architectural and systems design guidelin
 
 ### 🎯 What You'll Find Here
 
-- **27 comprehensive documentation modules** covering architecture, security, implementation, operations, and compliance
+- **31+ comprehensive documentation modules** covering architecture, security, implementation, operations, and compliance
+- **IEEE 29148:2018 SRS** with formal EARS-syntax requirements and full traceability
+- **IEEE 42010:2022 AD** with six architectural viewpoints and correspondence rules
 - **Production-ready code examples** in Python with FastMCP
 - **Decision trees and flowcharts** for architectural choices
 - **Complete testing strategies** with 80%+ coverage targets
-- **Security hardening guides** with RBAC, OAuth 2.0, and audit logging
+- **Security hardening guides** with RBAC, OAuth 2.1+PKCE, and audit logging
 - **Observability patterns** with Prometheus, Grafana, and OpenTelemetry
 - **DORA metrics tracking** for deployment excellence
 - **Migration guides** for REST API → MCP transitions
@@ -152,6 +154,34 @@ These guidelines are designed to help engineering teams:
 - Event-driven patterns
 - Multi-service orchestration
 
+**[Elicitation Patterns](docs/03f-elicitation-patterns.md)**
+
+- Human-in-the-loop structured input
+- Supported input types (string, number, enum, URL)
+- Confirmation before destructive actions
+- Fallback when client lacks elicitation support
+
+**[Task Patterns](docs/03g-task-patterns.md)**
+
+- Durable long-running operation tracking (experimental)
+- Task lifecycle state management
+- Status polling and cancellation
+- Production considerations (persistence, expiration)
+
+**[Multi-Server Orchestration](docs/03h-multi-server-orchestration.md)**
+
+- Cross-server workflow composition
+- Sequential and parallel aggregation patterns
+- Failure isolation between servers
+- Capability boundary declaration
+
+**[AI Service Provider Gateway](docs/03i-ai-service-provider-gateway.md)**
+
+- Provider-agnostic LLM routing (OpenAI, Azure, Anthropic, Bedrock, vLLM)
+- Automatic failover on 429/5xx/timeout
+- Credential rotation and secret management
+- Enterprise header injection and cost tracking
+
 ### Quality & Operations
 
 **[Testing Strategy](docs/04-testing-strategy.md)**
@@ -263,10 +293,26 @@ These guidelines are designed to help engineering teams:
 
 **[MCP Protocol Compatibility](docs/15-mcp-protocol-compatibility.md)**
 
-- Supported protocol versions and feature matrix
-- Version negotiation and upgrade paths
-- Deprecation policy and lifecycle management
-- Compatibility testing strategies
+- Supported MCP spec versions (2024-11-05 through 2025-11-25)
+- Feature progression across specification versions
+- Version negotiation during initialize handshake
+- Migration guidance for spec version upgrades
+
+### IEEE Standards
+
+**[IEEE 29148:2018 — Software Requirements Specification](docs/IEEE-29148/SRS.md)** ⭐ **NEW**
+
+- Formal requirements using EARS syntax
+- Functional requirements (protocol, resources, tools, prompts, sampling, elicitation, tasks, orchestration, gateway)
+- Non-functional requirements (security, performance, observability, container)
+- Verification method mapping and traceability matrix
+
+**[IEEE 42010:2022 — Architecture Description](docs/IEEE-42010/AD.md)** ⭐ **NEW**
+
+- Six viewpoints: Functional, Information, Deployment, Security, Operational, Development
+- Mermaid diagrams for every architectural view
+- Correspondence rules across viewpoints
+- Traceability to SRS requirements
 
 ## Development Setup
 
@@ -449,7 +495,7 @@ While these guidelines are language-agnostic in principle, examples and patterns
 
 - **Framework**: FastMCP (Python)
 - **Language**: Python 3.11+
-- **Authentication**: JWT/JWKS, OAuth 2.0
+- **Authentication**: JWT/JWKS, OAuth 2.1+PKCE
 - **Observability**: OpenTelemetry, Prometheus
 - **Container Runtime**: Docker
 - **Orchestration**: Kubernetes (examples are generic)
@@ -529,12 +575,21 @@ We welcome contributions from the community! Here's how you can help:
 
 ## Roadmap
 
-### ✅ Completed (v1.4.0)
+### ✅ Completed (v2.0.0)
 
-**Core Documentation (v1.0.0 - v1.3.0)**
+**IEEE Standards Adoption (v2.0.0)**
+
+- ✅ IEEE 29148:2018 Software Requirements Specification (SRS.md)
+- ✅ IEEE 42010:2022 Architecture Description (AD.md)
+- ✅ Elicitation patterns, Task patterns, Multi-server orchestration, AI gateway docs
+- ✅ Security architecture update (OAuth 2.1, RBAC alignment)
+- ✅ Protocol compatibility rewrite (real MCP spec versions)
+- ✅ Legacy file consolidation (MCP-PRD.md and MCP-ARCHITECTURE.md removed)
+
+**Core Documentation (v1.0.0 - v1.4.0)**
 
 - Core architecture and implementation standards
-- Security architecture with OAuth 2.0 and RBAC
+- Security architecture with OAuth 2.1 and RBAC
 - Testing strategy with 80%+ coverage targets
 - Observability with Prometheus and OpenTelemetry
 - Deployment patterns for Docker/Kubernetes
@@ -542,27 +597,11 @@ We welcome contributions from the community! Here's how you can help:
 - Troubleshooting guide with diagnostics
 - Metrics and KPIs with DORA tracking
 - MCP protocol compatibility documentation
+- Breadcrumb navigation across all documents
+- Cross-reference index by topic (98-index-by-topic.md)
+- Comprehensive terminology guide (00-terminology-guide.md)
 
-**Navigation & Usability (v1.4.0)**
-
-- ✅ Breadcrumb navigation across all 27 documents
-- ✅ Cross-reference index by topic (98-index-by-topic.md)
-- ✅ Enhanced README with visual learning paths
-- ✅ Comprehensive terminology guide (00-terminology-guide.md)
-- ✅ Standardized document headers with Quick Links
-- ✅ Consistent code example standards (✅/❌ patterns)
-- ✅ Content enhancements: decision tables, traceability matrices, error recovery trees, flame graph analysis
-- ✅ All documents updated to Production Ready status
-
-### 🚧 In Progress (v1.5.0)
-
-- Interactive decision flow tools
-- Video tutorials and walkthroughs
-- Compliance checklists (SOC2, ISO 27001)
-- Real-world case studies and implementation examples
-- Community contributions showcase
-
-### 🎯 Planned (v2.0.0)
+### 🎯 Planned (v2.1.0)
 
 - Event-driven architecture patterns
 - Streaming response implementations
@@ -608,7 +647,7 @@ A: Follow the [Migration Guides](docs/10-migration-guides.md) for phased approac
 A: 80%+ for enterprise applications. See [Testing Strategy](docs/04-testing-strategy.md) for details.
 
 **Q: How do I handle authentication?**
-A: We recommend JWT with JWKS or OAuth 2.0. See [Security Architecture](docs/02-security-architecture.md) for implementation patterns.
+A: We recommend JWT with JWKS or OAuth 2.1 with PKCE. See [Security Architecture](docs/02-security-architecture.md) for implementation patterns.
 
 ### Operational Questions
 

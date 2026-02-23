@@ -1119,6 +1119,115 @@ Production deployment requires:
 - **Strategies**: Rolling, blue-green, or canary deployments
 - **Observability**: Metrics, logging, and tracing integration
 - **Security**: Non-root containers, secrets management, network policies
+- **Container Hardening**: CIS Docker Benchmark, image signing, SBOM (see below)
+- **Distribution**: MCP Marketplace, ghcr.io, Docker Hub
+
+## Container Security Hardening
+
+> **SRS References:** NFR-CNTR-001 through NFR-CNTR-012, NFR-CNTR-027 through NFR-CNTR-029
+
+### Hardened Dockerfile
+
+Production containers must follow these security constraints:
+
+| Control | Implementation | SRS |
+|---------|---------------|-----|
+| Minimal base image | Alpine or distroless (< 100 MB compressed) | NFR-CNTR-001, NFR-CNTR-002 |
+| Non-root execution | `USER mcp` (UID > 1000) | NFR-CNTR-006 |
+| Read-only root filesystem | `--read-only` flag or `readOnlyRootFilesystem: true` | NFR-CNTR-007 |
+| Dropped capabilities | `--cap-drop=ALL --cap-add=<required>` | NFR-CNTR-008 |
+| No shell or package manager | Multi-stage build; final image has no `sh`, `apk`, `apt` | NFR-CNTR-009 |
+| No secrets in layers | Use runtime mounts or secret managers | NFR-CNTR-010 |
+| Automated rebuild | Trigger on base image updates (e.g., Renovate, Dependabot) | NFR-CNTR-011 |
+| CIS Docker Benchmark | Pass all applicable checks | NFR-CNTR-012 |
+
+**Hardened Kubernetes SecurityContext:**
+
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+```
+
+### Image Signing and Provenance
+
+Every published container image must be signed and include supply chain attestations:
+
+```bash
+# Sign image with Cosign (keyless, OIDC-based)
+cosign sign ghcr.io/org/mcp-server:v1.0.0
+
+# Generate and attach SBOM (CycloneDX format)
+syft ghcr.io/org/mcp-server:v1.0.0 -o cyclonedx-json > sbom.json
+cosign attach sbom --sbom sbom.json ghcr.io/org/mcp-server:v1.0.0
+
+# Attach SLSA provenance attestation
+cosign attest --predicate provenance.json ghcr.io/org/mcp-server:v1.0.0
+
+# Verify signature before deployment
+cosign verify ghcr.io/org/mcp-server:v1.0.0
+```
+
+### Vulnerability Scanning
+
+```bash
+# Scan for vulnerabilities (zero critical/high required)
+trivy image --severity CRITICAL,HIGH --exit-code 1 ghcr.io/org/mcp-server:v1.0.0
+
+# CIS Docker Benchmark audit
+docker-bench-security
+```
+
+## MCP Marketplace Distribution
+
+> **SRS References:** NFR-CNTR-024 through NFR-CNTR-030, FR-PROTO-016 through FR-PROTO-018
+
+### Registry Publishing
+
+Publish container images to **both** registries on every release:
+
+| Registry | Image Path | SRS |
+|----------|-----------|-----|
+| GitHub Container Registry | `ghcr.io/<org>/mcp-server:<version>` | NFR-CNTR-024 |
+| Docker Hub | `<org>/mcp-server:<version>` | NFR-CNTR-025 |
+
+Images must be published **within 10 minutes** of release (NFR-CNTR-030).
+
+### server.json Metadata
+
+Every MCP server requires a complete `server.json` for registry listing (FR-PROTO-016):
+
+```json
+{
+  "name": "example-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for [domain] integration",
+  "author": "Organization Name",
+  "license": "MIT",
+  "repository": "https://github.com/org/mcp-server",
+  "transport": ["http+sse", "stdio"],
+  "capabilities": {
+    "tools": true,
+    "resources": true,
+    "prompts": true
+  },
+  "container": {
+    "image": "ghcr.io/org/mcp-server",
+    "platforms": ["linux/amd64", "linux/arm64"]
+  },
+  "configuration": {
+    "required": ["AUTH_ISSUER", "AUTH_JWKS_URI"],
+    "optional": ["LOG_LEVEL", "RATE_LIMIT_RPM"]
+  }
+}
+```
 
 ---
 
