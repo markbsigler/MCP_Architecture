@@ -1,7 +1,7 @@
 # Tool Implementation Standards
 
 **Navigation**: [Home](../README.md) > Implementation Standards > Tool Implementation  
-**Related**: [← Previous: Requirements Engineering](02b-requirements-engineering.md) | [Next: Prompt Implementation →](03a-prompt-implementation.md) | [Decision Trees](03d-decision-trees.md#tool-vs-prompt-vs-resource-selection)
+**Related**: [← Previous: Requirements Engineering](../../IEEE-29148/methodology/02b-requirements-engineering.md) | [Next: Prompt Implementation →](03a-prompt-implementation.md) | [Decision Trees](03d-decision-trees.md#tool-vs-prompt-vs-resource-selection)
 
 **Version:** 2.0.0  
 **Last Updated:** July 19, 2025  

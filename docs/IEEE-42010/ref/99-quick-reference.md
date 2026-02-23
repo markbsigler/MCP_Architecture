@@ -489,18 +489,18 @@ docker logs -f container_id
 
 ## Reference Links
 
-- [Architecture Overview](01-architecture-overview.md)
-- [Security Architecture](02-security-architecture.md)
-- [Requirements Engineering](02b-requirements-engineering.md) ⭐ NEW
-- [Tool Standards](03-tool-implementation.md)
-- [Prompt Standards](03a-prompt-implementation.md)
-- [Resource Standards](03b-resource-implementation.md)
-- [Sampling Patterns](03c-sampling-patterns.md)
-- [Testing Strategy](04-testing-strategy.md)
-- [Observability](05-observability.md)
-- [Deployment Patterns](07-deployment-patterns.md)
-- [Operational Runbooks](08-operational-runbooks.md)
-- [Contributing Guide](../CONTRIBUTING.md)
+- [Architecture Overview](../views/01-architecture-overview.md)
+- [Security Architecture](../views/02-security-architecture.md)
+- [Requirements Engineering](../../IEEE-29148/methodology/02b-requirements-engineering.md) ⭐ NEW
+- [Tool Standards](../views/03-tool-implementation.md)
+- [Prompt Standards](../views/03a-prompt-implementation.md)
+- [Resource Standards](../views/03b-resource-implementation.md)
+- [Sampling Patterns](../views/03c-sampling-patterns.md)
+- [Testing Strategy](../views/04-testing-strategy.md)
+- [Observability](../views/05-observability.md)
+- [Deployment Patterns](../views/07-deployment-patterns.md)
+- [Operational Runbooks](../views/08-operational-runbooks.md)
+- [Contributing Guide](../../../CONTRIBUTING.md)
 
 ---
 

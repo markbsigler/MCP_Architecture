@@ -55,7 +55,7 @@ These guidelines are designed to help engineering teams:
 
 ### Foundation & Reference
 
-**[Terminology Guide](docs/00-terminology-guide.md)** ⭐ **NEW**
+**[Terminology Guide](docs/IEEE-42010/ref/00-terminology-guide.md)** ⭐ **NEW**
 
 - Standard terminology definitions (MCP server, tool, resource, prompt)
 - Consistent naming conventions across all documentation
@@ -64,14 +64,14 @@ These guidelines are designed to help engineering teams:
 
 ### Core Architecture
 
-**[Architecture Overview](docs/01-architecture-overview.md)**
+**[Architecture Overview](docs/IEEE-42010/views/01-architecture-overview.md)**
 
 - Enterprise MCP architecture layers
 - Request flow patterns
 - Component interactions
 - FastMCP integration patterns
 
-**[Architecture Decision Records](docs/01b-architecture-decisions.md)**
+**[Architecture Decision Records](docs/IEEE-42010/views/01b-architecture-decisions.md)**
 
 - ADR format and templates
 - Key architectural decisions
@@ -79,7 +79,7 @@ These guidelines are designed to help engineering teams:
 
 ### Implementation Standards
 
-**[Security Architecture](docs/02-security-architecture.md)**
+**[Security Architecture](docs/IEEE-42010/views/02-security-architecture.md)**
 
 - Authentication patterns (JWT, OAuth 2.0, WorkOS)
 - Authorization frameworks (RBAC, capability-based)
@@ -88,14 +88,14 @@ These guidelines are designed to help engineering teams:
 - Security headers and CORS
 - Audit logging requirements
 
-**[Data Privacy & Compliance](docs/02a-data-privacy-compliance.md)**
+**[Data Privacy & Compliance](docs/IEEE-42010/views/02a-data-privacy-compliance.md)**
 
 - PII detection and classification
 - Data masking and redaction
 - Retention policies and deletion
 - GDPR, CCPA, HIPAA compliance
 
-**[Requirements Engineering](docs/02b-requirements-engineering.md)**
+**[Requirements Engineering](docs/IEEE-29148/methodology/02b-requirements-engineering.md)**
 
 - EARS (Easy Approach to Requirements Syntax)
 - Agile user story format
@@ -103,7 +103,7 @@ These guidelines are designed to help engineering teams:
 - ISO/IEEE 29148 principles
 - Requirements traceability
 
-**[Tool Implementation Standards](docs/03-tool-implementation.md)**
+**[Tool Implementation Standards](docs/IEEE-42010/views/03-tool-implementation.md)**
 
 - Naming conventions (verb-noun pattern)
 - Parameter design standards
@@ -112,7 +112,7 @@ These guidelines are designed to help engineering teams:
 - Pagination patterns
 - Versioning strategies
 
-**[Prompt Implementation Standards](docs/03a-prompt-implementation.md)**
+**[Prompt Implementation Standards](docs/IEEE-42010/views/03a-prompt-implementation.md)**
 
 - User-controlled workflow templates
 - Parameter completion patterns
@@ -120,7 +120,7 @@ These guidelines are designed to help engineering teams:
 - Multi-message sequences
 - Versioning and compatibility
 
-**[Resource Implementation Standards](docs/03b-resource-implementation.md)**
+**[Resource Implementation Standards](docs/IEEE-42010/views/03b-resource-implementation.md)**
 
 - URI design patterns and templates
 - MIME type handling
@@ -128,7 +128,7 @@ These guidelines are designed to help engineering teams:
 - Caching strategies
 - Access control patterns
 
-**[Sampling Patterns and LLM Interaction](docs/03c-sampling-patterns.md)**
+**[Sampling Patterns and LLM Interaction](docs/IEEE-42010/views/03c-sampling-patterns.md)**
 
 - Server-initiated LLM requests
 - Model selection and temperature control
@@ -138,14 +138,14 @@ These guidelines are designed to help engineering teams:
 
 ### Decision Support
 
-**[Decision Trees](docs/03d-decision-trees.md)**
+**[Decision Trees](docs/IEEE-42010/views/03d-decision-trees.md)**
 
 - Structured architectural choice guides
 - Tool vs prompt vs resource selection matrices
 - Authentication method decision flows
 - Caching, database, and deployment pattern trees
 
-**[Integration Patterns](docs/03e-integration-patterns.md)**
+**[Integration Patterns](docs/IEEE-42010/views/03e-integration-patterns.md)**
 
 - REST API integration with circuit breakers
 - Multi-tier caching strategies
@@ -154,28 +154,28 @@ These guidelines are designed to help engineering teams:
 - Event-driven patterns
 - Multi-service orchestration
 
-**[Elicitation Patterns](docs/03f-elicitation-patterns.md)**
+**[Elicitation Patterns](docs/IEEE-42010/views/03f-elicitation-patterns.md)**
 
 - Human-in-the-loop structured input
 - Supported input types (string, number, enum, URL)
 - Confirmation before destructive actions
 - Fallback when client lacks elicitation support
 
-**[Task Patterns](docs/03g-task-patterns.md)**
+**[Task Patterns](docs/IEEE-42010/views/03g-task-patterns.md)**
 
 - Durable long-running operation tracking (experimental)
 - Task lifecycle state management
 - Status polling and cancellation
 - Production considerations (persistence, expiration)
 
-**[Multi-Server Orchestration](docs/03h-multi-server-orchestration.md)**
+**[Multi-Server Orchestration](docs/IEEE-42010/views/03h-multi-server-orchestration.md)**
 
 - Cross-server workflow composition
 - Sequential and parallel aggregation patterns
 - Failure isolation between servers
 - Capability boundary declaration
 
-**[AI Service Provider Gateway](docs/03i-ai-service-provider-gateway.md)**
+**[AI Service Provider Gateway](docs/IEEE-42010/views/03i-ai-service-provider-gateway.md)**
 
 - Provider-agnostic LLM routing (OpenAI, Azure, Anthropic, Bedrock, vLLM)
 - Automatic failover on 429/5xx/timeout
@@ -184,7 +184,7 @@ These guidelines are designed to help engineering teams:
 
 ### Quality & Operations
 
-**[Testing Strategy](docs/04-testing-strategy.md)**
+**[Testing Strategy](docs/IEEE-42010/views/04-testing-strategy.md)**
 
 - Unit testing patterns with mocking
 - Integration testing approaches
@@ -193,7 +193,7 @@ These guidelines are designed to help engineering teams:
 - Coverage requirements (80%+ for enterprise)
 - Test data management
 
-**[Observability Architecture](docs/05-observability.md)**
+**[Observability Architecture](docs/IEEE-42010/views/05-observability.md)**
 
 - Structured logging standards (JSON format)
 - Metrics collection (Prometheus/OpenTelemetry)
@@ -204,7 +204,7 @@ These guidelines are designed to help engineering teams:
 
 ### Development & Operations
 
-**[Development Lifecycle](docs/06-development-lifecycle.md)**
+**[Development Lifecycle](docs/IEEE-42010/views/06-development-lifecycle.md)**
 
 - Project structure standards
 - Configuration management patterns
@@ -213,14 +213,14 @@ These guidelines are designed to help engineering teams:
 - Code quality standards
 - Documentation requirements
 
-**[Performance & Scalability](docs/06a-performance-scalability.md)**
+**[Performance & Scalability](docs/IEEE-42010/views/06a-performance-scalability.md)**
 
 - Horizontal and vertical scaling
 - Caching strategies
 - Connection pooling
 - Load balancing patterns
 
-**[Deployment Patterns](docs/07-deployment-patterns.md)**
+**[Deployment Patterns](docs/IEEE-42010/views/07-deployment-patterns.md)**
 
 - Container best practices (Dockerfile standards)
 - Kubernetes deployment patterns
@@ -229,7 +229,7 @@ These guidelines are designed to help engineering teams:
 - Environment management
 - Secrets management
 
-**[Operational Runbooks](docs/08-operational-runbooks.md)**
+**[Operational Runbooks](docs/IEEE-42010/views/08-operational-runbooks.md)**
 
 - Common issues and resolutions
 - Incident response procedures
@@ -240,7 +240,7 @@ These guidelines are designed to help engineering teams:
 
 ### Advanced Topics
 
-**[Agentic System Best Practices](docs/09-agentic-best-practices.md)**
+**[Agentic System Best Practices](docs/IEEE-42010/views/09-agentic-best-practices.md)**
 
 - Context management and token optimization
 - User elicitation patterns
@@ -249,7 +249,7 @@ These guidelines are designed to help engineering teams:
 - Safety and confirmation patterns
 - LLM-specific considerations
 
-**[Migration Guides](docs/10-migration-guides.md)**
+**[Migration Guides](docs/IEEE-42010/views/10-migration-guides.md)**
 
 - REST API → MCP transition phases
 - MCP protocol version upgrade strategies
@@ -257,7 +257,7 @@ These guidelines are designed to help engineering teams:
 - Database migration and shadow write patterns
 - Zero-downtime deployment approaches
 
-**[Troubleshooting Guide](docs/11-troubleshooting.md)**
+**[Troubleshooting Guide](docs/IEEE-42010/views/11-troubleshooting.md)**
 
 - Common authentication and rate limiting issues
 - Performance degradation diagnostics
@@ -265,7 +265,7 @@ These guidelines are designed to help engineering teams:
 - Database connection troubleshooting
 - Log analysis patterns and profiling techniques
 
-**[Cost Optimization](docs/12-cost-optimization.md)**
+**[Cost Optimization](docs/IEEE-42010/views/12-cost-optimization.md)**
 
 - Resource sizing recommendations
 - Caching strategies for cost reduction
@@ -276,14 +276,14 @@ These guidelines are designed to help engineering teams:
 
 ### Metrics & Reference
 
-**[Metrics and KPIs](docs/13-metrics-kpis.md)**
+**[Metrics and KPIs](docs/IEEE-42010/views/13-metrics-kpis.md)**
 
 - Service Level Objectives (SLOs): availability, latency, error rate
 - Business metrics: tool executions, active users, API volume
 - Operational metrics: deployment frequency, MTTR, change failure rate
 - DORA metrics tracking for elite performance
 
-**[Performance Benchmarks](docs/14-performance-benchmarks.md)**
+**[Performance Benchmarks](docs/IEEE-42010/views/14-performance-benchmarks.md)**
 
 - Baseline performance metrics
 - Configuration comparisons
@@ -291,7 +291,7 @@ These guidelines are designed to help engineering teams:
 - Scaling characteristics
 - Hardware recommendations
 
-**[MCP Protocol Compatibility](docs/15-mcp-protocol-compatibility.md)**
+**[MCP Protocol Compatibility](docs/IEEE-42010/views/15-mcp-protocol-compatibility.md)**
 
 - Supported MCP spec versions (2024-11-05 through 2025-11-25)
 - Feature progression across specification versions
@@ -400,27 +400,27 @@ All documentation must pass:
 
 ```text
 ├─ Week 1: Foundation
-│  ├─ [Architecture](docs/01-architecture-overview.md) → Understand 5-layer enterprise design
-│  ├─ [Security](docs/02-security-architecture.md) → Implement JWT/OAuth 2.0 from day one
-│  ├─ [Privacy](docs/02a-data-privacy-compliance.md) → Set up PII detection and compliance
-│  └─ [Requirements](docs/02b-requirements-engineering.md) → Define requirements with EARS format
+│  ├─ [Architecture](docs/IEEE-42010/views/01-architecture-overview.md) → Understand 5-layer enterprise design
+│  ├─ [Security](docs/IEEE-42010/views/02-security-architecture.md) → Implement JWT/OAuth 2.0 from day one
+│  ├─ [Privacy](docs/IEEE-42010/views/02a-data-privacy-compliance.md) → Set up PII detection and compliance
+│  └─ [Requirements](docs/IEEE-29148/methodology/02b-requirements-engineering.md) → Define requirements with EARS format
 │
 ├─ Week 2: Core Implementation
-│  ├─ [Tools](docs/03-tool-implementation.md) → Build APIs with verb-noun naming
-│  ├─ [Prompts](docs/03a-prompt-implementation.md) → Create workflow templates
-│  ├─ [Resources](docs/03b-resource-implementation.md) → Implement data access patterns
-│  └─ [Testing](docs/04-testing-strategy.md) → Achieve 80%+ coverage
+│  ├─ [Tools](docs/IEEE-42010/views/03-tool-implementation.md) → Build APIs with verb-noun naming
+│  ├─ [Prompts](docs/IEEE-42010/views/03a-prompt-implementation.md) → Create workflow templates
+│  ├─ [Resources](docs/IEEE-42010/views/03b-resource-implementation.md) → Implement data access patterns
+│  └─ [Testing](docs/IEEE-42010/views/04-testing-strategy.md) → Achieve 80%+ coverage
 │
 ├─ Week 3: Quality & Operations
-│  ├─ [Observability](docs/05-observability.md) → Add logging, metrics, tracing
-│  ├─ [Performance](docs/06a-performance-scalability.md) → Optimize for scale
-│  ├─ [Deployment](docs/07-deployment-patterns.md) → Containerize with Docker/Kubernetes
-│  └─ [Integration](docs/03e-integration-patterns.md) → Connect external systems
+│  ├─ [Observability](docs/IEEE-42010/views/05-observability.md) → Add logging, metrics, tracing
+│  ├─ [Performance](docs/IEEE-42010/views/06a-performance-scalability.md) → Optimize for scale
+│  ├─ [Deployment](docs/IEEE-42010/views/07-deployment-patterns.md) → Containerize with Docker/Kubernetes
+│  └─ [Integration](docs/IEEE-42010/views/03e-integration-patterns.md) → Connect external systems
 │
 └─ Week 4: Production Readiness
-   ├─ [Operations](docs/08-operational-runbooks.md) → Set up incident response
-   ├─ [Agentic Best Practices](docs/09-agentic-best-practices.md) → Optimize context management
-   ├─ [Metrics](docs/13-metrics-kpis.md) → Configure dashboards and SLOs
+   ├─ [Operations](docs/IEEE-42010/views/08-operational-runbooks.md) → Set up incident response
+   ├─ [Agentic Best Practices](docs/IEEE-42010/views/09-agentic-best-practices.md) → Optimize context management
+   ├─ [Metrics](docs/IEEE-42010/views/13-metrics-kpis.md) → Configure dashboards and SLOs
    └─ Production Launch! 🚀
 ```
 
@@ -428,62 +428,62 @@ All documentation must pass:
 
 ```text
 ├─ Security Enhancement
-│  ├─ [Audit Checklist](docs/02-security-architecture.md#security-checklist) → Review current controls
-│  ├─ [Authentication](docs/02-security-architecture.md#authentication-patterns) → Upgrade auth
-│  ├─ [Authorization](docs/02-security-architecture.md#role-based-access-control-rbac) → Add RBAC
-│  └─ [Compliance](docs/02a-data-privacy-compliance.md) → Meet GDPR/CCPA requirements
+│  ├─ [Audit Checklist](docs/IEEE-42010/views/02-security-architecture.md#security-checklist) → Review current controls
+│  ├─ [Authentication](docs/IEEE-42010/views/02-security-architecture.md#authentication-patterns) → Upgrade auth
+│  ├─ [Authorization](docs/IEEE-42010/views/02-security-architecture.md#role-based-access-control-rbac) → Add RBAC
+│  └─ [Compliance](docs/IEEE-42010/views/02a-data-privacy-compliance.md) → Meet GDPR/CCPA requirements
 │
 ├─ Quality Improvement
-│  ├─ [Testing Strategy](docs/04-testing-strategy.md) → Increase coverage to 80%+
-│  ├─ [Coverage Requirements](docs/04-testing-strategy.md#coverage-requirements) → Set targets
-│  ├─ [Security Testing](docs/04-testing-strategy.md#security-testing) → Add security tests
-│  └─ [Performance Testing](docs/04-testing-strategy.md#performance-testing) → Benchmark system
+│  ├─ [Testing Strategy](docs/IEEE-42010/views/04-testing-strategy.md) → Increase coverage to 80%+
+│  ├─ [Coverage Requirements](docs/IEEE-42010/views/04-testing-strategy.md#coverage-requirements) → Set targets
+│  ├─ [Security Testing](docs/IEEE-42010/views/04-testing-strategy.md#security-testing) → Add security tests
+│  └─ [Performance Testing](docs/IEEE-42010/views/04-testing-strategy.md#performance-testing) → Benchmark system
 │
 ├─ Performance Optimization
-│  ├─ [Optimization Guide](docs/06a-performance-scalability.md) → Identify bottlenecks
-│  ├─ [Benchmarks](docs/14-performance-benchmarks.md) → Compare against baselines
-│  ├─ [Cost Optimization](docs/12-cost-optimization.md) → Reduce infrastructure costs
-│  └─ [Troubleshooting](docs/11-troubleshooting.md#understanding-flame-graphs) → Profile with flame graphs
+│  ├─ [Optimization Guide](docs/IEEE-42010/views/06a-performance-scalability.md) → Identify bottlenecks
+│  ├─ [Benchmarks](docs/IEEE-42010/views/14-performance-benchmarks.md) → Compare against baselines
+│  ├─ [Cost Optimization](docs/IEEE-42010/views/12-cost-optimization.md) → Reduce infrastructure costs
+│  └─ [Troubleshooting](docs/IEEE-42010/views/11-troubleshooting.md#understanding-flame-graphs) → Profile with flame graphs
 │
 └─ Operational Excellence
-   ├─ [Runbooks](docs/08-operational-runbooks.md) → Document incident procedures
-   ├─ [Troubleshooting](docs/11-troubleshooting.md) → Build diagnostic playbooks
-   ├─ [Metrics](docs/13-metrics-kpis.md#dora-metrics) → Track DORA metrics
-   └─ [Alerting](docs/05-observability.md#alerting-strategies) → Set up smart alerts
+   ├─ [Runbooks](docs/IEEE-42010/views/08-operational-runbooks.md) → Document incident procedures
+   ├─ [Troubleshooting](docs/IEEE-42010/views/11-troubleshooting.md) → Build diagnostic playbooks
+   ├─ [Metrics](docs/IEEE-42010/views/13-metrics-kpis.md#dora-metrics) → Track DORA metrics
+   └─ [Alerting](docs/IEEE-42010/views/05-observability.md#alerting-strategies) → Set up smart alerts
 ```
 
 **Migration (REST → MCP)**
 
 ```text
-└─ Start Here: [Migration Guides](docs/10-migration-guides.md#migrating-from-rest-api-to-mcp)
+└─ Start Here: [Migration Guides](docs/IEEE-42010/views/10-migration-guides.md#migrating-from-rest-api-to-mcp)
    │
    ├─ Phase 1: Planning
-   │  ├─ [MCP vs REST Decision](docs/03d-decision-trees.md#when-to-use-mcp-vs-rest-api) → Validate migration
-   │  ├─ [Architecture Overview](docs/01-architecture-overview.md) → Understand MCP patterns
-   │  └─ [Requirements](docs/02b-requirements-engineering.md) → Map REST endpoints to MCP tools
+   │  ├─ [MCP vs REST Decision](docs/IEEE-42010/views/03d-decision-trees.md#when-to-use-mcp-vs-rest-api) → Validate migration
+   │  ├─ [Architecture Overview](docs/IEEE-42010/views/01-architecture-overview.md) → Understand MCP patterns
+   │  └─ [Requirements](docs/IEEE-29148/methodology/02b-requirements-engineering.md) → Map REST endpoints to MCP tools
    │
    ├─ Phase 2: Parallel Implementation
-   │  ├─ [Tool Implementation](docs/03-tool-implementation.md) → Build MCP tools
-   │  ├─ [OpenAPI to MCP](docs/03e-integration-patterns.md#openapi-to-mcp-tool-generation) → Auto-generate tools
-   │  └─ [Testing](docs/04-testing-strategy.md#contract-testing) → Contract tests for compatibility
+   │  ├─ [Tool Implementation](docs/IEEE-42010/views/03-tool-implementation.md) → Build MCP tools
+   │  ├─ [OpenAPI to MCP](docs/IEEE-42010/views/03e-integration-patterns.md#openapi-to-mcp-tool-generation) → Auto-generate tools
+   │  └─ [Testing](docs/IEEE-42010/views/04-testing-strategy.md#contract-testing) → Contract tests for compatibility
    │
    ├─ Phase 3: Gradual Migration
-   │  ├─ [Zero-Downtime Migration](docs/10-migration-guides.md#zero-downtime-migration-strategies) → Deploy safely
-   │  ├─ [Protocol Compatibility](docs/15-mcp-protocol-compatibility.md) → Handle version differences
-   │  └─ [Database Migration](docs/10-migration-guides.md#database-migration-with-shadow-writes) → Shadow writes pattern
+   │  ├─ [Zero-Downtime Migration](docs/IEEE-42010/views/10-migration-guides.md#zero-downtime-migration-strategies) → Deploy safely
+   │  ├─ [Protocol Compatibility](docs/IEEE-42010/views/15-mcp-protocol-compatibility.md) → Handle version differences
+   │  └─ [Database Migration](docs/IEEE-42010/views/10-migration-guides.md#database-migration-with-shadow-writes) → Shadow writes pattern
    │
    └─ Phase 4: Cutover & Decommission
-      ├─ [Monitoring](docs/05-observability.md) → Watch for issues
-      ├─ [Troubleshooting](docs/11-troubleshooting.md) → Quick diagnostic guide
+      ├─ [Monitoring](docs/IEEE-42010/views/05-observability.md) → Watch for issues
+      ├─ [Troubleshooting](docs/IEEE-42010/views/11-troubleshooting.md) → Quick diagnostic guide
       └─ Decommission REST API
 ```
 
 ### 📚 Quick Navigation
 
-- **Find a Topic**: See [Index by Topic](docs/98-index-by-topic.md) for comprehensive topic index
-- **Quick Reference**: See [Quick Reference](docs/99-quick-reference.md) for command cheat sheets
-- **Table of Contents**: See [Table of Contents](docs/00-table-of-contents.md) for sequential listing
-- **Decision Help**: Use [Decision Trees](docs/03d-decision-trees.md) for architectural choices
+- **Find a Topic**: See [Index by Topic](docs/IEEE-42010/ref/98-index-by-topic.md) for comprehensive topic index
+- **Quick Reference**: See [Quick Reference](docs/IEEE-42010/ref/99-quick-reference.md) for command cheat sheets
+- **Table of Contents**: See [Table of Contents](docs/IEEE-42010/ref/00-table-of-contents.md) for sequential listing
+- **Decision Help**: Use [Decision Trees](docs/IEEE-42010/views/03d-decision-trees.md) for architectural choices
 
 ## Reference Implementation
 
@@ -638,41 +638,41 @@ A: While examples use Python with FastMCP, the patterns and principles apply to 
 ### Implementation Questions
 
 **Q: Do I need to implement everything?**
-A: No. Start with core patterns (architecture, security, testing) and adopt others based on your needs. Use [Decision Trees](docs/03d-decision-trees.md) to guide choices.
+A: No. Start with core patterns (architecture, security, testing) and adopt others based on your needs. Use [Decision Trees](docs/IEEE-42010/views/03d-decision-trees.md) to guide choices.
 
 **Q: How do I migrate from REST APIs?**
-A: Follow the [Migration Guides](docs/10-migration-guides.md) for phased approaches, shadow writing, and zero-downtime strategies.
+A: Follow the [Migration Guides](docs/IEEE-42010/views/10-migration-guides.md) for phased approaches, shadow writing, and zero-downtime strategies.
 
 **Q: What test coverage should I target?**
-A: 80%+ for enterprise applications. See [Testing Strategy](docs/04-testing-strategy.md) for details.
+A: 80%+ for enterprise applications. See [Testing Strategy](docs/IEEE-42010/views/04-testing-strategy.md) for details.
 
 **Q: How do I handle authentication?**
-A: We recommend JWT with JWKS or OAuth 2.1 with PKCE. See [Security Architecture](docs/02-security-architecture.md) for implementation patterns.
+A: We recommend JWT with JWKS or OAuth 2.1 with PKCE. See [Security Architecture](docs/IEEE-42010/views/02-security-architecture.md) for implementation patterns.
 
 ### Operational Questions
 
 **Q: What observability tools should I use?**
-A: We recommend Prometheus for metrics, OpenTelemetry for tracing, and structured JSON logging. See [Observability Architecture](docs/05-observability.md).
+A: We recommend Prometheus for metrics, OpenTelemetry for tracing, and structured JSON logging. See [Observability Architecture](docs/IEEE-42010/views/05-observability.md).
 
 **Q: How do I monitor SLOs?**
-A: Use the [Metrics and KPIs](docs/13-metrics-kpis.md) guide for SLO definitions, error budget tracking, and alerting rules.
+A: Use the [Metrics and KPIs](docs/IEEE-42010/views/13-metrics-kpis.md) guide for SLO definitions, error budget tracking, and alerting rules.
 
 **Q: What deployment patterns are recommended?**
-A: Docker containers with Kubernetes orchestration. Blue-green and canary deployments for zero-downtime. See [Deployment Patterns](docs/07-deployment-patterns.md).
+A: Docker containers with Kubernetes orchestration. Blue-green and canary deployments for zero-downtime. See [Deployment Patterns](docs/IEEE-42010/views/07-deployment-patterns.md).
 
 **Q: How do I troubleshoot production issues?**
-A: Start with the [Troubleshooting Guide](docs/11-troubleshooting.md) for common issues, diagnostic commands, and profiling techniques.
+A: Start with the [Troubleshooting Guide](docs/IEEE-42010/views/11-troubleshooting.md) for common issues, diagnostic commands, and profiling techniques.
 
 ### Compliance Questions
 
 **Q: How do I ensure GDPR compliance?**
-A: Follow [Data Privacy & Compliance](docs/02a-data-privacy-compliance.md) for PII detection, data masking, retention policies, and deletion procedures.
+A: Follow [Data Privacy & Compliance](docs/IEEE-42010/views/02a-data-privacy-compliance.md) for PII detection, data masking, retention policies, and deletion procedures.
 
 **Q: What about HIPAA compliance?**
-A: Implement encryption (transit/rest), audit logging, access controls, and data retention per [Data Privacy & Compliance](docs/02a-data-privacy-compliance.md).
+A: Implement encryption (transit/rest), audit logging, access controls, and data retention per [Data Privacy & Compliance](docs/IEEE-42010/views/02a-data-privacy-compliance.md).
 
 **Q: How do I handle security audits?**
-A: Use security checklists (coming in v1.4.0) and review [Security Architecture](docs/02-security-architecture.md) for hardening measures.
+A: Use security checklists (coming in v1.4.0) and review [Security Architecture](docs/IEEE-42010/views/02-security-architecture.md) for hardening measures.
 
 ## Support
 
@@ -687,7 +687,7 @@ A: Use security checklists (coming in v1.4.0) and review [Security Architecture]
 #### Technical Questions
 
 - Review relevant documentation sections first
-- Check [Troubleshooting Guide](docs/11-troubleshooting.md)
+- Check [Troubleshooting Guide](docs/IEEE-42010/views/11-troubleshooting.md)
 - Search existing GitHub issues
 - Open a new issue with detailed context
 
@@ -731,7 +731,7 @@ Under the following terms:
 
 ---
 
-**Next Steps**: Start with [Architecture Overview](docs/01-architecture-overview.md) to understand the foundational concepts.
+**Next Steps**: Start with [Architecture Overview](docs/IEEE-42010/views/01-architecture-overview.md) to understand the foundational concepts.
 
 ---
 

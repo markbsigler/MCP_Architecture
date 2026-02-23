@@ -18,7 +18,7 @@ This directory contains the formal Software Requirements Specification (SRS) for
 | Document | Relationship |
 |----------|-------------|
 | [IEEE-42010/AD.md](../IEEE-42010/AD.md) | Architecture Description — implements these requirements |
-| [02b-requirements-engineering.md](../02b-requirements-engineering.md) | EARS syntax patterns and requirements engineering guidance |
+| [02b-requirements-engineering.md](methodology/02b-requirements-engineering.md) | EARS syntax patterns and requirements engineering guidance |
 | Individual `docs/` files | Detailed implementation guides traced from SRS requirement IDs |
 
 ## IEEE 29148 Structure
@@ -49,3 +49,18 @@ The SRS follows the recommended document structure from IEEE 29148:2018 §5.2:
 | `NFR-PERF-xxx` | Performance & scalability | 6.2 |
 | `NFR-OBS-xxx` | Observability | 6.3 |
 | `NFR-CNTR-xxx` | Containerization & distribution | 6.4 |
+
+## Directory Structure
+
+```text
+IEEE-29148/
+├── README.md        # This file — index and navigation
+├── SRS.md           # Software Requirements Specification (main document)
+└── methodology/     # Requirements engineering methodology
+    └── 02b-requirements-engineering.md  # EARS syntax patterns and guidance
+```
+
+**Navigation:**
+
+- Start with [SRS.md](SRS.md) for the complete requirements specification
+- Consult [methodology/02b-requirements-engineering.md](methodology/02b-requirements-engineering.md) for EARS syntax patterns and requirements engineering best practices

@@ -1387,9 +1387,9 @@ For more information on MCP sampling and server implementation:
 - **[MCP Server Concepts](https://modelcontextprotocol.io/docs/learn/server-concepts)** - Core understanding of server capabilities
 - **[Build an MCP Server](https://modelcontextprotocol.io/docs/develop/build-server)** - Complete server implementation guide
 - **[Connect Remote Servers](https://modelcontextprotocol.io/docs/develop/connect-remote-servers)** - Remote server deployment and usage
-- **[Tool Implementation Standards](./03-tool-implementation.md)** - Tool development best practices
-- **[Prompt Implementation Standards](./03a-prompt-implementation.md)** - Prompt design patterns
-- **[Resource Implementation Standards](./03b-resource-implementation.md)** - Resource implementation guide
+- **[Tool Implementation Standards](03-tool-implementation.md)** - Tool development best practices
+- **[Prompt Implementation Standards](03a-prompt-implementation.md)** - Prompt design patterns
+- **[Resource Implementation Standards](03b-resource-implementation.md)** - Resource implementation guide
 
 ---
 

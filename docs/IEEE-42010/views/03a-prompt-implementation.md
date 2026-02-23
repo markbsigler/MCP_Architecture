@@ -1244,8 +1244,8 @@ For more information on MCP prompts and server development:
 
 - **[MCP Server Concepts](https://modelcontextprotocol.io/docs/learn/server-concepts)** - Core understanding of prompts, resources, and tools
 - **[Build an MCP Server](https://modelcontextprotocol.io/docs/develop/build-server)** - Complete server implementation guide
-- **[Tool Implementation Standards](./03-tool-implementation.md)** - Parallel implementation guide for tools
-- **[Resource Implementation Standards](./03b-resource-implementation.md)** - Parallel implementation guide for resources
+- **[Tool Implementation Standards](03-tool-implementation.md)** - Parallel implementation guide for tools
+- **[Resource Implementation Standards](03b-resource-implementation.md)** - Parallel implementation guide for resources
 
 ---
 

@@ -795,7 +795,7 @@ async def load_test_tool(
 
 > **SRS References:** NFR-PERF-001 through NFR-PERF-023
 
-The following quantitative targets are mandated by the [SRS](IEEE-29148/SRS.md):
+The following quantitative targets are mandated by the [SRS](../../IEEE-29148/SRS.md):
 
 ### Latency Budget
 

@@ -10,9 +10,9 @@ Requirements engineering is a critical foundation for MCP server development, en
 
 **Related Documentation:**
 
-- [Tool Implementation Standards](03-tool-implementation.md) - Implementing tools from requirements
-- [Testing Strategy](04-testing-strategy.md) - Verifying requirements satisfaction
-- [Development Lifecycle](06-development-lifecycle.md) - Requirements in the development process
+- [Tool Implementation Standards](../../IEEE-42010/views/03-tool-implementation.md) - Implementing tools from requirements
+- [Testing Strategy](../../IEEE-42010/views/04-testing-strategy.md) - Verifying requirements satisfaction
+- [Development Lifecycle](../../IEEE-42010/views/06-development-lifecycle.md) - Requirements in the development process
 
 ---
 
@@ -1114,9 +1114,9 @@ Effective requirements engineering for MCP servers combines:
 
 **Next Steps:**
 
-- Review [Tool Implementation Standards](03-tool-implementation.md) for translating requirements to code
-- See [Testing Strategy](04-testing-strategy.md) for requirements verification
-- Consult [Development Lifecycle](06-development-lifecycle.md) for requirements management
+- Review [Tool Implementation Standards](../../IEEE-42010/views/03-tool-implementation.md) for translating requirements to code
+- See [Testing Strategy](../../IEEE-42010/views/04-testing-strategy.md) for requirements verification
+- Consult [Development Lifecycle](../../IEEE-42010/views/06-development-lifecycle.md) for requirements management
 
 ---
 
@@ -1125,5 +1125,5 @@ Effective requirements engineering for MCP servers combines:
 - [EARS - Easy Approach to Requirements Syntax](https://alistairmavin.com/ears/)
 - [ISO/IEC/IEEE 29148:2018 - Requirements Engineering](https://standards.ieee.org/ieee/29148/6937/)
 - [Agile Alliance - User Stories](https://www.agilealliance.org/glossary/user-stories/)
-- [Tool Implementation Standards](03-tool-implementation.md)
-- [Testing Strategy](04-testing-strategy.md)
+- [Tool Implementation Standards](../../IEEE-42010/views/03-tool-implementation.md)
+- [Testing Strategy](../../IEEE-42010/views/04-testing-strategy.md)

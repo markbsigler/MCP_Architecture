@@ -26,34 +26,38 @@ endif
 
 # Content markdown sections (excluding title page & explicit TOC)
 CONTENT_SECTIONS = \
-	docs/01-architecture-overview.md \
-	docs/01b-architecture-decisions.md \
-	docs/02-security-architecture.md \
-	docs/02a-data-privacy-compliance.md \
-	docs/02b-requirements-engineering.md \
-	docs/03-tool-implementation.md \
-	docs/03a-prompt-implementation.md \
-	docs/03b-resource-implementation.md \
-	docs/03c-sampling-patterns.md \
-	docs/03d-decision-trees.md \
-	docs/03e-integration-patterns.md \
-	docs/04-testing-strategy.md \
-	docs/05-observability.md \
-	docs/06-development-lifecycle.md \
-	docs/06a-performance-scalability.md \
-	docs/07-deployment-patterns.md \
-	docs/08-operational-runbooks.md \
-	docs/09-agentic-best-practices.md \
-	docs/10-migration-guides.md \
-	docs/11-troubleshooting.md \
-	docs/12-cost-optimization.md \
-	docs/13-metrics-kpis.md \
-	docs/14-performance-benchmarks.md \
-	docs/15-mcp-protocol-compatibility.md \
-	docs/99-quick-reference.md
+	docs/IEEE-42010/views/01-architecture-overview.md \
+	docs/IEEE-42010/views/01b-architecture-decisions.md \
+	docs/IEEE-42010/views/02-security-architecture.md \
+	docs/IEEE-42010/views/02a-data-privacy-compliance.md \
+	docs/IEEE-29148/methodology/02b-requirements-engineering.md \
+	docs/IEEE-42010/views/03-tool-implementation.md \
+	docs/IEEE-42010/views/03a-prompt-implementation.md \
+	docs/IEEE-42010/views/03b-resource-implementation.md \
+	docs/IEEE-42010/views/03c-sampling-patterns.md \
+	docs/IEEE-42010/views/03d-decision-trees.md \
+	docs/IEEE-42010/views/03e-integration-patterns.md \
+	docs/IEEE-42010/views/03f-elicitation-patterns.md \
+	docs/IEEE-42010/views/03g-task-patterns.md \
+	docs/IEEE-42010/views/03h-multi-server-orchestration.md \
+	docs/IEEE-42010/views/03i-ai-service-provider-gateway.md \
+	docs/IEEE-42010/views/04-testing-strategy.md \
+	docs/IEEE-42010/views/05-observability.md \
+	docs/IEEE-42010/views/06-development-lifecycle.md \
+	docs/IEEE-42010/views/06a-performance-scalability.md \
+	docs/IEEE-42010/views/07-deployment-patterns.md \
+	docs/IEEE-42010/views/08-operational-runbooks.md \
+	docs/IEEE-42010/views/09-agentic-best-practices.md \
+	docs/IEEE-42010/views/10-migration-guides.md \
+	docs/IEEE-42010/views/11-troubleshooting.md \
+	docs/IEEE-42010/views/12-cost-optimization.md \
+	docs/IEEE-42010/views/13-metrics-kpis.md \
+	docs/IEEE-42010/views/14-performance-benchmarks.md \
+	docs/IEEE-42010/views/15-mcp-protocol-compatibility.md \
+	docs/IEEE-42010/ref/99-quick-reference.md
 
 # Preface sections (generated or static)
-PREFIX_SECTIONS = docs/00-title-page.md docs/00-table-of-contents.md
+PREFIX_SECTIONS = docs/00-title-page.md docs/IEEE-42010/ref/00-table-of-contents.md
 
 # All sections in final order
 ALL_SECTIONS = $(PREFIX_SECTIONS) $(CONTENT_SECTIONS)

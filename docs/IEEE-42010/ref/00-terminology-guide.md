@@ -556,8 +556,8 @@ Exception: Abbreviations are acceptable in:
 
 - [Quick Reference Guide](99-quick-reference.md) - Command cheat sheets
 - [Index by Topic](98-index-by-topic.md) - Topic-based navigation
-- [Architecture Overview](01-architecture-overview.md) - Core architecture terms
-- [Tool Implementation](03-tool-implementation.md) - Tool-specific terminology
+- [Architecture Overview](../views/01-architecture-overview.md) - Core architecture terms
+- [Tool Implementation](../views/03-tool-implementation.md) - Tool-specific terminology
 
 ---
 

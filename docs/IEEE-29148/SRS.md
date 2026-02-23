@@ -34,7 +34,7 @@
 
 This Software Requirements Specification (SRS) defines all functional and non-functional requirements for a production-ready Model Context Protocol (MCP) server. The MCP server enables Large Language Models (LLMs) to securely access and interact with external data sources and tools via the open [MCP specification](https://modelcontextprotocol.io/docs/).
 
-This document is structured per ISO/IEC/IEEE 29148:2018 and uses [EARS (Easy Approach to Requirements Syntax)](https://alistairmavin.com/ears/) patterns for unambiguous requirement statements (see [Requirements Engineering Standards](../02b-requirements-engineering.md)).
+This document is structured per ISO/IEC/IEEE 29148:2018 and uses [EARS (Easy Approach to Requirements Syntax)](https://alistairmavin.com/ears/) patterns for unambiguous requirement statements (see [Requirements Engineering Standards](methodology/02b-requirements-engineering.md)).
 
 ### 1.2 Scope
 
@@ -47,6 +47,7 @@ The MCP server is a lightweight, containerized service exposing capabilities thr
 | **Prompts** | User-controlled | Pre-built instruction templates for specific workflows |
 
 **In scope:**
+
 - MCP server implementation compliant with MCP specification 2025-11-25
 - Resources, tools, and prompts for a target integration domain
 - OAuth 2.1 authorization and JWT authentication for HTTP transport
@@ -57,6 +58,7 @@ The MCP server is a lightweight, containerized service exposing capabilities thr
 - Enterprise security, monitoring, and observability
 
 **Out of scope:**
+
 - Custom MCP client development
 - Modifications to the MCP protocol specification
 - Legacy system modernization (integration only)
@@ -92,28 +94,28 @@ The MCP server is a lightweight, containerized service exposing capabilities thr
 
 | Reference | URL |
 |-----------|-----|
-| MCP Specification (2025-11-25) | https://modelcontextprotocol.io/docs/ |
-| MCP Specification Changelog | https://modelcontextprotocol.io/specification/2025-11-25/changelog |
-| MCP Authorization Tutorial | https://modelcontextprotocol.io/docs/tutorials/security/authorization |
-| MCP Server Concepts | https://modelcontextprotocol.io/docs/learn/server-concepts |
-| MCP Build Server Guide | https://modelcontextprotocol.io/docs/develop/build-server |
-| MCP Registry | https://registry.modelcontextprotocol.io |
-| JSON-RPC 2.0 Specification | https://www.jsonrpc.org/specification |
-| JSON Schema 2020-12 | https://json-schema.org/ |
-| OAuth 2.1 | https://oauth.net/2.1/ |
-| RFC 6570 (URI Templates) | https://tools.ietf.org/html/rfc6570 |
-| RFC 7636 (PKCE) | https://tools.ietf.org/html/rfc7636 |
-| RFC 9728 (Protected Resource Metadata) | https://datatracker.ietf.org/doc/html/rfc9728 |
-| CIS Docker Benchmark | https://www.cisecurity.org/benchmark/docker |
-| 12-Factor App | https://12factor.net/ |
+| MCP Specification (2025-11-25) | <https://modelcontextprotocol.io/docs/> |
+| MCP Specification Changelog | <https://modelcontextprotocol.io/specification/2025-11-25/changelog> |
+| MCP Authorization Tutorial | <https://modelcontextprotocol.io/docs/tutorials/security/authorization> |
+| MCP Server Concepts | <https://modelcontextprotocol.io/docs/learn/server-concepts> |
+| MCP Build Server Guide | <https://modelcontextprotocol.io/docs/develop/build-server> |
+| MCP Registry | <https://registry.modelcontextprotocol.io> |
+| JSON-RPC 2.0 Specification | <https://www.jsonrpc.org/specification> |
+| JSON Schema 2020-12 | <https://json-schema.org/> |
+| OAuth 2.1 | <https://oauth.net/2.1/> |
+| RFC 6570 (URI Templates) | <https://tools.ietf.org/html/rfc6570> |
+| RFC 7636 (PKCE) | <https://tools.ietf.org/html/rfc7636> |
+| RFC 9728 (Protected Resource Metadata) | <https://datatracker.ietf.org/doc/html/rfc9728> |
+| CIS Docker Benchmark | <https://www.cisecurity.org/benchmark/docker> |
+| 12-Factor App | <https://12factor.net/> |
 
 **Informative References:**
 
 | Reference | Path |
 |-----------|------|
 | IEEE 42010 Architecture Description | [../IEEE-42010/AD.md](../IEEE-42010/AD.md) |
-| Requirements Engineering Standards | [../02b-requirements-engineering.md](../02b-requirements-engineering.md) |
-| Architecture Decision Records | [../01b-architecture-decisions.md](../01b-architecture-decisions.md) |
+| Requirements Engineering Standards | [../02b-requirements-engineering.md](methodology/02b-requirements-engineering.md) |
+| Architecture Decision Records | [../01b-architecture-decisions.md](../IEEE-42010/views/01b-architecture-decisions.md) |
 
 ### 1.5 Document Overview
 
@@ -196,6 +198,7 @@ Each MCP server shall focus on a single integration domain with cohesive capabil
 ## 3. Specific Requirements
 
 Requirements use [EARS syntax](https://alistairmavin.com/ears/) patterns:
+
 - **Ubiquitous:** `The <system> shall <response>`
 - **Event-driven:** `When <trigger>, the <system> shall <response>`
 - **State-driven:** `While <state>, the <system> shall <response>`
@@ -811,38 +814,38 @@ The AI Service Provider Gateway shall be verified through 6 test groups:
 
 | SRS Requirement | Architecture Section | Viewpoint (IEEE 42010) |
 |-----------------|---------------------|------------------------|
-| FR-PROTO-001–010 | [01-architecture-overview.md](../01-architecture-overview.md) | Functional |
-| FR-PROTO-011–015 | [01-architecture-overview.md](../01-architecture-overview.md) | Functional |
-| FR-PROTO-016–018 | [07-deployment-patterns.md](../07-deployment-patterns.md) | Deployment |
-| FR-PROTO-019–024 | [03-tool-implementation.md](../03-tool-implementation.md) | Functional |
-| FR-RSRC-001–013 | [03b-resource-implementation.md](../03b-resource-implementation.md) | Functional |
-| FR-TOOL-001–022 | [03-tool-implementation.md](../03-tool-implementation.md) | Functional |
-| FR-PROMPT-001–006 | [03a-prompt-implementation.md](../03a-prompt-implementation.md) | Functional |
-| FR-SAMP-001–005 | [03c-sampling-patterns.md](../03c-sampling-patterns.md) | Functional |
-| FR-ELIC-001–005 | [03f-elicitation-patterns.md](../03f-elicitation-patterns.md) | Functional |
-| FR-TASK-001–003 | [03g-task-patterns.md](../03g-task-patterns.md) | Functional |
-| FR-ORCH-001–005 | [03h-multi-server-orchestration.md](../03h-multi-server-orchestration.md) | Functional |
-| FR-GWWY-001–012 | [03i-ai-service-provider-gateway.md](../03i-ai-service-provider-gateway.md) | Deployment |
-| NFR-SEC-001–009 | [02-security-architecture.md](../02-security-architecture.md) | Security |
-| NFR-SEC-010–016 | [02-security-architecture.md](../02-security-architecture.md) | Security |
-| NFR-SEC-017–021 | [02-security-architecture.md](../02-security-architecture.md) | Security |
-| NFR-SEC-022–029 | [02-security-architecture.md](../02-security-architecture.md) | Security |
-| NFR-SEC-030–040 | [02-security-architecture.md](../02-security-architecture.md) | Security |
-| NFR-SEC-041–045 | [02-security-architecture.md](../02-security-architecture.md), [02a-data-privacy-compliance.md](../02a-data-privacy-compliance.md) | Security, Information |
-| NFR-SEC-046–050 | [05-observability.md](../05-observability.md) | Operational |
-| NFR-SEC-051–057 | [02-security-architecture.md](../02-security-architecture.md) | Security |
-| NFR-SEC-058–065 | [03i-ai-service-provider-gateway.md](../03i-ai-service-provider-gateway.md) | Security, Deployment |
-| NFR-SEC-066–072 | [02a-data-privacy-compliance.md](../02a-data-privacy-compliance.md) | Information |
-| NFR-PERF-001–014 | [06a-performance-scalability.md](../06a-performance-scalability.md) | Operational |
-| NFR-PERF-015–023 | [06a-performance-scalability.md](../06a-performance-scalability.md), [03e-integration-patterns.md](../03e-integration-patterns.md) | Operational |
-| NFR-OBS-001–004 | [05-observability.md](../05-observability.md) | Operational |
-| NFR-OBS-005–007 | [05-observability.md](../05-observability.md) | Operational |
-| NFR-OBS-008–010 | [05-observability.md](../05-observability.md) | Operational |
-| NFR-OBS-011–013 | [05-observability.md](../05-observability.md) | Operational |
-| NFR-CNTR-001–012 | [07-deployment-patterns.md](../07-deployment-patterns.md) | Deployment |
-| NFR-CNTR-013–017 | [07-deployment-patterns.md](../07-deployment-patterns.md), [06-development-lifecycle.md](../06-development-lifecycle.md) | Deployment |
-| NFR-CNTR-018–023 | [07-deployment-patterns.md](../07-deployment-patterns.md) | Deployment |
-| NFR-CNTR-024–030 | [07-deployment-patterns.md](../07-deployment-patterns.md) | Deployment |
+| FR-PROTO-001–010 | [01-architecture-overview.md](../IEEE-42010/views/01-architecture-overview.md) | Functional |
+| FR-PROTO-011–015 | [01-architecture-overview.md](../IEEE-42010/views/01-architecture-overview.md) | Functional |
+| FR-PROTO-016–018 | [07-deployment-patterns.md](../IEEE-42010/views/07-deployment-patterns.md) | Deployment |
+| FR-PROTO-019–024 | [03-tool-implementation.md](../IEEE-42010/views/03-tool-implementation.md) | Functional |
+| FR-RSRC-001–013 | [03b-resource-implementation.md](../IEEE-42010/views/03b-resource-implementation.md) | Functional |
+| FR-TOOL-001–022 | [03-tool-implementation.md](../IEEE-42010/views/03-tool-implementation.md) | Functional |
+| FR-PROMPT-001–006 | [03a-prompt-implementation.md](../IEEE-42010/views/03a-prompt-implementation.md) | Functional |
+| FR-SAMP-001–005 | [03c-sampling-patterns.md](../IEEE-42010/views/03c-sampling-patterns.md) | Functional |
+| FR-ELIC-001–005 | [03f-elicitation-patterns.md](../IEEE-42010/views/03f-elicitation-patterns.md) | Functional |
+| FR-TASK-001–003 | [03g-task-patterns.md](../IEEE-42010/views/03g-task-patterns.md) | Functional |
+| FR-ORCH-001–005 | [03h-multi-server-orchestration.md](../IEEE-42010/views/03h-multi-server-orchestration.md) | Functional |
+| FR-GWWY-001–012 | [03i-ai-service-provider-gateway.md](../IEEE-42010/views/03i-ai-service-provider-gateway.md) | Deployment |
+| NFR-SEC-001–009 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
+| NFR-SEC-010–016 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
+| NFR-SEC-017–021 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
+| NFR-SEC-022–029 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
+| NFR-SEC-030–040 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
+| NFR-SEC-041–045 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md), [02a-data-privacy-compliance.md](../IEEE-42010/views/02a-data-privacy-compliance.md) | Security, Information |
+| NFR-SEC-046–050 | [05-observability.md](../IEEE-42010/views/05-observability.md) | Operational |
+| NFR-SEC-051–057 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
+| NFR-SEC-058–065 | [03i-ai-service-provider-gateway.md](../IEEE-42010/views/03i-ai-service-provider-gateway.md) | Security, Deployment |
+| NFR-SEC-066–072 | [02a-data-privacy-compliance.md](../IEEE-42010/views/02a-data-privacy-compliance.md) | Information |
+| NFR-PERF-001–014 | [06a-performance-scalability.md](../IEEE-42010/views/06a-performance-scalability.md) | Operational |
+| NFR-PERF-015–023 | [06a-performance-scalability.md](../IEEE-42010/views/06a-performance-scalability.md), [03e-integration-patterns.md](../IEEE-42010/views/03e-integration-patterns.md) | Operational |
+| NFR-OBS-001–004 | [05-observability.md](../IEEE-42010/views/05-observability.md) | Operational |
+| NFR-OBS-005–007 | [05-observability.md](../IEEE-42010/views/05-observability.md) | Operational |
+| NFR-OBS-008–010 | [05-observability.md](../IEEE-42010/views/05-observability.md) | Operational |
+| NFR-OBS-011–013 | [05-observability.md](../IEEE-42010/views/05-observability.md) | Operational |
+| NFR-CNTR-001–012 | [07-deployment-patterns.md](../IEEE-42010/views/07-deployment-patterns.md) | Deployment |
+| NFR-CNTR-013–017 | [07-deployment-patterns.md](../IEEE-42010/views/07-deployment-patterns.md), [06-development-lifecycle.md](../IEEE-42010/views/06-development-lifecycle.md) | Deployment |
+| NFR-CNTR-018–023 | [07-deployment-patterns.md](../IEEE-42010/views/07-deployment-patterns.md) | Deployment |
+| NFR-CNTR-024–030 | [07-deployment-patterns.md](../IEEE-42010/views/07-deployment-patterns.md) | Deployment |
 
 ### 6.2 Requirements to Test Category Traceability
 

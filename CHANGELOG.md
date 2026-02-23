@@ -5,6 +5,61 @@ All notable changes to the MCP Architecture Documentation will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-02-23
+
+### Changed
+
+- **Documentation Restructure**: Reorganized all documentation into IEEE-compliant directory structure
+  - Moved 27 implementation guides → `docs/IEEE-42010/views/`
+  - Moved 4 reference documents → `docs/IEEE-42010/ref/`
+  - Moved requirements methodology → `docs/IEEE-29148/methodology/`
+  - Updated 347 cross-references across 38 files
+  - Preserved git history using `git mv` for all relocations
+
+### Migration Table
+
+| Old Path | New Path | Type |
+|----------|----------|------|
+| `docs/01-architecture-overview.md` | `docs/IEEE-42010/views/01-architecture-overview.md` | View |
+| `docs/01b-architecture-decisions.md` | `docs/IEEE-42010/views/01b-architecture-decisions.md` | View |
+| `docs/02-security-architecture.md` | `docs/IEEE-42010/views/02-security-architecture.md` | View |
+| `docs/02a-data-privacy-compliance.md` | `docs/IEEE-42010/views/02a-data-privacy-compliance.md` | View |
+| `docs/02b-requirements-engineering.md` | `docs/IEEE-29148/methodology/02b-requirements-engineering.md` | Methodology |
+| `docs/03-tool-implementation.md` | `docs/IEEE-42010/views/03-tool-implementation.md` | View |
+| `docs/03a-prompt-implementation.md` | `docs/IEEE-42010/views/03a-prompt-implementation.md` | View |
+| `docs/03b-resource-implementation.md` | `docs/IEEE-42010/views/03b-resource-implementation.md` | View |
+| `docs/03c-sampling-patterns.md` | `docs/IEEE-42010/views/03c-sampling-patterns.md` | View |
+| `docs/03d-decision-trees.md` | `docs/IEEE-42010/views/03d-decision-trees.md` | View |
+| `docs/03e-integration-patterns.md` | `docs/IEEE-42010/views/03e-integration-patterns.md` | View |
+| `docs/03f-elicitation-patterns.md` | `docs/IEEE-42010/views/03f-elicitation-patterns.md` | View |
+| `docs/03g-task-patterns.md` | `docs/IEEE-42010/views/03g-task-patterns.md` | View |
+| `docs/03h-multi-server-orchestration.md` | `docs/IEEE-42010/views/03h-multi-server-orchestration.md` | View |
+| `docs/03i-ai-service-provider-gateway.md` | `docs/IEEE-42010/views/03i-ai-service-provider-gateway.md` | View |
+| `docs/04-testing-strategy.md` | `docs/IEEE-42010/views/04-testing-strategy.md` | View |
+| `docs/05-observability.md` | `docs/IEEE-42010/views/05-observability.md` | View |
+| `docs/06-development-lifecycle.md` | `docs/IEEE-42010/views/06-development-lifecycle.md` | View |
+| `docs/06a-performance-scalability.md` | `docs/IEEE-42010/views/06a-performance-scalability.md` | View |
+| `docs/07-deployment-patterns.md` | `docs/IEEE-42010/views/07-deployment-patterns.md` | View |
+| `docs/08-operational-runbooks.md` | `docs/IEEE-42010/views/08-operational-runbooks.md` | View |
+| `docs/09-agentic-best-practices.md` | `docs/IEEE-42010/views/09-agentic-best-practices.md` | View |
+| `docs/10-migration-guides.md` | `docs/IEEE-42010/views/10-migration-guides.md` | View |
+| `docs/11-troubleshooting.md` | `docs/IEEE-42010/views/11-troubleshooting.md` | View |
+| `docs/12-cost-optimization.md` | `docs/IEEE-42010/views/12-cost-optimization.md` | View |
+| `docs/13-metrics-kpis.md` | `docs/IEEE-42010/views/13-metrics-kpis.md` | View |
+| `docs/14-performance-benchmarks.md` | `docs/IEEE-42010/views/14-performance-benchmarks.md` | View |
+| `docs/15-mcp-protocol-compatibility.md` | `docs/IEEE-42010/views/15-mcp-protocol-compatibility.md` | View |
+| `docs/00-table-of-contents.md` | `docs/IEEE-42010/ref/00-table-of-contents.md` | Reference |
+| `docs/00-terminology-guide.md` | `docs/IEEE-42010/ref/00-terminology-guide.md` | Reference |
+| `docs/98-index-by-topic.md` | `docs/IEEE-42010/ref/98-index-by-topic.md` | Reference |
+| `docs/99-quick-reference.md` | `docs/IEEE-42010/ref/99-quick-reference.md` | Reference |
+
+### Updated
+
+- CONTRIBUTING.md: Updated directory structure documentation
+- Makefile: Updated CONTENT_SECTIONS paths to new locations
+- README.md: All links automatically updated to new structure
+- IEEE-42010/AD.md, IEEE-29148/SRS.md: Cross-references updated
+
 ## [1.0.0] - 2025-11-18
 
 ### Added

@@ -34,56 +34,59 @@ The documentation follows a structured organization:
 
 ```text
 MCP_Architecture/
-├── docs/                           # Individual documentation sections
-│   ├── 00-title-page.md           # Generated title page
-│   ├── 00-table-of-contents.md    # Auto-generated TOC
-│   ├── 00-terminology-guide.md    # Standard terminology definitions
-│   ├── 01-architecture-overview.md
-│   ├── 01b-architecture-decisions.md
-│   ├── 02-security-architecture.md
-│   ├── 02a-data-privacy-compliance.md
-│   ├── 02b-requirements-engineering.md
-│   ├── 03-tool-implementation.md
-│   ├── 03a-prompt-implementation.md
-│   ├── 03b-resource-implementation.md
-│   ├── 03c-sampling-patterns.md
-│   ├── 03d-decision-trees.md
-│   ├── 03e-integration-patterns.md
-│   ├── 03f-elicitation-patterns.md
-│   ├── 03g-task-patterns.md
-│   ├── 03h-multi-server-orchestration.md
-│   ├── 03i-ai-service-provider-gateway.md
-│   ├── 04-testing-strategy.md
-│   ├── 05-observability.md
-│   ├── 06-development-lifecycle.md
-│   ├── 06a-performance-scalability.md
-│   ├── 07-deployment-patterns.md
-│   ├── 08-operational-runbooks.md
-│   ├── 09-agentic-best-practices.md
-│   ├── 10-migration-guides.md
-│   ├── 11-troubleshooting.md
-│   ├── 12-cost-optimization.md
-│   ├── 13-metrics-kpis.md
-│   ├── 14-performance-benchmarks.md
-│   ├── 15-mcp-protocol-compatibility.md
-│   ├── 98-index-by-topic.md
-│   ├── 99-quick-reference.md
-│   ├── IEEE-29148/                 # IEEE 29148:2018 Requirements Specification
+├── docs/                           # Documentation root
+│   ├── 00-title-page.md           # Overall title page
+│   ├── IEEE-29148/                # IEEE 29148:2018 Requirements Specification
 │   │   ├── README.md
-│   │   └── SRS.md
-│   └── IEEE-42010/                 # IEEE 42010:2022 Architecture Description
+│   │   ├── SRS.md                 # Software Requirements Specification
+│   │   └── methodology/
+│   │       └── 02b-requirements-engineering.md  # EARS requirements approach
+│   └── IEEE-42010/                # IEEE 42010:2022 Architecture Description
 │       ├── README.md
-│       └── AD.md
+│       ├── AD.md                  # Architecture Description
+│       ├── ref/                   # Reference materials
+│       │   ├── 00-table-of-contents.md    # Auto-generated TOC
+│       │   ├── 00-terminology-guide.md    # Standard terminology
+│       │   ├── 98-index-by-topic.md       # Topical index
+│       │   └── 99-quick-reference.md      # Quick reference guide
+│       └── views/                 # Architecture views (27 implementation guides)
+│           ├── 01-architecture-overview.md
+│           ├── 01b-architecture-decisions.md
+│           ├── 02-security-architecture.md
+│           ├── 02a-data-privacy-compliance.md
+│           ├── 03-tool-implementation.md
+│           ├── 03a-prompt-implementation.md
+│           ├── 03b-resource-implementation.md
+│           ├── 03c-sampling-patterns.md
+│           ├── 03d-decision-trees.md
+│           ├── 03e-integration-patterns.md
+│           ├── 03f-elicitation-patterns.md
+│           ├── 03g-task-patterns.md
+│           ├── 03h-multi-server-orchestration.md
+│           ├── 03i-ai-service-provider-gateway.md
+│           ├── 04-testing-strategy.md
+│           ├── 05-observability.md
+│           ├── 06-development-lifecycle.md
+│           ├── 06a-performance-scalability.md
+│           ├── 07-deployment-patterns.md
+│           ├── 08-operational-runbooks.md
+│           ├── 09-agentic-best-practices.md
+│           ├── 10-migration-guides.md
+│           ├── 11-troubleshooting.md
+│           ├── 12-cost-optimization.md
+│           ├── 13-metrics-kpis.md
+│           ├── 14-performance-benchmarks.md
+│           └── 15-mcp-protocol-compatibility.md
 ├── dashboards/                     # Grafana dashboard definitions
 ├── scripts/                        # Build scripts
 │   ├── gen_toc.py                 # TOC generator
-│   ├── check_links.py            # Link validator
-│   └── rewrite_links.py          # Link rewriter
+│   ├── check_links.py             # Link validator
+│   └── rewrite_links.py           # Link rewriter
 ├── Makefile                        # Build automation
 ├── README.md                       # Project overview
 ├── CONTRIBUTING.md                 # This file
 ├── CHANGELOG.md                    # Version history
-└── mcp-architecture.md            # Generated consolidated doc (gitignored)
+└── mcp-architecture.md             # Generated consolidated doc (gitignored)
 ```
 
 ### Section Naming Convention
@@ -232,7 +235,7 @@ More text
 Link to other documentation sections using relative paths:
 
 ```markdown
-See [Tool Implementation Standards](docs/03-tool-implementation.md) for details.
+See [Tool Implementation Standards](docs/IEEE-42010/views/03-tool-implementation.md) for details.
 ```
 
 ## Build Process

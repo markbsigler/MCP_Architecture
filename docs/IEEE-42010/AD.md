@@ -62,44 +62,44 @@ The AD covers the architecture of a single MCP server instance and its supportin
 | Reference | Location |
 |-----------|----------|
 | SRS (IEEE 29148) | [../IEEE-29148/SRS.md](../IEEE-29148/SRS.md) |
-| MCP Specification 2025-11-25 | https://modelcontextprotocol.io/docs/ |
-| MCP Authorization | https://modelcontextprotocol.io/docs/tutorials/security/authorization |
-| JSON-RPC 2.0 | https://www.jsonrpc.org/specification |
-| OAuth 2.1 | https://oauth.net/2.1/ |
-| RFC 9728 | https://datatracker.ietf.org/doc/html/rfc9728 |
+| MCP Specification 2025-11-25 | <https://modelcontextprotocol.io/docs/> |
+| MCP Authorization | <https://modelcontextprotocol.io/docs/tutorials/security/authorization> |
+| JSON-RPC 2.0 | <https://www.jsonrpc.org/specification> |
+| OAuth 2.1 | <https://oauth.net/2.1/> |
+| RFC 9728 | <https://datatracker.ietf.org/doc/html/rfc9728> |
 
 **Supporting Architecture Documents:**
 
 | Document | Viewpoints Supported |
 |----------|---------------------|
-| [01-architecture-overview.md](../01-architecture-overview.md) | Functional |
-| [01b-architecture-decisions.md](../01b-architecture-decisions.md) | All (ADRs) |
-| [02-security-architecture.md](../02-security-architecture.md) | Security |
-| [02a-data-privacy-compliance.md](../02a-data-privacy-compliance.md) | Security, Information |
-| [02b-requirements-engineering.md](../02b-requirements-engineering.md) | Development |
-| [03-tool-implementation.md](../03-tool-implementation.md) | Functional |
-| [03a-prompt-implementation.md](../03a-prompt-implementation.md) | Functional |
-| [03b-resource-implementation.md](../03b-resource-implementation.md) | Functional |
-| [03c-sampling-patterns.md](../03c-sampling-patterns.md) | Functional |
-| [03d-decision-trees.md](../03d-decision-trees.md) | Development |
-| [03e-integration-patterns.md](../03e-integration-patterns.md) | Functional |
-| [03f-elicitation-patterns.md](../03f-elicitation-patterns.md) | Functional |
-| [03g-task-patterns.md](../03g-task-patterns.md) | Functional |
-| [03h-multi-server-orchestration.md](../03h-multi-server-orchestration.md) | Functional, Deployment |
-| [03i-ai-service-provider-gateway.md](../03i-ai-service-provider-gateway.md) | Functional, Deployment |
-| [04-testing-strategy.md](../04-testing-strategy.md) | Development |
-| [05-observability.md](../05-observability.md) | Operational |
-| [06-development-lifecycle.md](../06-development-lifecycle.md) | Development |
-| [06a-performance-scalability.md](../06a-performance-scalability.md) | Operational |
-| [07-deployment-patterns.md](../07-deployment-patterns.md) | Deployment |
-| [08-operational-runbooks.md](../08-operational-runbooks.md) | Operational |
-| [09-agentic-best-practices.md](../09-agentic-best-practices.md) | Functional |
-| [10-migration-guides.md](../10-migration-guides.md) | Development |
-| [11-troubleshooting.md](../11-troubleshooting.md) | Operational |
-| [12-cost-optimization.md](../12-cost-optimization.md) | Operational |
-| [13-metrics-kpis.md](../13-metrics-kpis.md) | Operational |
-| [14-performance-benchmarks.md](../14-performance-benchmarks.md) | Operational |
-| [15-mcp-protocol-compatibility.md](../15-mcp-protocol-compatibility.md) | Development |
+| [01-architecture-overview.md](views/01-architecture-overview.md) | Functional |
+| [01b-architecture-decisions.md](views/01b-architecture-decisions.md) | All (ADRs) |
+| [02-security-architecture.md](views/02-security-architecture.md) | Security |
+| [02a-data-privacy-compliance.md](views/02a-data-privacy-compliance.md) | Security, Information |
+| [02b-requirements-engineering.md](../IEEE-29148/methodology/02b-requirements-engineering.md) | Development |
+| [03-tool-implementation.md](views/03-tool-implementation.md) | Functional |
+| [03a-prompt-implementation.md](views/03a-prompt-implementation.md) | Functional |
+| [03b-resource-implementation.md](views/03b-resource-implementation.md) | Functional |
+| [03c-sampling-patterns.md](views/03c-sampling-patterns.md) | Functional |
+| [03d-decision-trees.md](views/03d-decision-trees.md) | Development |
+| [03e-integration-patterns.md](views/03e-integration-patterns.md) | Functional |
+| [03f-elicitation-patterns.md](views/03f-elicitation-patterns.md) | Functional |
+| [03g-task-patterns.md](views/03g-task-patterns.md) | Functional |
+| [03h-multi-server-orchestration.md](views/03h-multi-server-orchestration.md) | Functional, Deployment |
+| [03i-ai-service-provider-gateway.md](views/03i-ai-service-provider-gateway.md) | Functional, Deployment |
+| [04-testing-strategy.md](views/04-testing-strategy.md) | Development |
+| [05-observability.md](views/05-observability.md) | Operational |
+| [06-development-lifecycle.md](views/06-development-lifecycle.md) | Development |
+| [06a-performance-scalability.md](views/06a-performance-scalability.md) | Operational |
+| [07-deployment-patterns.md](views/07-deployment-patterns.md) | Deployment |
+| [08-operational-runbooks.md](views/08-operational-runbooks.md) | Operational |
+| [09-agentic-best-practices.md](views/09-agentic-best-practices.md) | Functional |
+| [10-migration-guides.md](views/10-migration-guides.md) | Development |
+| [11-troubleshooting.md](views/11-troubleshooting.md) | Operational |
+| [12-cost-optimization.md](views/12-cost-optimization.md) | Operational |
+| [13-metrics-kpis.md](views/13-metrics-kpis.md) | Operational |
+| [14-performance-benchmarks.md](views/14-performance-benchmarks.md) | Operational |
+| [15-mcp-protocol-compatibility.md](views/15-mcp-protocol-compatibility.md) | Development |
 
 ---
 
@@ -153,11 +153,13 @@ Per IEEE 42010 §5.4, viewpoints are reusable conventions for constructing archi
 **Concerns addressed:** CON-01, CON-02, CON-11, CON-12
 
 **Model kinds:**
+
 - Component diagram (C4 Level 2)
 - Sequence diagram (request flow)
 - Capability map
 
 **Analysis techniques:**
+
 - Scenario walkthrough
 - Protocol compliance verification
 
@@ -170,10 +172,12 @@ Per IEEE 42010 §5.4, viewpoints are reusable conventions for constructing archi
 **Concerns addressed:** CON-03
 
 **Model kinds:**
+
 - Data model diagram
 - Schema definitions (JSON Schema 2020-12)
 
 **Analysis techniques:**
+
 - Schema validation
 - Data flow analysis
 
@@ -186,11 +190,13 @@ Per IEEE 42010 §5.4, viewpoints are reusable conventions for constructing archi
 **Concerns addressed:** CON-04, CON-08, CON-12
 
 **Model kinds:**
+
 - Container topology diagram
 - Distribution flow diagram
 - Infrastructure diagram
 
 **Analysis techniques:**
+
 - Capacity analysis
 - Failure mode analysis
 
@@ -203,12 +209,14 @@ Per IEEE 42010 §5.4, viewpoints are reusable conventions for constructing archi
 **Concerns addressed:** CON-05, CON-09
 
 **Model kinds:**
+
 - Trust boundary diagram
 - Authentication flow sequence
 - RBAC model
 - STRIDE threat model
 
 **Analysis techniques:**
+
 - Threat modeling (STRIDE)
 - Attack surface analysis
 
@@ -221,11 +229,13 @@ Per IEEE 42010 §5.4, viewpoints are reusable conventions for constructing archi
 **Concerns addressed:** CON-06, CON-08
 
 **Model kinds:**
+
 - Observability pipeline diagram
 - Health check topology
 - Alert routing diagram
 
 **Analysis techniques:**
+
 - SLO/SLI analysis
 - Capacity planning
 
@@ -238,11 +248,13 @@ Per IEEE 42010 §5.4, viewpoints are reusable conventions for constructing archi
 **Concerns addressed:** CON-07, CON-10
 
 **Model kinds:**
+
 - Module structure diagram
 - CI/CD pipeline diagram
 - Testing pyramid
 
 **Analysis techniques:**
+
 - Dependency analysis
 - Coverage analysis
 
@@ -297,7 +309,7 @@ flowchart TB
     Server --> Integration
 ```
 
-**Layer responsibilities** (see [architecture overview](../01-architecture-overview.md) for full detail):
+**Layer responsibilities** (see [architecture overview](views/01-architecture-overview.md) for full detail):
 
 | Layer | Responsibility | SRS Requirements |
 |-------|---------------|------------------|
@@ -412,6 +424,7 @@ flowchart LR
 ```
 
 **Gateway capabilities:**
+
 - Configurable `base_url` for any OpenAI-compatible endpoint (FR-GWWY-001)
 - Automated `/v1/models` connectivity handshake (FR-GWWY-002)
 - Enterprise header injection (`X-Project-ID`, `X-Cost-Center`) (FR-GWWY-003)
@@ -700,6 +713,7 @@ sequenceDiagram
 ```
 
 **Key security constraints:**
+
 - PKCE mandatory for all public clients (NFR-SEC-001)
 - Implicit flow prohibited (NFR-SEC-002)
 - RFC 9728 Protected Resource Metadata at `/.well-known/oauth-protected-resource` (NFR-SEC-004)
@@ -926,6 +940,7 @@ flowchart LR
 ```
 
 **Quality gates:**
+
 - Pre-commit: lint + format + unit tests pass
 - PR: integration + contract + SAST + security tests pass, coverage thresholds met
 - Main: full suite + container scan (zero critical/high), image built + signed
@@ -945,6 +960,7 @@ flowchart LR
 #### 4.6.4 Framework Choice
 
 **FastMCP** selected per ADR-001:
+
 - Declarative tool registration (60% less boilerplate)
 - Built-in OAuth, dependency injection, lifecycle hooks
 - Escape hatch to native MCP SDK for edge cases
@@ -964,7 +980,7 @@ Per IEEE 42010 §5.7, architecture decisions and their rationale are captured in
 | ADR-004 | PostgreSQL + SQLite | ACID for audit, JSONB for schemas, SQLite for dev | Information, Development | FR-RSRC-003, NFR-PERF-008 |
 | ADR-005 | HTTP/SSE transport | Proxy-friendly, simpler scaling, standard tooling | Functional, Deployment | FR-PROTO-001, DC-005 |
 
-Full ADR documentation: [01b-architecture-decisions.md](../01b-architecture-decisions.md)
+Full ADR documentation: [01b-architecture-decisions.md](views/01b-architecture-decisions.md)
 
 ---
 
