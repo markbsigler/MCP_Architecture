@@ -1,8 +1,9 @@
 # Enhancement Plan: Mermaid Diagrams
 
-**Version:** 1.0.0  
+**Version:** 2.1.0  
 **Created:** November 19, 2025  
-**Status:** In Progress
+**Last Updated:** February 23, 2026  
+**Status:** Active - Phase 2 Pending
 
 ## Overview
 
@@ -21,31 +22,36 @@ This enhancement adds comprehensive mermaid diagrams to improve visual understan
 ### Diagrams to Add/Enhance
 
 #### 1. System Layers Visualization (Section 01)
-- **File:** `docs/01-architecture-overview.md`
+
+- **File:** `docs/IEEE-42010/views/01-architecture-overview.md`
 - **Status:** ✅ Already exists (needs review)
 - **Type:** Flowchart
 - **Shows:** Five-layer enterprise architecture
 
 #### 2. Detailed Request Flow with Latencies (Section 01)
-- **File:** `docs/01-architecture-overview.md`
+
+- **File:** `docs/IEEE-42010/views/01-architecture-overview.md`
 - **Status:** ✅ Already exists (needs enhancement with timing)
 - **Type:** Sequence diagram
 - **Enhancement:** Add latency annotations and timing information
 
 #### 3. Network Security Boundaries (Section 02)
-- **File:** `docs/02-security-architecture.md`
+
+- **File:** `docs/IEEE-42010/views/02-security-architecture.md`
 - **Status:** ✅ Already has defense-in-depth diagram (needs enhancement)
 - **Type:** Network diagram showing trust zones
 - **Enhancement:** Add detailed trust zone boundaries, network policies, DMZ
 
 #### 4. Production Deployment Diagram (Section 07)
-- **File:** `docs/07-deployment-patterns.md`
+
+- **File:** `docs/IEEE-42010/views/07-deployment-patterns.md`
 - **Status:** ❌ Missing
 - **Type:** Architecture diagram
 - **Shows:** Complete production deployment with K8s, ingress, services, databases
 
 #### 5. Complete Monitoring Stack (Section 05)
-- **File:** `docs/05-observability.md`
+
+- **File:** `docs/IEEE-42010/views/05-observability.md`
 - **Status:** ⚠️ Has ASCII art (needs replacement)
 - **Type:** Architecture diagram
 - **Shows:** Full observability stack (logs, metrics, traces, alerting)
@@ -53,18 +59,21 @@ This enhancement adds comprehensive mermaid diagrams to improve visual understan
 ## Implementation Plan
 
 ### Phase 1: Assessment and Planning ✅
+
 - [x] Review existing diagrams
 - [x] Identify gaps and enhancements needed
 - [x] Create enhancement plan document
 - [x] Set up git workflow (commit after each task)
 
 ### Phase 2: Diagram Implementation 🔄
+
 - [ ] Task 2: Enhance request flow with latencies (01)
 - [ ] Task 3: Add detailed network security boundaries (02)
 - [ ] Task 4: Add production deployment diagram (07)
 - [ ] Task 5: Replace ASCII art with monitoring stack diagram (05)
 
 ### Phase 3: Documentation Updates 📋
+
 - [ ] Task 6: Rebuild consolidated documentation
 - [ ] Task 7: Update CHANGELOG.md for v1.2.0
 - [ ] Task 8: Update README.md if needed
@@ -115,15 +124,38 @@ git push origin main
 - [x] Legacy files deleted (MCP-PRD.md, MCP-ARCHITECTURE.md)
 - [x] Housekeeping: CHANGELOG, CONTRIBUTING, README updated
 
+## Phase 5: IEEE Directory Restructure (v2.1.0) ✅
+
+**Completed:** February 23, 2026
+
+- [x] Created IEEE-compliant subdirectory structure
+  - [x] `docs/IEEE-42010/views/` — 27 implementation guides
+  - [x] `docs/IEEE-42010/ref/` — 4 reference documents
+  - [x] `docs/IEEE-29148/methodology/` — 1 requirements methodology
+- [x] Moved 31 documentation files using `git mv` (preserves blame)
+- [x] Fixed 347 cross-references across 38 files
+- [x] Updated repository files
+  - [x] CONTRIBUTING.md — Updated directory tree documentation
+  - [x] Makefile — Updated file paths in CONTENT_SECTIONS
+  - [x] CHANGELOG.md — Added v2.1.0 entry with migration table
+  - [x] IEEE README files — Added directory structure documentation
+- [x] Verified all links valid (0 broken links)
+- [x] All changes committed (9861905) and pushed to origin/main
+
 ## Timeline
 
 - **Start:** November 19, 2025
-- **Estimated Duration:** 2-3 hours
-- **Target Completion:** November 19, 2025
+- **Phase 4 Completed:** February 2026
+- **Phase 5 Completed:** February 23, 2026
+- **Status:** Active - Diagram enhancements pending
 
 ## Notes
 
-- Existing diagrams in 01 and 02 are already in mermaid format
-- 05-observability.md uses ASCII art that needs conversion
-- 07-deployment-patterns.md has no deployment architecture diagram
+- All documentation now organized in IEEE-compliant directory structure
+- File paths updated: `docs/XX.md` → `docs/IEEE-42010/views/XX.md` or `docs/IEEE-42010/ref/XX.md`
+- Requirements methodology moved to `docs/IEEE-29148/methodology/02b-requirements-engineering.md`
+- Existing diagrams in sections 01 and 02 are already in mermaid format
+- Section 05 observability uses ASCII art that needs conversion to mermaid
+- Section 07 deployment patterns missing deployment architecture diagram
 - All diagrams should be production-ready and professional quality
+- Git history preserved for all file moves using `git mv`
