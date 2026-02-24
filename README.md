@@ -351,12 +351,25 @@ make lint
 # Generate table of contents
 make toc
 
-# Build consolidated documentation
+# Build consolidated documentation (creates mcp-architecture.md)
 make md
 
 # Clean generated files
 make clean
 ```
+
+**About `mcp-architecture.md`**:
+
+The `make md` command generates a consolidated single-file version of all documentation by concatenating all sections in order. This build artifact is useful for:
+
+- **Offline reading** - Single file contains all documentation
+- **PDF generation** - Easy conversion to PDF format
+- **Archival** - Complete documentation snapshot
+- **Distribution** - Share entire documentation set as one file
+
+The file is automatically excluded from git (via `.gitignore`) and should not be committed. The authoritative documentation is the individual files in `docs/IEEE-42010/` and `docs/IEEE-29148/`.
+
+For the IEEE 42010-compliant Architecture Description, use **[`docs/IEEE-42010/AD.md`](docs/IEEE-42010/AD.md)** instead.
 
 ### Pre-commit Hooks
 
@@ -593,7 +606,8 @@ We welcome contributions from the community! Here's how you can help:
 - ✅ Elicitation patterns, Task patterns, Multi-server orchestration, AI gateway docs
 - ✅ Security architecture update (OAuth 2.1, RBAC alignment)
 - ✅ Protocol compatibility rewrite (real MCP spec versions)
-- ✅ Legacy file consolidation (MCP-PRD.md and MCP-ARCHITECTURE.md removed)
+- ✅ Legacy file cleanup (MCP-PRD.md removed, uppercase MCP-ARCHITECTURE.md removed)
+- ✅ Build artifact documentation (lowercase mcp-architecture.md explained in README)
 
 **Core Documentation (v1.0.0 - v1.4.0)**
 
