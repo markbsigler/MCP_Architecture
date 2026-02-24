@@ -1,8 +1,8 @@
 # Architecture Description: MCP Server
 
 **Document Identifier:** MCP-AD-001  
-**Version:** 1.0.0  
-**Date:** 2026-02-23  
+**Version:** 1.1.0  
+**Date:** 2025-07-17  
 **Standard:** ISO/IEC/IEEE 42010:2022  
 **Status:** Approved  
 **Author:** Mark Sigler
@@ -13,6 +13,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1.0 | 2025-07-17 | Mark Sigler | Aligned with SRS v1.1.0: Streamable HTTP session management, expanded capability map, data model updates (outputSchema, annotations, icons), MCP protocol security best practices (NFR-SEC-073–081), updated ADR-005 to Streamable HTTP |
 | 1.0.0 | 2026-02-23 | Mark Sigler | Initial AD derived from MCP-ARCHITECTURE v1.4.0, structured per IEEE 42010:2022 |
 
 ---
@@ -313,9 +314,9 @@ flowchart TB
 
 | Layer | Responsibility | SRS Requirements |
 |-------|---------------|------------------|
-| Gateway | TLS termination, auth validation, routing, global rate limits, correlation IDs, circuit breaker coordination | FR-PROTO-005, FR-PROTO-006, NFR-SEC-022, NFR-PERF-017 |
-| Server | Tool execution, resource serving, prompt rendering, sampling, elicitation, task management | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-*, FR-SAMP-*, FR-ELIC-*, FR-TASK-* |
-| Security | OAuth 2.1 + PKCE, JWT verification, RBAC, capability ACL, input validation, audit logging | NFR-SEC-001–072 |
+| Gateway | TLS termination, auth validation, routing, session management (MCP-Session-Id, MCP-Protocol-Version), global rate limits, correlation IDs, circuit breaker coordination, DNS rebinding protection | FR-PROTO-005, FR-PROTO-006, FR-PROTO-006a, FR-PROTO-025–031, NFR-SEC-022, NFR-PERF-017 |
+| Server | Tool execution, resource serving, prompt rendering, sampling, elicitation, task management, list_changed notifications, lifecycle management | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-*, FR-SAMP-*, FR-ELIC-*, FR-TASK-*, FR-PROTO-032–034 |
+| Security | OAuth 2.1 + PKCE, JWT verification, RBAC, capability ACL, input validation, audit logging, MCP protocol security (confused deputy, SSRF, session hijacking, scope minimization) | NFR-SEC-001–081 |
 | Observability | Structured JSON logging, Prometheus metrics, OpenTelemetry tracing, health checks | NFR-OBS-001–013 |
 | Integration | External API calls, database access, legacy system adapters | FR-TOOL-011–015 |
 
@@ -330,14 +331,21 @@ mindmap
       resources/templates/list
       resources/subscribe
       resources/unsubscribe
+      notifications/resources/list_changed
+      Annotations audience, priority, lastModified
     Tools
       tools/list
       tools/call
+      outputSchema / structuredContent
+      Tool annotations
+      notifications/tools/list_changed
       Progress notifications
       Cancellation
     Prompts
       prompts/list
       prompts/get
+      notifications/prompts/list_changed
+      Audio content
       Parameter completion
     Sampling
       createMessage
@@ -346,9 +354,17 @@ mindmap
       elicitation/create
       Input types
     Tasks
-      Task tracking
-      Polling
-      Deferred results
+      tasks/get
+      tasks/result
+      tasks/list
+      tasks/cancel
+      notifications/tasks/progress
+      Task lifecycle
+    Session
+      MCP-Session-Id
+      MCP-Protocol-Version
+      SSE resumability
+      Ping keepalive
 ```
 
 #### 4.1.3 Request Flow
@@ -461,20 +477,27 @@ erDiagram
         string name
         string description
         object inputSchema
-        string icon_url
+        object outputSchema
+        object annotations
+        array icons
     }
     
     Resource {
         string uri
         string name
+        string title
         string description
         string mimeType
+        integer size
+        object annotations
     }
     
     Prompt {
         string name
+        string title
         string description
         array arguments
+        array icons
     }
     
     InputSchema {
@@ -485,6 +508,7 @@ erDiagram
     
     ToolResult {
         array content
+        object structuredContent
         boolean isError
     }
     
@@ -779,6 +803,7 @@ sequenceDiagram
 | Authorization | RBAC (4 roles), capability ACL, deny-by-default | NFR-SEC-017–021 |
 | Application | Input validation (7 attack classes), rate limiting, security headers | NFR-SEC-030–057 |
 | Data | PII masking, encrypted secrets, TLS in transit | NFR-SEC-041–045, NFR-SEC-058–065 |
+| MCP Protocol | Confused deputy mitigation, token passthrough prohibition, SSRF protections (private IP blocking, HTTPS enforcement), session hijacking prevention, scope minimization, consent cookie hardening | NFR-SEC-073–081 |
 | Audit | JSON audit events, append-only, 1-year retention | NFR-SEC-046–050 |
 
 #### 4.4.5 Security Headers
@@ -1018,7 +1043,7 @@ Per IEEE 42010 §5.7, architecture decisions and their rationale are captured in
 | ADR-002 | JWT/JWKS authentication | SSO integration, token lifecycle, proxy-compatible, cloud-native | Security | NFR-SEC-010–016 |
 | ADR-003 | Stateless server design | Horizontal scaling, simple deployment, no session affinity | Deployment, Operational | NFR-PERF-010, DC-012 |
 | ADR-004 | PostgreSQL + SQLite | ACID for audit, JSONB for schemas, SQLite for dev | Information, Development | FR-RSRC-003, NFR-PERF-008 |
-| ADR-005 | HTTP/SSE transport | Proxy-friendly, simpler scaling, standard tooling | Functional, Deployment | FR-PROTO-001, DC-005 |
+| ADR-005 | Streamable HTTP transport | Proxy-friendly, session management, SSE resumability, standard tooling | Functional, Deployment | FR-PROTO-001, FR-PROTO-025–031, DC-005 |
 
 Full ADR documentation: [01b-architecture-decisions.md](views/01b-architecture-decisions.md)
 
@@ -1046,7 +1071,8 @@ Every SRS requirement has at least one realizing element in this AD:
 
 | SRS Domain | AD Section |
 |-----------|------------|
-| FR-PROTO-* | §4.1 Functional View (request flow, capability map) |
+| FR-PROTO-001–024 | §4.1 Functional View (request flow, capability map) |
+| FR-PROTO-025–034 | §4.1.1 Layer Responsibilities (session management, lifecycle) |
 | FR-RSRC-* | §4.1 Functional View, §4.2 Information View (data model) |
 | FR-TOOL-* | §4.1 Functional View (capability map, layers) |
 | FR-PROMPT-* | §4.1 Functional View (capability map) |
@@ -1055,7 +1081,8 @@ Every SRS requirement has at least one realizing element in this AD:
 | FR-TASK-* | §4.1 Functional View (capability map) |
 | FR-ORCH-* | §4.1.4 Multi-Server Orchestration |
 | FR-GWWY-* | §4.1.5 AI Service Provider Gateway |
-| NFR-SEC-* | §4.4 Security View (all subsections) |
+| NFR-SEC-001–072 | §4.4 Security View (auth, RBAC, headers, validation, audit) |
+| NFR-SEC-073–081 | §4.4.4 Defense in Depth (MCP Protocol layer) |
 | NFR-PERF-* | §4.5 Operational View (performance budget, resilience) |
 | NFR-OBS-* | §4.5 Operational View (observability pipeline, metrics) |
 | NFR-CNTR-* | §4.3 Deployment View (container spec, distribution) |
@@ -1069,7 +1096,7 @@ Every SRS requirement has at least one realizing element in this AD:
 | ADR-002 (JWT/JWKS) | §4.4.2 OAuth 2.1 Flow |
 | ADR-003 (Stateless) | §4.3.6 Scaling, §4.5.4 Performance Budget |
 | ADR-004 (Database) | §4.2.1 Data Model |
-| ADR-005 (HTTP/SSE) | §4.1.3 Request Flow |
+| ADR-005 (Streamable HTTP) | §4.1.3 Request Flow, §4.1.1 Layer Responsibilities |
 
 ---
 
