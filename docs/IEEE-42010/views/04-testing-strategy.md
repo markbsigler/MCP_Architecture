@@ -25,14 +25,31 @@ Comprehensive testing is essential for reliable MCP servers. This document estab
 ## Testing Pyramid
 
 ```mermaid
-         /\
-        /E2E\         <- Few (Critical user journeys)
-       /------\
-      / Integr \      <- Some (Component interactions)
-     /----------\
-    /    Unit    \    <- Many (Individual functions/tools)
-   /--------------\
+graph TD
+    subgraph Pyramid[" "]
+        E2E["🎯 End-to-End Tests<br/><b>Few</b><br/>Critical user journeys"]
+        Integration["🔗 Integration Tests<br/><b>Some</b><br/>Component interactions"]
+        Unit["⚙️ Unit Tests<br/><b>Many</b><br/>Individual functions/tools"]
+    end
+    
+    E2E --> Integration
+    Integration --> Unit
+    
+    style E2E fill:#f8d7da,stroke:#721c24,stroke-width:2px
+    style Integration fill:#fff3cd,stroke:#856404,stroke-width:2px
+    style Unit fill:#d4f4dd,stroke:#2d662d,stroke-width:3px
+    style Pyramid fill:none,stroke:none
 ```
+
+**Testing Distribution:**
+
+| Test Level | Quantity | Execution Time | Scope | Purpose |
+|------------|----------|----------------|-------|---------|
+| Unit Tests | 70-80% | Milliseconds | Single function/method | Validate logic, edge cases |
+| Integration Tests | 15-25% | Seconds | Component interaction | Verify contracts, data flow |
+| End-to-End Tests | 5-10% | Minutes | Full user workflow | Confirm critical paths work |
+
+**Coverage Targets:** 80%+ overall, 90%+ for critical business logic
 
 ## Unit Testing
 

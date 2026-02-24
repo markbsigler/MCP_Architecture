@@ -22,34 +22,49 @@ Enhance visual clarity of architecture documentation by improving existing diagr
 
 | Enhancement | File | Status | Type | Description |
 |------------|------|--------|------|-------------|
-| Request flow latencies | [01-architecture-overview.md](docs/IEEE-42010/views/01-architecture-overview.md) | 🔄 Needs enhancement | Sequence diagram | Add latency annotations and timing information |
-| Network security zones | [02-security-architecture.md](docs/IEEE-42010/views/02-security-architecture.md) | 🔄 Needs enhancement | Network diagram | Add detailed trust zone boundaries, DMZ, network policies |
-| Production deployment | [07-deployment-patterns.md](docs/IEEE-42010/views/07-deployment-patterns.md) | ❌ Missing | Architecture diagram | K8s deployment with ingress, services, databases |
-| Monitoring stack | [05-observability.md](docs/IEEE-42010/views/05-observability.md) | ⚠️ Replace ASCII art | Architecture diagram | Full observability stack (logs, metrics, traces, alerting) |
+| Request flow latencies | [01-architecture-overview.md](docs/IEEE-42010/views/01-architecture-overview.md) | 🔄 Needs enhancement | Sequence diagram | Add network hop details, cache latencies, retry timing |
+| Network security zones | [02-security-architecture.md](docs/IEEE-42010/views/02-security-architecture.md) | 🔄 Needs enhancement | Network diagram | Add DMZ, firewall rules, network policy details |
+| Production deployment | [07-deployment-patterns.md](docs/IEEE-42010/views/07-deployment-patterns.md) | ✅ **COMPLETE** | Architecture diagram | Comprehensive K8s diagram exists (line 224, ~120 lines) |
+| Monitoring stack | [05-observability.md](docs/IEEE-42010/views/05-observability.md) | 🔄 Split diagram | Architecture diagram | Split 150-line Mermaid into 3 focused views |
+| Decision trees | [03d-decision-trees.md](docs/IEEE-42010/views/03d-decision-trees.md) | ➕ Convert ASCII | Flowcharts | Convert 7 ASCII decision trees to Mermaid flowcharts |
+| Testing pyramid | [04-testing-strategy.md](docs/IEEE-42010/views/04-testing-strategy.md) | ➕ Convert ASCII | Diagram | Convert ASCII pyramid to Mermaid diagram |
 
 #### Tasks
 
-- [ ] Enhance request flow sequence diagram with latency annotations
-- [ ] Add detailed network security zone boundaries to security architecture
-- [ ] Create comprehensive production deployment diagram for Kubernetes
-- [ ] Replace ASCII art monitoring stack with mermaid diagram
+- [ ] Enhance request flow sequence diagram with network hop latencies, cache timing, retry delays
+- [ ] Add detailed network security zones (DMZ, firewall rules, network policies) to security architecture
+- [x] ~~Create comprehensive production deployment diagram for Kubernetes~~ (Already exists - line 224 in 07-deployment-patterns.md)
+- [ ] Split observability stack diagram into three focused views (collection, storage, analysis)
+- [ ] Convert 7 ASCII decision trees in 03d-decision-trees.md to Mermaid flowcharts
+- [ ] Convert testing pyramid in 04-testing-strategy.md to Mermaid diagram
+- [ ] Add legends to complex diagrams (security zones, container topology, distribution flow)
+- [ ] Establish diagram styling standards document (color palette, node shapes, size guidelines)
 - [ ] Review and update consolidated documentation build
 - [ ] Update CHANGELOG.md with diagram improvements
 
 #### Technical Standards
 
-- Use consistent colors for component types across all diagrams
-- Include legends where helpful for clarity
-- Add timing/latency annotations where relevant
-- Use subgraphs for logical grouping
-- Keep diagrams focused (split complex diagrams into multiple views)
+- Use consistent colors for component types across all diagrams:
+  - Blue: Network/external systems
+  - Green: Application services/components
+  - Red: Security/critical paths
+  - Orange: Monitoring/observability
+  - Purple: Infrastructure/cloud resources
+- Include legends where helpful for clarity (especially for diagrams with multiple element types)
+- Add timing/latency annotations where relevant (use ms ranges: "P50: 15ms, P95: 45ms, P99: 120ms")
+- Use subgraphs for logical grouping (zones, layers, clusters)
+- Keep diagrams focused - split if exceeds ~100 lines (target readability over single-view completeness)
+- Prefer `flowchart TB/LR` over `graph TB/LR` (more features, better semantics)
+- For ASCII decision trees: Convert to `flowchart TD` with diamond decision nodes
 
 **Mermaid diagram types:**
 
-- Flowchart (`flowchart TB/LR`): System architecture, layers
-- Sequence Diagram (`sequenceDiagram`): Request flows, interactions
-- C4 Diagram (`C4Context/C4Container`): Deployment architecture
-- Graph (`graph TB/LR`): Network boundaries, monitoring stack
+- Flowchart (`flowchart TB/LR`): System architecture, layers, decision trees
+- Sequence Diagram (`sequenceDiagram`): Request flows, interactions, timing
+- C4 Diagram (`C4Context/C4Container`): Deployment architecture (if needed)
+- Graph (`graph TB/LR`): Network boundaries, monitoring stack (legacy, prefer flowchart)
+- State Diagram (`stateDiagram-v2`): State machines, lifecycle flows
+- ER Diagram (`erDiagram`): Data models, entity relationships
 
 ### 2. Interactive Examples
 
