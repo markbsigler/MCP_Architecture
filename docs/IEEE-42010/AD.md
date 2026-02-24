@@ -316,7 +316,7 @@ flowchart TB
 | Layer | Responsibility | SRS Requirements |
 |-------|---------------|------------------|
 | Gateway | TLS termination, auth validation, routing, session management (MCP-Session-Id, MCP-Protocol-Version), global rate limits, correlation IDs, circuit breaker coordination, DNS rebinding protection | FR-PROTO-005, FR-PROTO-006, FR-PROTO-006a, FR-PROTO-025–031, NFR-SEC-022, NFR-PERF-017 |
-| Server | Tool execution, resource serving, prompt rendering, sampling, elicitation, task management, list_changed notifications, lifecycle management | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-*, FR-SAMP-*, FR-ELIC-*, FR-TASK-*, FR-PROTO-032–034 |
+| Server | **FastMCP v3.x Server**: Tool execution, resource serving, prompt rendering, sampling, elicitation, task management, list_changed notifications, lifecycle management; **Middleware Stack**: authorization, rate limiting, caching, logging, timing; **Provider System**: component sourcing from decorators, filesystem, proxies, OpenAPI specs; **Dependency Injection**: request context, tokens, custom deps | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-*, FR-SAMP-*, FR-ELIC-*, FR-TASK-*, FR-PROTO-032–034, NFR-OBS-*, NFR-SEC-025–026 |
 | Security | OAuth 2.1 + PKCE, JWT verification, RBAC, capability ACL, input validation, audit logging, MCP protocol security (confused deputy, SSRF, session hijacking, scope minimization) | NFR-SEC-001–081 |
 | Observability | Structured JSON logging, Prometheus metrics, OpenTelemetry tracing, health checks | NFR-OBS-001–013 |
 | Integration | External API calls, database access, legacy system adapters | FR-TOOL-011–015 |
@@ -1025,12 +1025,19 @@ flowchart LR
 
 #### 4.6.4 Framework Choice
 
-**FastMCP** selected per ADR-002:
+**FastMCP v3.x** selected per ADR-002:
 
-- Declarative tool registration (60% less boilerplate)
-- Built-in OAuth, dependency injection, lifecycle hooks
-- Escape hatch to native MCP SDK for edge cases
-- Review date: 2026-06-01
+- **Declarative Components**: Decorator-based tool, resource, and prompt registration (60% less boilerplate vs. low-level SDK)
+- **Provider System**: Local provider (decorators), filesystem provider (auto-discovery), MCP proxy provider, OpenAPI provider, skills provider, custom providers
+- **Middleware**: Cross-cutting concerns (logging, rate limiting, authorization, caching, error handling, timing)
+- **Built-in Patterns**: OAuth 2.1/OIDC proxy, dependency injection, authorization callables, lifecycle management (lifespans)
+- **Composition**: Server mounting for modular architecture, namespace transforms for name isolation
+- **Transformations**: Prompts-as-tools, resources-as-tools, versioning, visibility filtering
+- **Interactive Apps**: Tool UIs rendered in conversations (Claude, ChatGPT, etc.)
+- **Observability**: Native OpenTelemetry tracing, structured logging, Prometheus metrics
+- **Configuration**: Project-level fastmcp.json for portable deployment
+- **Escape Hatch**: Access to low-level MCP SDK for edge cases
+- **Review Date**: 2026-06-01
 
 ---
 
@@ -1041,7 +1048,7 @@ Per IEEE 42010 §5.7, architecture decisions and their rationale are captured in
 | ADR | Decision | Rationale | Viewpoints Affected | SRS Requirements |
 |-----|----------|-----------|--------------------|--------------------|
 | ADR-001 | Python 3.11+ as implementation language | Native type hints, rich ecosystem, async/await support, enterprise adoption | Functional, Development | All FR-* |
-| ADR-002 | FastMCP v3.x as MCP framework | 60% less boilerplate, built-in enterprise features, active maintenance | Functional, Development | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-* |
+| ADR-002 | FastMCP v3.x as MCP framework | 60% less boilerplate; provider system (local, filesystem, proxy, OpenAPI); built-in middleware, dependency injection, authorization; interactive Apps; composable via mounting; transformations (namespace, versioning); OpenTelemetry tracing; active maintenance | Functional, Development | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-* |
 | ADR-003 | JWT/JWKS authentication | SSO integration, token lifecycle, proxy-compatible, cloud-native | Security | NFR-SEC-010–016 |
 | ADR-004 | Stateless server design | Horizontal scaling, simple deployment, no session affinity | Deployment, Operational | NFR-PERF-010, DC-012 |
 | ADR-005 | PostgreSQL + SQLite | ACID for audit, JSONB for schemas, SQLite for dev | Information, Development | FR-RSRC-003, NFR-PERF-008 |
