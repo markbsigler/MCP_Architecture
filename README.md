@@ -1,6 +1,6 @@
 # Model Context Protocol (MCP) Server Architecture and Design Guidelines
 
-**Version:** 2.0.0  
+**Version:** 2.1.0  
 **Last Updated:** February 23, 2026  
 **Status:** Production Ready  
 **Repository:** MCP_Architecture  
@@ -11,9 +11,9 @@
 [![MCP Protocol](https://img.shields.io/badge/MCP-2.0-green.svg)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
 [![FastMCP](https://img.shields.io/badge/FastMCP-enabled-orange.svg)](https://github.com/jlowin/fastmcp)
-[![Tests](https://img.shields.io/badge/coverage-80%25+-success.svg)](docs/04-testing-strategy.md)
-[![Security](https://img.shields.io/badge/security-hardened-red.svg)](docs/02-security-architecture.md)
-[![DORA](https://img.shields.io/badge/DORA-elite-purple.svg)](docs/13-metrics-kpis.md)
+[![Tests](https://img.shields.io/badge/coverage-80%25+-success.svg)](docs/IEEE-42010/views/04-testing-strategy.md)
+[![Security](https://img.shields.io/badge/security-hardened-red.svg)](docs/IEEE-42010/views/02-security-architecture.md)
+[![DORA](https://img.shields.io/badge/DORA-elite-purple.svg)](docs/IEEE-42010/views/13-metrics-kpis.md)
 
 ## Overview
 
@@ -575,7 +575,16 @@ We welcome contributions from the community! Here's how you can help:
 
 ## Roadmap
 
-### ✅ Completed (v2.0.0)
+### ✅ Completed (v2.1.0)
+
+**IEEE Directory Restructure (v2.1.0)**
+
+- ✅ Reorganized 31 documentation files into IEEE-compliant directory structure
+- ✅ Moved 27 implementation guides → `docs/IEEE-42010/views/`
+- ✅ Moved 4 reference documents → `docs/IEEE-42010/ref/`
+- ✅ Moved requirements methodology → `docs/IEEE-29148/methodology/`
+- ✅ Updated 347 cross-references across 38 files
+- ✅ Preserved git history using `git mv` for all file relocations
 
 **IEEE Standards Adoption (v2.0.0)**
 
@@ -601,26 +610,17 @@ We welcome contributions from the community! Here's how you can help:
 - Cross-reference index by topic (98-index-by-topic.md)
 - Comprehensive terminology guide (00-terminology-guide.md)
 
-### 🎯 Planned (v2.1.0)
+### 🔮 Future Enhancements
 
-- Event-driven architecture patterns
-- Streaming response implementations
-- GraphQL integration patterns
-- Service mesh integration guides (Istio, Linkerd)
-- Advanced monitoring dashboards (Grafana templates)
-- Multi-tenancy architecture patterns
-- Performance optimization playbooks
-- Disaster recovery procedures
+For detailed planning and upcoming work, see [ROADMAP.md](ROADMAP.md).
 
-### 💡 Under Consideration
+**Planned priorities include:**
 
-- WebAssembly (WASM) tool execution sandbox
-- Edge computing deployment patterns (Cloudflare Workers, Lambda@Edge)
-- AI model versioning and A/B testing strategies
-- Advanced prompt engineering techniques and templates
-- Real-time collaboration features for multi-agent scenarios
-- Automated security scanning integrations
-- Cost forecasting and optimization ML models
+- Mermaid diagram improvements (request flows, security zones, deployment architecture)
+- Interactive code examples and templates
+- Security audit checklists (pre-production, compliance, incident response)
+- Performance testing toolkit and benchmarking
+- Migration tooling (REST → MCP, OpenAPI conversion)
 
 ## FAQ
 
