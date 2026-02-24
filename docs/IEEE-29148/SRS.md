@@ -695,7 +695,7 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 
 | ID | Constraint | Source |
 |----|-----------|--------|
-| DC-007 | The MCP server may be implemented in TypeScript, Python, or Go. | Team capability |
+| DC-007 | The MCP server shall be implemented in Python using the FastMCP v3.x framework (ADR-001, ADR-002). | Architecture decision |
 | DC-008 | The MCP server shall use standard container format (Docker/OCI-compliant). | Operations |
 | DC-009 | The MCP server shall use structured JSON logging. | Observability |
 | DC-010 | The MCP server shall use OpenTelemetry or Prometheus for metrics. | Industry standard |
