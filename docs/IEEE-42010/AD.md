@@ -634,6 +634,24 @@ flowchart TB
 | Vulnerability scan | Zero critical/high | NFR-CNTR-004 |
 | CIS Benchmark | Passes | NFR-CNTR-012 |
 | Startup time | < 5 seconds | NFR-CNTR-005 |
+
+**Base Image Decision (ADR-007):**
+
+- **Production (recommended)**: `gcr.io/distroless/python3-debian12` — No shell, no package manager, minimal attack surface (5-20MB), zero OS CVE exposure, strongest compliance posture (PCI-DSS, SOC2, NIST 800-190)
+- **Development/Debug**: `python:3.11-alpine` — Shell access for troubleshooting, `apk` for build-time dependencies, 20-50MB size, musl libc (note: some Python packages require glibc workarounds)
+- **Multi-stage builds**: Alpine for build stage (compile extensions, install deps) → distroless for runtime stage (copy artifacts, no tooling)
+
+**Trade-offs:**
+
+| Aspect | Distroless | Alpine |
+|--------|-----------|--------|
+| Attack Surface | Minimal (no shell/pkg-mgr) | Small (busybox, apk) |
+| Size | 5-20 MB | 20-50 MB |
+| CVE Exposure | OS packages: 0 | OS packages: ~5-15 |
+| Debugging | Limited (no shell) | Full (sh, common utils) |
+| Build Complexity | Requires multi-stage | Single-stage possible |
+| Python Compatibility | Standard glibc | musl libc (edge cases) |
+| Compliance | Strongest | Strong |
 | Image signing | Cosign or Docker Content Trust | NFR-CNTR-027 |
 | SBOM | Included | NFR-CNTR-028 |
 | Provenance | Attestation included | NFR-CNTR-029 |
@@ -1053,6 +1071,7 @@ Per IEEE 42010 §5.7, architecture decisions and their rationale are captured in
 | ADR-004 | Stateless server design | Horizontal scaling, simple deployment, no session affinity | Deployment, Operational | NFR-PERF-010, DC-012 |
 | ADR-005 | PostgreSQL + SQLite | ACID for audit, JSONB for schemas, SQLite for dev | Information, Development | FR-RSRC-003, NFR-PERF-008 |
 | ADR-006 | Streamable HTTP transport | Proxy-friendly, session management, SSE resumability, standard tooling | Functional, Deployment | FR-PROTO-001, FR-PROTO-025–031, DC-005 |
+| ADR-007 | Distroless base images (Alpine optional) | **Distroless (primary)**: No shell, minimal attack surface (5-20MB), zero CVE exposure from OS packages, strongest compliance posture; **Alpine (optional)**: Development environments, complex builds needing apk/shell, 20-50MB with musl libc; **Decision criteria**: Production → distroless; dev/debug → Alpine | Security, Deployment | NFR-SEC-060–065, NFR-CNTR-001–012, DC-013 |
 
 Per IEEE 42010 §5.6, correspondence rules define constraints between views and between the AD and SRS.
 
