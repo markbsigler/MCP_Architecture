@@ -15,7 +15,8 @@ PANDOC := pandoc
 MMDC := mmdc
 
 # PDF output configuration
-PDF_DIR := pdfs
+PDF_DIR := .
+DIAGRAM_DIR := docs/diagrams
 SRS_PDF := $(PDF_DIR)/IEEE-29148-SRS.pdf
 AD_PDF := $(PDF_DIR)/IEEE-42010-AD.pdf
 
@@ -78,7 +79,7 @@ PREFIX_SECTIONS = docs/00-title-page.md $(TOC_FILE)
 ALL_SECTIONS = $(PREFIX_SECTIONS) $(CONTENT_SECTIONS)
 
 # Output files
-COMBINED_MD := mcp-architecture.md
+COMBINED_MD := docs/mcp-architecture.md
 TOC_FILE := docs/IEEE-42010/ref/00-table-of-contents.md
 
 #==============================================================================
@@ -452,15 +453,15 @@ pdf: pdf-srs pdf-ad
 # Generate IEEE 29148 SRS PDF with rendered Mermaid diagrams
 pdf-srs: check-pdf-deps $(SRS_MD)
 	echo "$(BLUE)[pdf-srs] Generating IEEE 29148 SRS PDF...$(NC)"
-	mkdir -p $(PDF_DIR)
+	mkdir -p $(DIAGRAM_DIR)
 	if [ ! -f $(SRS_MD) ]; then \
 		echo "$(RED)Error: $(SRS_MD) not found$(NC)"; \
 		exit 1; \
 	fi
 	echo "$(BLUE)[pdf-srs] Converting Mermaid diagrams to images...$(NC)"
-	$(PYTHON) scripts/convert_mermaid_for_pdf.py $(SRS_MD) $(PDF_DIR)/srs_temp.md $(PDF_DIR) srs
+	$(PYTHON) scripts/convert_mermaid_for_pdf.py $(SRS_MD) /tmp/srs_temp.md $(DIAGRAM_DIR) srs
 	echo "$(BLUE)[pdf-srs] Generating PDF with Pandoc...$(NC)"
-	$(PANDOC) $(PDF_DIR)/srs_temp.md \
+	$(PANDOC) /tmp/srs_temp.md \
 		-o $(SRS_PDF) \
 		--pdf-engine=xelatex \
 		--toc \
@@ -476,21 +477,21 @@ pdf-srs: check-pdf-deps $(SRS_MD)
 		--metadata date="$$(date '+%B %d, %Y')" \
 		2>&1 | grep -v "Missing character" || echo "$(YELLOW)Note: PDF generated with warnings$(NC)"
 	echo "$(BLUE)[pdf-srs] Cleaning up temporary files...$(NC)"
-	rm -f $(PDF_DIR)/srs_temp.md $(PDF_DIR)/srs_diagram_*.mmd
+	rm -f /tmp/srs_temp.md $(DIAGRAM_DIR)/srs_diagram_*.mmd
 	echo "$(GREEN)[pdf-srs] Generated $(SRS_PDF) ($$(wc -c < $(SRS_PDF) | tr -d ' ') bytes) ✓$(NC)"
 
 # Generate IEEE 42010 AD PDF with rendered Mermaid diagrams
 pdf-ad: check-pdf-deps $(AD_MD)
 	echo "$(BLUE)[pdf-ad] Generating IEEE 42010 AD PDF...$(NC)"
-	mkdir -p $(PDF_DIR)
+	mkdir -p $(DIAGRAM_DIR)
 	if [ ! -f $(AD_MD) ]; then \
 		echo "$(RED)Error: $(AD_MD) not found$(NC)"; \
 		exit 1; \
 	fi
 	echo "$(BLUE)[pdf-ad] Converting Mermaid diagrams to images...$(NC)"
-	$(PYTHON) scripts/convert_mermaid_for_pdf.py $(AD_MD) $(PDF_DIR)/ad_temp.md $(PDF_DIR) ad
+	$(PYTHON) scripts/convert_mermaid_for_pdf.py $(AD_MD) /tmp/ad_temp.md $(DIAGRAM_DIR) ad
 	echo "$(BLUE)[pdf-ad] Generating PDF with Pandoc...$(NC)"
-	$(PANDOC) $(PDF_DIR)/ad_temp.md \
+	$(PANDOC) /tmp/ad_temp.md \
 		-o $(AD_PDF) \
 		--pdf-engine=xelatex \
 		--toc \
@@ -506,16 +507,22 @@ pdf-ad: check-pdf-deps $(AD_MD)
 		--metadata date="$$(date '+%B %d, %Y')" \
 		2>&1 | grep -v "Missing character" || echo "$(YELLOW)Note: PDF generated with warnings$(NC)"
 	echo "$(BLUE)[pdf-ad] Cleaning up temporary files...$(NC)"
-	rm -f $(PDF_DIR)/ad_temp.md $(PDF_DIR)/ad_diagram_*.mmd
+	rm -f /tmp/ad_temp.md $(DIAGRAM_DIR)/ad_diagram_*.mmd
 	echo "$(GREEN)[pdf-ad] Generated $(AD_PDF) ($$(wc -c < $(AD_PDF) | tr -d ' ') bytes) ✓$(NC)"
 
 # Clean up generated PDF files
 clean-pdf:
 	echo "$(BLUE)[clean-pdf] Removing generated PDF files...$(NC)"
-	if [ -d $(PDF_DIR) ]; then \
-		rm -rf $(PDF_DIR); \
-		echo "$(GREEN)[clean-pdf] Removed $(PDF_DIR)/ directory ✓$(NC)"; \
-	else \
-		echo "$(YELLOW)[clean-pdf] $(PDF_DIR)/ does not exist$(NC)"; \
+	if [ -f $(SRS_PDF) ]; then \
+		rm -f $(SRS_PDF); \
+		echo "$(GREEN)[clean-pdf] Removed $(SRS_PDF) ✓$(NC)"; \
+	fi
+	if [ -f $(AD_PDF) ]; then \
+		rm -f $(AD_PDF); \
+		echo "$(GREEN)[clean-pdf] Removed $(AD_PDF) ✓$(NC)"; \
+	fi
+	if [ -d $(DIAGRAM_DIR) ]; then \
+		rm -f $(DIAGRAM_DIR)/*_diagram_*.png $(DIAGRAM_DIR)/*_diagram_*.mmd; \
+		echo "$(GREEN)[clean-pdf] Removed diagram files from $(DIAGRAM_DIR)/ ✓$(NC)"; \
 	fi
 	echo "$(GREEN)[clean-pdf] PDF cleanup complete!$(NC)"
