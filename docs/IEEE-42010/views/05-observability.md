@@ -22,182 +22,225 @@ Comprehensive observability enables effective monitoring, debugging, and perform
 
 ## Three Pillars of Observability
 
-The observability system integrates logs, metrics, and traces for comprehensive system visibility:
+The observability system integrates logs, metrics, and traces for comprehensive system visibility. The architecture is organized into three layers: collection & ingestion, storage & retention, and analysis & visualization.
+
+### 1. Collection & Ingestion Pipeline
+
+This layer captures telemetry from MCP servers and forwards it to storage systems:
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph Sources["📡 Data Sources"]
         direction LR
-        MCP1[MCP Server 1]
-        MCP2[MCP Server 2]
-        MCP3[MCP Server 3]
-        Gateway[MCP Gateway]
-        K8s[Kubernetes<br/>Control Plane]
+        MCP1[MCP Server 1<br/>stdout/stderr + /metrics + OTLP]
+        MCP2[MCP Server 2<br/>stdout/stderr + /metrics + OTLP]
+        MCP3[MCP Server 3<br/>stdout/stderr + /metrics + OTLP]
+        Gateway[MCP Gateway<br/>JSON logs + StatsD + Zipkin]
+        K8s[Kubernetes<br/>Events + kube-state-metrics]
     end
     
-    subgraph Collection["🔄 Collection Layer"]
-        direction TB
-        
-        subgraph LogPipeline["Log Pipeline"]
-            Fluent[Fluentd/Fluent Bit<br/>Log Forwarder]
-            LogBuffer[(Buffer<br/>Kafka/Redis)]
-        end
-        
-        subgraph MetricPipeline["Metrics Pipeline"]
-            Prometheus[Prometheus<br/>Scraper]
-            StatsdExp[StatsD Exporter<br/>Push Gateway]
-        end
-        
-        subgraph TracePipeline["Trace Pipeline"]
-            OTel[OpenTelemetry<br/>Collector]
-            TraceBuffer[(Sampling<br/>Buffer)]
-        end
+    subgraph LogCollection["📋 Log Collection"]
+        Fluent[Fluentd/Fluent Bit<br/>Parse & Enrich]
+        LogBuffer[(Kafka/Redis<br/>Buffering)]
     end
     
-    subgraph Storage["💾 Storage Layer"]
-        direction TB
-        
-        subgraph LogStorage["Log Storage"]
-            Loki[(Loki<br/>LogQL)]
-            ES[(Elasticsearch<br/>Full-text Search)]
-            S3Log[(S3/GCS<br/>Long-term Archive)]
-        end
-        
-        subgraph MetricStorage["Metrics Storage"]
-            PromStorage[(Prometheus TSDB<br/>15d retention)]
-            Thanos[(Thanos<br/>Long-term Storage)]
-            M3[(M3DB<br/>High Cardinality)]
-        end
-        
-        subgraph TraceStorage["Trace Storage"]
-            Jaeger[(Jaeger<br/>Cassandra/ES)]
-            Tempo[(Grafana Tempo<br/>S3/GCS)]
-        end
+    subgraph MetricCollection["📊 Metrics Collection"]
+        Prometheus[Prometheus<br/>Pull-based Scraper<br/>15s interval]
+        StatsdExp[StatsD Exporter<br/>Push Gateway]
     end
     
-    subgraph Analysis["🔍 Analysis & Visualization"]
-        direction LR
-        Grafana[Grafana<br/>Unified Dashboards]
-        Kibana[Kibana<br/>Log Analysis]
-        Jaeger_UI[Jaeger UI<br/>Trace Explorer]
+    subgraph TraceCollection["🔍 Trace Collection"]
+        OTel[OpenTelemetry Collector<br/>OTLP + Zipkin receivers]
+        TraceSampler[Tail-based Sampler<br/>10% head + error sampling]
     end
     
-    subgraph Alerting["🚨 Alerting & Response"]
-        direction TB
-        AlertMgr[Alert Manager<br/>Routing & Dedup]
-        PagerDuty[PagerDuty<br/>On-call]
-        Slack[Slack<br/>Notifications]
-        Email[Email<br/>Reports]
-    end
-    
-    subgraph Intelligence["🤖 AIOps (Optional)"]
-        Anomaly[Anomaly Detection<br/>ML Models]
-        Forecast[Capacity Forecasting<br/>Prophet/ARIMA]
-        RCA[Root Cause Analysis<br/>Graph Analysis]
-    end
-    
-    %% Log Flow
     MCP1 -->|stdout/stderr| Fluent
     MCP2 -->|stdout/stderr| Fluent
     MCP3 -->|stdout/stderr| Fluent
     Gateway -->|JSON logs| Fluent
     K8s -->|Events| Fluent
     
-    Fluent -->|Parse & Enrich| LogBuffer
-    LogBuffer -->|Indexed| Loki
-    LogBuffer -->|Full-text| ES
-    Loki -->|Cold Storage| S3Log
-    
-    %% Metrics Flow
-    MCP1 -->|/metrics| Prometheus
-    MCP2 -->|/metrics| Prometheus
-    MCP3 -->|/metrics| Prometheus
-    Gateway -->|StatsD| StatsdExp
+    MCP1 -->|GET /metrics| Prometheus
+    MCP2 -->|GET /metrics| Prometheus
+    MCP3 -->|GET /metrics| Prometheus
+    Gateway -->|UDP 8125| StatsdExp
     K8s -->|kube-state-metrics| Prometheus
     
-    StatsdExp -->|Expose| Prometheus
-    Prometheus -->|Federate| PromStorage
-    PromStorage -->|Downsample| Thanos
-    Prometheus -->|High Card| M3
+    MCP1 -->|OTLP gRPC| OTel
+    MCP2 -->|OTLP gRPC| OTel
+    MCP3 -->|OTLP gRPC| OTel
+    Gateway -->|Zipkin HTTP| OTel
     
-    %% Trace Flow
-    MCP1 -->|OTLP| OTel
-    MCP2 -->|OTLP| OTel
-    MCP3 -->|OTLP| OTel
-    Gateway -->|Zipkin| OTel
+    Fluent -->|Parsed & Structured| LogBuffer
+    StatsdExp -->|Expose :9102| Prometheus
+    OTel -->|Batch & Sample| TraceSampler
     
-    OTel -->|Sample & Batch| TraceBuffer
-    TraceBuffer -->|Spans| Jaeger
-    TraceBuffer -->|Spans| Tempo
+    LogBuffer -.->|Forward to Storage| StorageLayer[Storage Layer]
+    Prometheus -.->|Persist to TSDB| StorageLayer
+    TraceSampler -.->|Ship spans| StorageLayer
     
-    %% Visualization
-    Loki -->|LogQL| Grafana
-    ES -->|Query| Kibana
-    PromStorage -->|PromQL| Grafana
-    Thanos -->|PromQL| Grafana
-    Jaeger -->|Query| Jaeger_UI
-    Tempo -->|TraceQL| Grafana
-    
-    %% Correlation
-    Grafana -.->|trace_id| Jaeger_UI
-    Grafana -.->|correlation_id| Kibana
-    Jaeger_UI -.->|log correlation| Loki
-    
-    %% Alerting
-    Prometheus -->|Alert Rules| AlertMgr
-    Loki -->|Alert Rules| AlertMgr
-    AlertMgr -->|On-call| PagerDuty
-    AlertMgr -->|Notify| Slack
-    AlertMgr -->|Digest| Email
-    
-    %% AIOps
-    PromStorage -.->|Time Series| Anomaly
-    Loki -.->|Error Patterns| RCA
-    PromStorage -.->|Historical| Forecast
-    
-    Anomaly -->|Anomaly Alerts| AlertMgr
-    RCA -.->|Context| Grafana
-    Forecast -.->|Predictions| Grafana
-    
-    %% Styling
-    classDef sources fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef collection fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef storage fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    classDef analysis fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef alerting fill:#ffebee,stroke:#c62828,stroke-width:2px
-    classDef aiops fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
-    class MCP1,MCP2,MCP3,Gateway,K8s sources
-    class Fluent,LogBuffer,Prometheus,StatsdExp,OTel,TraceBuffer collection
-    class Loki,ES,S3Log,PromStorage,Thanos,M3,Jaeger,Tempo storage
-    class Grafana,Kibana,Jaeger_UI analysis
-    class AlertMgr,PagerDuty,Slack,Email alerting
-    class Anomaly,Forecast,RCA aiops
+    style Sources fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style LogCollection fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style MetricCollection fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style TraceCollection fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style StorageLayer fill:#e0e0e0,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5
 ```
 
-### Observability Stack Components
+**Collection Layer Details:**
 
-**Data Sources:**
+| Component | Protocol | Buffer | Processing | Target Storage |
+|-----------|----------|--------|------------|----------------|
+| Fluentd | Syslog, JSON | Kafka/Redis | Parse, enrich, filter | Loki, Elasticsearch |
+| Prometheus | HTTP /metrics | In-memory (2h) | Scrape, relabel | Prometheus TSDB |
+| OpenTelemetry | OTLP, Zipkin | Memory (10k spans) | Sample, batch | Jaeger, Tempo |
+| StatsD Exporter | UDP 8125 | None | Aggregate counters | Prometheus (via /metrics) |
 
-- MCP servers emit logs, metrics, and traces
-- Gateway provides centralized telemetry
-- Kubernetes control plane metrics and events
+### 2. Storage & Retention Architecture
 
-**Collection Layer:**
+This layer persists telemetry data with appropriate retention policies:
 
-- **Logs**: Fluentd/Fluent Bit for log forwarding with parsing
-- **Metrics**: Prometheus pull-based scraping, StatsD push
-- **Traces**: OpenTelemetry Collector with sampling and batching
+```mermaid
+flowchart LR
+    subgraph LogStorage["📋 Log Storage"]
+        direction TB
+        Loki[(Grafana Loki<br/>7d retention<br/>LogQL queries)]
+        ES[(Elasticsearch<br/>30d retention<br/>Full-text search)]
+        S3Log[(S3/GCS Archive<br/>1 year retention<br/>Cold storage)]
+        
+        Loki -->|Compress & Archive| S3Log
+        ES -->|Snapshots| S3Log
+    end
+    
+    subgraph MetricStorage["📊 Metrics Storage"]
+        direction TB
+        PromTSDB[(Prometheus TSDB<br/>15d retention<br/>5s resolution)]
+        Thanos[(Thanos<br/>13 months retention<br/>5m downsampled)]
+        M3[(M3DB<br/>90d retention<br/>High cardinality)]
+        
+        PromTSDB -->|Federate & Downsample| Thanos
+        PromTSDB -->|High cardinality| M3
+    end
+    
+    subgraph TraceStorage["🔍 Trace Storage"]
+        direction TB
+        Jaeger[(Jaeger<br/>7d retention<br/>Cassandra backend)]
+        Tempo[(Grafana Tempo<br/>30d retention<br/>S3/GCS backend)]
+        
+        Jaeger -.->|Optional: Migrate| Tempo
+    end
+    
+    IngestLog[Log Buffer] --> Loki
+    IngestLog --> ES
+    IngestMetric[Prometheus Scraper] --> PromTSDB
+    IngestTrace[OTel Collector] --> Jaeger
+    IngestTrace --> Tempo
+    
+    style LogStorage fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style MetricStorage fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style TraceStorage fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style IngestLog fill:#e0e0e0,stroke:#666
+    style IngestMetric fill:#e0e0e0,stroke:#666
+    style IngestTrace fill:#e0e0e0,stroke:#666
+```
 
-**Storage Layer:**
+**Storage Retention Policies:**
 
-- **Logs**: Loki (efficient), Elasticsearch (full-text), S3 (archive)
-- **Metrics**: Prometheus (15d), Thanos (long-term), M3DB (high cardinality)
-- **Traces**: Jaeger (Cassandra/ES), Tempo (object storage)
+| Data Type | Short-term | Medium-term | Long-term | Justification |
+|-----------|------------|-------------|-----------|---------------|
+| **Logs** | Loki (7d, full) | Elasticsearch (30d, indexed) | S3 (1y, compressed) | Debug recent issues, compliance archive |
+| **Metrics** | Prometheus (15d, 5s) | M3DB (90d, 1m) | Thanos (13mo, 5m) | Performance analysis, capacity planning |
+| **Traces** | Jaeger (7d, sampled) | Tempo (30d, sampled) | - | Request debugging, latency analysis |
 
-**Analysis & Visualization:**
+**Cost Optimization:**
 
-- Grafana for unified dashboards (logs, metrics, traces)
+- Logs: Loki cheaper than ES for grep-like queries, S3 for compliance
+- Metrics: Prometheus local TSDB, Thanos for long-term with downsampling
+- Traces: Tempo uses object storage (90% cheaper than Cassandra)
+
+### 3. Analysis & Visualization Layer
+
+This layer provides unified interfaces for querying and correlating telemetry:
+
+```mermaid
+flowchart TB
+    subgraph Visualization["🎨 Visualization Tools"]
+        direction LR
+        Grafana[Grafana<br/>Unified Dashboards<br/>LogQL + PromQL + TraceQL]
+        Kibana[Kibana<br/>Log Analysis<br/>Elasticsearch DSL]
+        JaegerUI[Jaeger UI<br/>Trace Explorer<br/>Dependency Graph]
+    end
+    
+    subgraph Alerting["🚨 Alerting & Notification"]
+        direction TB
+        AlertMgr[Alert Manager<br/>Routing & Deduplication<br/>Grouping & Throttling]
+        PagerDuty[PagerDuty<br/>On-call Escalation]
+        Slack[Slack<br/>Team Notifications]
+        Email[Email<br/>Weekly Reports]
+        
+        AlertMgr -->|Severity: Critical| PagerDuty
+        AlertMgr -->|Severity: Warning| Slack
+        AlertMgr -->|Daily Digest| Email
+    end
+    
+    subgraph AIOps["🤖 AIOps (Optional)"]
+        direction TB
+        Anomaly[Anomaly Detection<br/>Isolation Forest<br/>Prophet for seasonality]
+        RCA[Root Cause Analysis<br/>Graph-based correlation<br/>trace_id → logs]
+        Forecast[Capacity Forecasting<br/>Prophet/ARIMA<br/>7-day prediction]
+    end
+    
+    %% Data Sources to Visualization
+    Loki[(Loki)] -->|LogQL| Grafana
+    ES[(Elasticsearch)] -->|Query DSL| Kibana
+    PromTSDB[(Prometheus)] -->|PromQL| Grafana
+    Thanos[(Thanos)] -->|PromQL| Grafana
+    Jaeger[(Jaeger)] -->|Span Query| JaegerUI
+    Tempo[(Tempo)] -->|TraceQL| Grafana
+    
+    %% Cross-correlation
+    Grafana -.->|trace_id link| JaegerUI
+    Grafana -.->|correlation_id| Kibana
+    JaegerUI -.->|span.log_id| Loki
+    
+    %% Alerting Sources
+    PromTSDB -->|Alert Rules<br/>PromQL expressions| AlertMgr
+    Loki -->|Alert Rules<br/>LogQL expressions| AlertMgr
+    
+    %% AIOps Integration
+    PromTSDB -.->|Time Series Feed| Anomaly
+    Loki -.->|Error Log Patterns| RCA
+    PromTSDB -.->|Historical Metrics| Forecast
+    
+    Anomaly -->|Anomaly Alerts| AlertMgr
+    RCA -.->|Correlation Context| Grafana
+    Forecast -.->|Capacity Predictions| Grafana
+    
+    style Visualization fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Alerting fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style AIOps fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style Loki fill:#fff3e0,stroke:#f57c00
+    style ES fill:#fff3e0,stroke:#f57c00
+    style PromTSDB fill:#e8f5e9,stroke:#388e3c
+    style Thanos fill:#e8f5e9,stroke:#388e3c
+    style Jaeger fill:#f3e5f5,stroke:#7b1fa2
+    style Tempo fill:#f3e5f5,stroke:#7b1fa2
+```
+
+**Correlation Strategies:**
+
+| Correlation Type | Implementation | Query Example | Use Case |
+|------------------|----------------|---------------|----------|
+| **Trace → Logs** | Include `trace_id` in log fields | `{app="mcp-server"} \| json \| trace_id="abc123"` | Debug specific request |
+| **Logs → Trace** | Extract `trace_id` from logs, link to Jaeger | Grafana `trace_id` variable → Jaeger link | Root cause analysis |
+| **Metrics → Trace** | Exemplars in Prometheus | Click high-latency point → see trace | Performance debugging |
+| **Alerts → Context** | Include dashboard links in alerts | Alert annotation with Grafana URL | Faster incident response |
+
+**Alerting Best Practices:**
+
+- **Routing**: Critical → PagerDuty (5min SLA), Warning → Slack (30min SLA)
+- **Grouping**: Group by `cluster`, `namespace`, `alertname` (5min window)
+- **Throttling**: Max 1 page per alert per hour, daily digest for info-level
+- **Context**: Include runbook links, dashboard URLs, recent related alerts
 - Kibana for advanced log analysis
 - Jaeger UI for trace exploration
 

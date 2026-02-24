@@ -581,7 +581,18 @@ flowchart TB
     HPA -.->|scales| Deploy
     CM -.->|config| Deploy
     SEC -.->|secrets| Deploy
+    
+    style Registry fill:#e3f2fd,stroke:#1976d2
+    style K8s fill:#e8f5e9,stroke:#388e3c
+    style External fill:#fff3e0,stroke:#f57c00
 ```
+
+**Topology Legend:**
+
+- **Solid lines (→)**: Runtime dependencies (network calls, data flow)
+- **Dashed lines (-.→)**: Configuration/control relationships (mounts, scaling)
+- **Cylinders**: Data stores (databases, key-value stores)
+- **Rectangles**: Compute resources (pods, services)
 
 #### 4.3.2 Container Specification
 
@@ -633,7 +644,22 @@ flowchart LR
     IMG -->|push| DHB[Docker Hub]
     IMG -->|register| MARKET[MCP Marketplace]
     MARKET -->|metadata| SRVJSON[server.json]
+    
+    style CI fill:#e3f2fd,stroke:#1976d2
+    style IMG fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style GHCR fill:#fff3e0,stroke:#f57c00
+    style DHB fill:#fff3e0,stroke:#f57c00
+    style MARKET fill:#f3e5f5,stroke:#7b1fa2
 ```
+
+**Artifact Types:**
+
+- **Container Image**: Built and scanned container (base artifact)
+- **Signature**: Cryptographic signature (Cosign/DCT) for verification
+- **SBOM**: Software Bill of Materials (CycloneDX/SPDX format)
+- **Provenance**: Build attestation (SLSA provenance)
+- **Registry**: Public/private container registries (ghcr.io, Docker Hub)
+- **Marketplace**: MCP server registry with server.json metadata
 
 **Publish within 10 minutes of release** (NFR-CNTR-030).
 
@@ -684,7 +710,21 @@ flowchart TB
     SRV --> DB
     SRV --> VAULT
     CLIENT -.->|OAuth 2.1 + PKCE| IDP
+    
+    style External fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style DMZ fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Trusted fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Internal fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style AuthZ fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
 ```
+
+**Trust Zone Definitions:**
+
+- **Untrusted Zone (Red)**: Public internet, no security assumptions
+- **DMZ (Orange)**: Perimeter defense, TLS termination, limited trust
+- **Trusted Zone (Green)**: Authenticated services, application logic
+- **Internal Services (Blue)**: Data stores, highest security, no external access
+- **Auth Provider (Purple)**: Identity and access management, federated trust
 
 #### 4.4.2 OAuth 2.1 Authorization Flow
 

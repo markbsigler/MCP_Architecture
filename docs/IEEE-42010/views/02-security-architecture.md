@@ -26,44 +26,236 @@ For guidance on transitioning existing REST authentication flows or rotating ide
 
 ## Defense in Depth
 
-Enterprise MCP servers implement multiple layers of security controls:
+Enterprise MCP servers implement multiple layers of security controls with network segmentation and trust zones:
 
 ```mermaid
 flowchart TB
-    subgraph Layer1["Network Security"]
-        N1[TLS/mTLS]
-        N2[Network Policies]
-        N3[Firewall Rules]
+    subgraph Internet["🌐 Internet (Untrusted Zone)"]
+        Client[Client Applications<br/>Web/Mobile/CLI]
     end
     
-    subgraph Layer2["Authentication"]
-        A1[JWT Verification]
-        A2[OAuth 2.0]
-        A3[API Keys]
+    subgraph DMZ["🔒 DMZ (Perimeter Zone)"]
+        direction TB
+        WAF[Web Application Firewall<br/>ModSecurity/Cloudflare<br/>OWASP Top 10 protection]
+        LB[Load Balancer<br/>TLS termination<br/>DDoS mitigation]
+        
+        WAF --> LB
     end
     
-    subgraph Layer3["Authorization"]
-        Z1[RBAC]
-        Z2[Capability ACL]
-        Z3[Resource Policies]
+    subgraph AppZone["🏢 Application Zone (Restricted)"]
+        direction TB
+        
+        subgraph AuthLayer["Authentication Layer"]
+            direction LR
+            JWT[JWT Verifier<br/>JWKS validation]
+            OAuth[OAuth 2.0 Provider<br/>Token exchange]
+            APIKey[API Key Manager<br/>SHA-256 hash check]
+        end
+        
+        subgraph MCPServers["MCP Server Cluster"]
+            direction LR
+            MCP1[MCP Server 1<br/>Pod: mcp-server-a]
+            MCP2[MCP Server 2<br/>Pod: mcp-server-b]
+            MCP3[MCP Server 3<br/>Pod: mcp-server-c]
+        end
+        
+        subgraph Authorization["Authorization Layer"]
+            RBAC[RBAC Engine<br/>Role → Permissions]
+            ACL[Capability ACL<br/>Per-tool policies]
+        end
+        
+        AuthLayer --> MCPServers
+        MCPServers --> Authorization
     end
     
-    subgraph Layer4["Application Security"]
-        S1[Input Validation]
-        S2[Rate Limiting]
-        S3[Security Headers]
+    subgraph DataZone["💾 Data Zone (Highly Restricted)"]
+        direction LR
+        DB[(PostgreSQL<br/>Encrypted at rest)]
+        Cache[(Redis<br/>TLS required)]
+        Secrets[Vault<br/>Secret management]
     end
     
-    subgraph Layer5["Audit & Monitoring"]
-        M1[Audit Logging]
-        M2[Anomaly Detection]
-        M3[Alert System]
+    subgraph MonitorZone["📊 Monitoring Zone (Isolated)"]
+        direction LR
+        Prometheus[Prometheus<br/>:9090]
+        Grafana[Grafana<br/>:3000]
+        Loki[Loki<br/>Log aggregation]
+    end
+    
+    %% Network Flow
+    Client -->|HTTPS :443<br/>TLS 1.3| WAF
+    WAF -->|Allow: Valid requests<br/>Block: Attack patterns| LB
+    LB -->|HTTP :8080<br/>mTLS optional| AuthLayer
+    
+    %% Firewall Rules
+    FW1{{Firewall 1<br/>Internet → DMZ}}
+    FW2{{Firewall 2<br/>DMZ → App Zone}}
+    FW3{{Firewall 3<br/>App → Data Zone}}
+    
+    Internet -.->|Port 443 only| FW1
+    FW1 -.-> DMZ
+    DMZ -.->|Authenticated only| FW2
+    FW2 -.-> AppZone
+    AppZone -.->|DB: 5432, Redis: 6379<br/>Vault: 8200| FW3
+    FW3 -.-> DataZone
+    
+    %% Network Policies (K8s)
+    MCPServers -->|NetworkPolicy:<br/>Allow egress to DB| DB
+    MCPServers -->|NetworkPolicy:<br/>Allow egress to Cache| Cache
+    MCPServers -->|NetworkPolicy:<br/>Deny all other egress| X[❌]
+    
+    %% Monitoring Access
+    MCPServers -.->|Metrics :9090<br/>Read-only| Prometheus
+    Prometheus -.->|Scrape| Grafana
+    MCPServers -.->|Logs stdout<br/>Structured JSON| Loki
+    
+    %% Legend
+    subgraph Legend["🔑 Security Controls Legend"]
+        L1[Trust Zone Boundary]
+        L2{{Firewall / Network Policy}}
+        L3[TLS/mTLS Encryption]
+        L4[Authentication Required]
+    end
+    
+    style Internet fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style DMZ fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style AppZone fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style DataZone fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style MonitorZone fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style FW1 fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+    style FW2 fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+    style FW3 fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+    style WAF fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style Legend fill:#fafafa,stroke:#999,stroke-width:1px
+```
+
+### Security Zones & Trust Boundaries
+
+| Zone | Trust Level | Access | Firewall Rules | Network Policy |
+|------|-------------|--------|----------------|----------------|
+| **Internet** | Untrusted | Public | Allow :443 HTTPS only | N/A (external) |
+| **DMZ** | Low | WAF + LB | Allow :443 in, :8080 out to App Zone | Deny all except App Zone |
+| **Application Zone** | Medium | Authenticated users | Allow from DMZ, to Data Zone only | Deny all except DB/Cache/Vault |
+| **Data Zone** | High | Application services | Allow :5432 (PG), :6379 (Redis), :8200 (Vault) | Deny all inbound except App Zone |
+| **Monitoring Zone** | Isolated | Read-only metrics | Allow :9090, :3000 from App Zone | Deny all write access |
+
+**Firewall Rules (iptables/nftables):**
+
+```bash
+# Firewall 1: Internet → DMZ
+iptables -A FORWARD -i eth0 -o dmz0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i dmz0 -o eth0 -m state --state ESTABLISHED -j ACCEPT
+iptables -P FORWARD DROP
+
+# Firewall 2: DMZ → Application Zone
+iptables -A FORWARD -i dmz0 -o app0 -p tcp --dport 8080 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -s 10.1.0.0/24 -d 10.2.0.0/24 -j ACCEPT  # DMZ → App subnet
+iptables -P FORWARD DROP
+
+# Firewall 3: Application → Data Zone
+iptables -A FORWARD -i app0 -o data0 -p tcp -m multiport --dports 5432,6379,8200 -j ACCEPT
+iptables -A FORWARD -s 10.2.0.0/24 -d 10.3.0.0/24 -j DROP  # Deny all other traffic
+```
+
+**Kubernetes NetworkPolicies:**
+
+```yaml
+# Restrict MCP Server egress to only database and cache
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-server-egress
+  namespace: mcp-production
+spec:
+  podSelector:
+    matchLabels:
+      app: mcp-server
+  policyTypes:
+    - Egress
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow Vault
+    - to:
+        - podSelector:
+            matchLabels:
+              app: vault
+      ports:
+        - protocol: TCP
+          port: 8200
+```
+
+### Defense in Depth Layers
+
+```mermaid
+flowchart TB
+    subgraph Layer1["🌐 Layer 1: Network Security"]
+        N1[TLS 1.3 Encryption<br/>ECDHE cipher suites]
+        N2[Network Policies<br/>K8s NetworkPolicy]
+        N3[Firewall Rules<br/>iptables/nftables]
+        N4[WAF Protection<br/>OWASP Top 10]
+    end
+    
+    subgraph Layer2["🔐 Layer 2: Authentication"]
+        A1[JWT Verification<br/>RS256 + JWKS]
+        A2[OAuth 2.0 + PKCE<br/>Authorization Code Flow]
+        A3[API Keys<br/>SHA-256 hashed]
+        A4[mTLS<br/>Service-to-service]
+    end
+    
+    subgraph Layer3["🛡️ Layer 3: Authorization"]
+        Z1[RBAC<br/>Role → Permissions]
+        Z2[Capability ACL<br/>Per-tool policies]
+        Z3[Resource Policies<br/>Ownership checks]
+        Z4[Rate Limiting<br/>Token bucket per user]
+    end
+    
+    subgraph Layer4["⚙️ Layer 4: Application Security"]
+        S1[Input Validation<br/>Pydantic schemas]
+        S2[Output Encoding<br/>XSS prevention]
+        S3[Security Headers<br/>CSP, HSTS, X-Frame-Options]
+        S4[CSRF Protection<br/>Token validation]
+    end
+    
+    subgraph Layer5["📊 Layer 5: Audit & Monitoring"]
+        M1[Audit Logging<br/>Structured JSON + trace_id]
+        M2[Anomaly Detection<br/>Failed auth spikes]
+        M3[Alert System<br/>PagerDuty on critical]
+        M4[Security Metrics<br/>Prometheus + Grafana]
     end
     
     Layer1 --> Layer2
     Layer2 --> Layer3
     Layer3 --> Layer4
     Layer4 --> Layer5
+    
+    style Layer1 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style Layer2 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Layer3 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Layer4 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Layer5 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
 ```
 
 ## Threat Modeling
@@ -374,21 +566,37 @@ sequenceDiagram
     participant AS as Authorization Server
     participant JWKS as JWKS Endpoint
 
+    Note over C,MCP: Initial Request (unauthenticated)
     C->>MCP: 1. Request (no token)
+    Note right of MCP: <5ms<br/>Fast reject
     MCP-->>C: 401 + WWW-Authenticate (resource_metadata)
+    
+    Note over C,MCP: Discovery Phase
     C->>MCP: 2. GET /.well-known/oauth-protected-resource
+    Note right of MCP: <10ms<br/>Cached metadata
     MCP-->>C: Protected Resource Metadata (RFC 9728)
     C->>AS: 3. GET /.well-known/openid-configuration
+    Note right of AS: 20-50ms<br/>Network + lookup
     AS-->>C: OIDC Discovery metadata
+    
+    Note over C,AS: Authorization Code Flow + PKCE
     C->>AS: 4. Authorization Code + PKCE (code_challenge)
+    Note right of AS: 200-500ms<br/>User consent UI<br/>PKCE validation
     AS-->>C: Authorization code
     C->>AS: 5. Token Exchange (code + code_verifier)
+    Note right of AS: 100-300ms<br/>Code verification<br/>Token generation
     AS-->>C: Access token (JWT) + refresh token
+    
+    Note over C,MCP: Authenticated Request
     C->>MCP: 6. Request + Bearer token
     MCP->>JWKS: 7. Fetch public keys (cached)
+    Note right of JWKS: 50-150ms (miss)<br/>5-10ms (hit)
     JWKS-->>MCP: JWKS
     MCP->>MCP: 8. Validate: signature, iss, aud, exp, scopes
+    Note right of MCP: 10-20ms<br/>Crypto validation
     MCP-->>C: 200 OK + response
+    
+    Note over C,MCP: Total Latency:<br/>P50: ~400ms | P95: ~800ms | P99: ~1200ms
 ```
 
 **Protected Resource Metadata Example:**
@@ -465,19 +673,32 @@ sequenceDiagram
     
     Client->>MCP Server: Request with JWT Bearer Token
     MCP Server->>Cache: Check JWKS Cache
-    alt Cache Miss
+    Note right of Cache: 1-5ms<br/>In-memory lookup
+    
+    alt Cache Miss (cold start or expired)
         MCP Server->>JWKS Endpoint: Fetch Public Keys
+        Note right of JWKS Endpoint: 50-150ms<br/>Network + HTTPS handshake
         JWKS Endpoint-->>MCP Server: Return Keys
         MCP Server->>Cache: Store Keys (TTL: 1h)
+        Note right of Cache: 2-3ms<br/>Cache write
     end
+    
+    Note over MCP Server: Token Validation
     MCP Server->>MCP Server: Validate Token Signature
+    Note right of MCP Server: 8-15ms<br/>RS256 signature verify
     MCP Server->>MCP Server: Verify Issuer & Audience
+    Note right of MCP Server: <1ms<br/>String comparison
     MCP Server->>MCP Server: Check Expiration
+    Note right of MCP Server: <1ms<br/>Timestamp check
+    
     alt Valid Token
         MCP Server->>MCP Server: Extract Claims (user_id, roles)
+        Note right of MCP Server: <1ms<br/>JSON parse
         MCP Server-->>Client: Process Request
-    else Invalid Token
+        Note over Client,MCP Server: Total Latency:<br/>Cache Hit: 10-25ms | Cache Miss: 60-175ms
+    else Invalid Token (signature, expiry, claims)
         MCP Server-->>Client: 401 Unauthorized
+        Note right of MCP Server: <5ms<br/>Fast reject
     end
 ```
 

@@ -135,22 +135,51 @@ sequenceDiagram
     participant S2 as Jira Server (down)
     participant S3 as Slack Server
 
+    Note over C: Per-server timeout: 5s<br/>Circuit breaker: 3 failures
+    
     C->>S1: get_latest_release()
+    Note right of S1: 150ms<br/>API call + parse
     S1-->>C: Release v2.1.0
+    
     C->>S2: get_issue("PROJ-42")
-    S2--xC: Connection timeout
-    Note over C: Jira unavailable — continue with partial data
+    Note right of S2: 5000ms timeout<br/>No response
+    S2--xC: Connection timeout (5s elapsed)
+    Note over C: Circuit breaker opens<br/>Jira unavailable — continue with partial data<br/>Retry after 30s cooldown
+    
     C->>S3: send_message(partial_update)
+    Note right of S3: 200ms<br/>Webhook delivery
     S3-->>C: Message sent
+    
     C-->>C: Report: deployed, Jira update pending
+    Note over C: Total time: 5.5s<br/>(GitHub: 150ms + Jira timeout: 5s + Slack: 200ms)
 ```
 
 **Client-side resilience tips:**
 
-- Set per-server timeouts independently
-- Degrade gracefully when a server is unavailable
-- Retry transient failures with backoff (per-server circuit breaker)
-- Report partial results rather than failing entirely
+- **Per-server timeouts**: Set independent timeouts (recommended: 5s for API calls, 30s for long operations)
+- **Circuit breaker**: Open after 3 consecutive failures, half-open after 30s cooldown, closed after 2 successes
+- **Exponential backoff**: Start at 100ms, double on each retry, max 5 attempts, cap at 10s
+- **Graceful degradation**: Return partial results when a server is unavailable
+- **Retry transient failures**: Retry on network errors and 503 Service Unavailable, don't retry 4xx client errors
+- **Report partial results**: Show available data rather than failing entirely
+
+**Timeout Configuration:**
+
+```python
+# Recommended per-server timeout values
+SERVER_TIMEOUTS = {
+    "connect_timeout": 2.0,      # TCP connection establishment
+    "read_timeout": 5.0,         # Response read timeout
+    "total_timeout": 10.0,       # Total request timeout (connect + read + processing)
+}
+
+# Circuit breaker configuration
+CIRCUIT_BREAKER = {
+    "failure_threshold": 3,      # Open after 3 failures
+    "recovery_timeout": 30.0,    # Half-open after 30s
+    "success_threshold": 2,      # Close after 2 successes
+}
+```
 
 ## Design Guidelines
 
