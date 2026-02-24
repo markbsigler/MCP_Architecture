@@ -21,6 +21,12 @@ docs/00-table-of-contents.md
 docs/IEEE-42010/ref/00-table-of-contents.md
 mcp-architecture.md
 
+# PDF generation artifacts
+pdfs/
+*.mmd
+ad_diagram_*.png
+srs_diagram_*.png
+
 # Python cache
 __pycache__/
 *.pyc

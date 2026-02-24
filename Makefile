@@ -11,6 +11,17 @@ SHELL := /bin/bash
 # Required tools
 PYTHON := python3
 NPX := npx
+PANDOC := pandoc
+MMDC := mmdc
+
+# PDF output configuration
+PDF_DIR := pdfs
+SRS_PDF := $(PDF_DIR)/IEEE-29148-SRS.pdf
+AD_PDF := $(PDF_DIR)/IEEE-42010-AD.pdf
+
+# IEEE Standards source files
+SRS_MD := docs/IEEE-29148/SRS.md
+AD_MD := docs/IEEE-42010/AD.md
 
 # Detect if running in CI environment (disable colors)
 ifeq ($(CI),true)
@@ -76,9 +87,10 @@ TOC_FILE := docs/IEEE-42010/ref/00-table-of-contents.md
 
 .PHONY: all help build clean rebuild \
         toc md \
-        check-deps install-deps \
+        check-deps install-deps check-pdf-deps install-pdf-deps \
         lint fix format validate test \
-        pre-commit watch
+        pre-commit watch \
+        pdf pdf-srs pdf-ad clean-pdf
 
 #==============================================================================
 # Default & Help
@@ -104,6 +116,14 @@ help:
 	echo "  make format        # Alias for fix"
 	echo "  make test          # Run all tests and validations"
 	echo "  make pre-commit    # Simulate pre-commit hooks"
+	echo ""
+	echo "$(GREEN)PDF Generation:$(NC)"
+	echo "  make pdf           # Generate both IEEE standards PDFs (SRS + AD)"
+	echo "  make pdf-srs       # Generate IEEE 29148 SRS PDF"
+	echo "  make pdf-ad        # Generate IEEE 42010 AD PDF"
+	echo "  make clean-pdf     # Remove generated PDF files"
+	echo "  make check-pdf-deps    # Check PDF generation dependencies"
+	echo "  make install-pdf-deps  # Install PDF generation tools"
 	echo ""
 	echo "$(GREEN)Dependency Targets:$(NC)"
 	echo "  make check-deps    # Check for required tools"
@@ -185,6 +205,64 @@ install-deps:
 		echo "$(YELLOW)To install markdownlint, first install Node.js from https://nodejs.org/$(NC)"; \
 	fi
 	echo "$(GREEN)[install-deps] Dependency installation complete!$(NC)"
+
+# Check for PDF generation dependencies
+check-pdf-deps:
+	echo "$(BLUE)[check-pdf-deps] Checking PDF generation tools...$(NC)"
+	missing=0; \
+	if ! command -v $(PANDOC) >/dev/null 2>&1; then \
+		echo "$(RED)✗ pandoc not found$(NC)"; \
+		missing=1; \
+	else \
+		echo "$(GREEN)✓ pandoc found: $$($(PANDOC) --version | head -1)$(NC)"; \
+	fi; \
+	if ! command -v $(MMDC) >/dev/null 2>&1; then \
+		echo "$(RED)✗ mermaid-cli (mmdc) not found$(NC)"; \
+		missing=1; \
+	else \
+		echo "$(GREEN)✓ mermaid-cli found: $$($(MMDC) --version)$(NC)"; \
+	fi; \
+	if ! command -v pdflatex >/dev/null 2>&1; then \
+		echo "$(YELLOW)⚠ pdflatex not found (optional, improves PDF quality)$(NC)"; \
+	else \
+		echo "$(GREEN)✓ pdflatex found: $$(pdflatex --version | head -1)$(NC)"; \
+	fi; \
+	if [ $$missing -eq 1 ]; then \
+		echo "$(RED)[check-pdf-deps] Missing required PDF dependencies!$(NC)"; \
+		echo "$(YELLOW)Run 'make install-pdf-deps' to install missing tools$(NC)"; \
+		exit 1; \
+	else \
+		echo "$(GREEN)[check-pdf-deps] All required PDF dependencies found!$(NC)"; \
+	fi
+
+# Install PDF generation dependencies
+install-pdf-deps:
+	echo "$(BLUE)[install-pdf-deps] Installing PDF generation tools...$(NC)"
+	if command -v brew >/dev/null 2>&1; then \
+		echo "$(BLUE)[install-pdf-deps] Detected Homebrew (macOS)$(NC)"; \
+		echo "$(BLUE)Installing pandoc...$(NC)"; \
+		brew install pandoc || echo "$(YELLOW)Warning: Failed to install pandoc$(NC)"; \
+		echo "$(BLUE)Installing mermaid-cli...$(NC)"; \
+		npm install -g @mermaid-js/mermaid-cli || echo "$(YELLOW)Warning: Failed to install mermaid-cli$(NC)"; \
+		echo "$(BLUE)Installing BasicTeX (optional, for better PDF quality)...$(NC)"; \
+		brew install --cask basictex || echo "$(YELLOW)Info: BasicTeX installation skipped$(NC)"; \
+	elif command -v apt-get >/dev/null 2>&1; then \
+		echo "$(BLUE)[install-pdf-deps] Detected apt (Debian/Ubuntu)$(NC)"; \
+		echo "$(BLUE)Installing pandoc...$(NC)"; \
+		sudo apt-get install -y pandoc || echo "$(YELLOW)Warning: Failed to install pandoc$(NC)"; \
+		echo "$(BLUE)Installing mermaid-cli...$(NC)"; \
+		npm install -g @mermaid-js/mermaid-cli || echo "$(YELLOW)Warning: Failed to install mermaid-cli$(NC)"; \
+		echo "$(BLUE)Installing texlive (optional, for better PDF quality)...$(NC)"; \
+		sudo apt-get install -y texlive-latex-base texlive-latex-extra || echo "$(YELLOW)Info: texlive installation skipped$(NC)"; \
+	else \
+		echo "$(RED)[install-pdf-deps] Unsupported package manager$(NC)"; \
+		echo "$(YELLOW)Please install manually:$(NC)"; \
+		echo "$(YELLOW)  - Pandoc: https://pandoc.org/installing.html$(NC)"; \
+		echo "$(YELLOW)  - Mermaid CLI: npm install -g @mermaid-js/mermaid-cli$(NC)"; \
+		echo "$(YELLOW)  - LaTeX (optional): https://www.latex-project.org/get/$(NC)"; \
+		exit 1; \
+	fi
+	echo "$(GREEN)[install-pdf-deps] PDF dependency installation complete!$(NC)"
 
 #==============================================================================
 # Quality & Validation
@@ -362,3 +440,82 @@ watch:
 		echo "$(YELLOW)Linux: apt-get install inotify-tools$(NC)"; \
 		exit 1; \
 	fi
+
+#==============================================================================
+# PDF Generation
+#==============================================================================
+
+# Generate both IEEE standards PDFs
+pdf: pdf-srs pdf-ad
+	echo "$(GREEN)[pdf] All IEEE standards PDFs generated!$(NC)"
+
+# Generate IEEE 29148 SRS PDF with rendered Mermaid diagrams
+pdf-srs: check-pdf-deps $(SRS_MD)
+	echo "$(BLUE)[pdf-srs] Generating IEEE 29148 SRS PDF...$(NC)"
+	mkdir -p $(PDF_DIR)
+	if [ ! -f $(SRS_MD) ]; then \
+		echo "$(RED)Error: $(SRS_MD) not found$(NC)"; \
+		exit 1; \
+	fi
+	echo "$(BLUE)[pdf-srs] Converting Mermaid diagrams to images...$(NC)"
+	$(PYTHON) scripts/convert_mermaid_for_pdf.py $(SRS_MD) $(PDF_DIR)/srs_temp.md $(PDF_DIR) srs
+	echo "$(BLUE)[pdf-srs] Generating PDF with Pandoc...$(NC)"
+	$(PANDOC) $(PDF_DIR)/srs_temp.md \
+		-o $(SRS_PDF) \
+		--pdf-engine=xelatex \
+		--toc \
+		--toc-depth=3 \
+		--number-sections \
+		-V geometry:margin=1in \
+		-V documentclass=report \
+		-V papersize=letter \
+		-V fontsize=11pt \
+		--metadata title="IEEE 29148:2018 Software Requirements Specification" \
+		--metadata subtitle="Model Context Protocol (MCP) Server" \
+		--metadata author="Mark Sigler" \
+		--metadata date="$$(date '+%B %d, %Y')" \
+		2>&1 | grep -v "Missing character" || echo "$(YELLOW)Note: PDF generated with warnings$(NC)"
+	echo "$(BLUE)[pdf-srs] Cleaning up temporary files...$(NC)"
+	rm -f $(PDF_DIR)/srs_temp.md $(PDF_DIR)/srs_diagram_*.mmd
+	echo "$(GREEN)[pdf-srs] Generated $(SRS_PDF) ($$(wc -c < $(SRS_PDF) | tr -d ' ') bytes) ✓$(NC)"
+
+# Generate IEEE 42010 AD PDF with rendered Mermaid diagrams
+pdf-ad: check-pdf-deps $(AD_MD)
+	echo "$(BLUE)[pdf-ad] Generating IEEE 42010 AD PDF...$(NC)"
+	mkdir -p $(PDF_DIR)
+	if [ ! -f $(AD_MD) ]; then \
+		echo "$(RED)Error: $(AD_MD) not found$(NC)"; \
+		exit 1; \
+	fi
+	echo "$(BLUE)[pdf-ad] Converting Mermaid diagrams to images...$(NC)"
+	$(PYTHON) scripts/convert_mermaid_for_pdf.py $(AD_MD) $(PDF_DIR)/ad_temp.md $(PDF_DIR) ad
+	echo "$(BLUE)[pdf-ad] Generating PDF with Pandoc...$(NC)"
+	$(PANDOC) $(PDF_DIR)/ad_temp.md \
+		-o $(AD_PDF) \
+		--pdf-engine=xelatex \
+		--toc \
+		--toc-depth=3 \
+		--number-sections \
+		-V geometry:margin=1in \
+		-V documentclass=report \
+		-V papersize=letter \
+		-V fontsize=11pt \
+		--metadata title="IEEE 42010:2022 Architecture Description" \
+		--metadata subtitle="Model Context Protocol (MCP) Server" \
+		--metadata author="Mark Sigler" \
+		--metadata date="$$(date '+%B %d, %Y')" \
+		2>&1 | grep -v "Missing character" || echo "$(YELLOW)Note: PDF generated with warnings$(NC)"
+	echo "$(BLUE)[pdf-ad] Cleaning up temporary files...$(NC)"
+	rm -f $(PDF_DIR)/ad_temp.md $(PDF_DIR)/ad_diagram_*.mmd
+	echo "$(GREEN)[pdf-ad] Generated $(AD_PDF) ($$(wc -c < $(AD_PDF) | tr -d ' ') bytes) ✓$(NC)"
+
+# Clean up generated PDF files
+clean-pdf:
+	echo "$(BLUE)[clean-pdf] Removing generated PDF files...$(NC)"
+	if [ -d $(PDF_DIR) ]; then \
+		rm -rf $(PDF_DIR); \
+		echo "$(GREEN)[clean-pdf] Removed $(PDF_DIR)/ directory ✓$(NC)"; \
+	else \
+		echo "$(YELLOW)[clean-pdf] $(PDF_DIR)/ does not exist$(NC)"; \
+	fi
+	echo "$(GREEN)[clean-pdf] PDF cleanup complete!$(NC)"
