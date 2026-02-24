@@ -3,11 +3,30 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Task Patterns  
 **Related**: [← Previous: Elicitation Patterns](03f-elicitation-patterns.md) | [Next: Multi-Server Orchestration →](03h-multi-server-orchestration.md) | [Tool Implementation](03-tool-implementation.md)
 
-**Version:** 2.0.0  
-**Last Updated:** July 19, 2025  
-**Status:** Production Ready
+**Version:** 3.0.0  
+**Last Updated:** February 24, 2026  
+**Status:** Production Ready  
+**Framework:** FastMCP v3.x (ADR-002)
 
-> **SRS References:** FR-TASK-001 through FR-TASK-003
+> **SRS References:** FR-TASK-001 through FR-TASK-012  
+> **ADR References:** ADR-002 (FastMCP v3.x)
+
+## SRS Traceability
+
+| SRS Requirement | Description | Covered In |
+|----------------|-------------|------------|
+| FR-TASK-001 | Durable requests with unique task identifiers | [Task Lifecycle](#task-lifecycle), [Creating a Task](#creating-a-task) |
+| FR-TASK-002 | `tasks/get` for polling-based status retrieval | [Polling Task Status](#polling-task-status-tasksget) |
+| FR-TASK-003 | `tasks/result` for deferred result retrieval | [Retrieving Task Result](#retrieving-task-result-tasksresult) |
+| FR-TASK-004 | Lifecycle: `working` → `completed` / `failed` / `cancelled` / `input_required` | [Task States](#task-states) |
+| FR-TASK-005 | `task` field (`id` + `status`) in responses and notifications | [Task Fields Reference](#task-fields-reference) |
+| FR-TASK-006 | `notifications/tasks/progress` with status and progress percentage | [Basic Task-Enabled Tool](#basic-task-enabled-tool) |
+| FR-TASK-007 | `tasks/cancel` for in-progress task cancellation | [Cancelling a Task](#cancelling-a-task-taskscancel) |
+| FR-TASK-008 | `tasks/list` returning active tasks for the session | [Listing Tasks](#listing-tasks-taskslist) |
+| FR-TASK-009 | Configurable TTL on task results with resource cleanup | [Production Considerations](#production-considerations) |
+| FR-TASK-010 | `execution.taskSupport`: `required`, `optional`, `forbidden` | [Tool-Level Task Negotiation](#tool-level-task-negotiation) |
+| FR-TASK-011 | Session-bound task isolation and access control | [Security Considerations](#security-considerations) |
+| FR-TASK-012 | Audit logging of all task lifecycle transitions | [Security Considerations](#security-considerations), [Production Considerations](#production-considerations) |
 
 ## Introduction
 

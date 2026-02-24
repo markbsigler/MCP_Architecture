@@ -3,11 +3,13 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > AI Service Provider Gateway  
 **Related**: [← Previous: Multi-Server Orchestration](03h-multi-server-orchestration.md) | [Testing Strategy →](04-testing-strategy.md) | [Sampling Patterns](03c-sampling-patterns.md)
 
-**Version:** 1.0.0  
-**Last Updated:** February 23, 2026  
-**Status:** Production Ready
+**Version:** 2.0.0  
+**Last Updated:** February 24, 2026  
+**Status:** Production Ready  
+**Framework:** FastMCP v3.x (ADR-002)
 
-> **SRS References:** FR-GWWY-001 through FR-GWWY-012, NFR-SEC-058 through NFR-SEC-065, CP-03
+> **SRS References:** FR-GWWY-001 through FR-GWWY-012, NFR-SEC-058 through NFR-SEC-065, CP-03  
+> **ADR References:** ADR-002 (FastMCP v3.x)
 
 ## Introduction
 

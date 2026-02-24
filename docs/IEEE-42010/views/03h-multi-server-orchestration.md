@@ -3,15 +3,20 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Multi-Server Orchestration  
 **Related**: [← Previous: Task Patterns](03g-task-patterns.md) | [Next: AI Service Provider Gateway →](03i-ai-service-provider-gateway.md) | [Architecture Overview](01-architecture-overview.md)
 
-**Version:** 1.0.0  
-**Last Updated:** February 23, 2026  
-**Status:** Production Ready
+**Version:** 2.0.0  
+**Last Updated:** February 24, 2026  
+**Status:** Production Ready  
+**Framework:** FastMCP v3.x (ADR-002)
 
-> **SRS References:** FR-ORCH-001 through FR-ORCH-005
+> **SRS References:** FR-ORCH-001 through FR-ORCH-005  
+> **ADR References:** ADR-002 (FastMCP v3.x)  
+> **FastMCP Docs:** [Server Composition](https://gofastmcp.com/servers/composition)
 
 ## Introduction
 
 MCP is designed for composition: a single AI client (host) connects to **multiple MCP servers** simultaneously, each serving a distinct integration domain. Cross-domain workflows are achieved by the client orchestrating calls across servers — servers never communicate directly with each other.
+
+FastMCP v3 (ADR-002) adds **server-side composition** via `mount()`, `import_server()`, and `create_proxy()`, enabling a gateway server to aggregate multiple sub-servers under a unified namespace while preserving domain boundaries.
 
 This pattern enforces the **Separation of Concerns** core principle (CP-04): each server focuses on a single domain with cohesive capabilities.
 
@@ -189,6 +194,7 @@ CIRCUIT_BREAKER = {
 - **Declare clear boundaries**: Name, description, and capability set should make scope obvious
 - **Use standard URI schemes**: `github://`, `jira://`, `db://` for resources
 - **Design for independent operation**: Each server works alone or in composition
+- **Use namespaced mounting** for server-side aggregation to prevent tool/resource collisions
 
 ### DON'T
 
@@ -196,6 +202,147 @@ CIRCUIT_BREAKER = {
 - **Don't create "god" servers**: A server doing GitHub + Jira + Slack violates CP-04
 - **Don't assume composition order**: Clients may call servers in any order
 - **Don't share authentication tokens**: Each server manages its own credentials
+- **Don't mount without namespaces** in production — name collisions cause silent overwrites
+
+## FastMCP v3 Server Composition
+
+> **ADR Reference:** ADR-002 (FastMCP v3.x) — [Composition docs](https://gofastmcp.com/servers/composition)
+
+FastMCP v3 supports composing multiple servers into a single gateway server. This provides unified tool/resource namespacing while preserving domain isolation per FR-ORCH-001/005.
+
+### Composition Methods
+
+| Method | Lifecycle | Use Case |
+|--------|----------|----------|
+| `mount()` | Live link — sub-server changes reflected immediately | In-process sub-servers (dev/test) |
+| `import_server()` | Static copy — snapshot at call time | Pinned production configs |
+| `create_proxy()` | Remote/subprocess proxy | External or out-of-process servers |
+
+### In-Process Mounting
+
+```python
+from fastmcp import FastMCP
+
+# Domain servers
+github_server = FastMCP("github-mcp-server")
+jira_server = FastMCP("jira-mcp-server")
+slack_server = FastMCP("slack-mcp-server")
+
+@github_server.tool
+async def get_latest_release(repo: str) -> str:
+    """Get the latest release from a GitHub repository."""
+    ...
+
+@jira_server.tool
+async def get_issue(key: str) -> str:
+    """Get a Jira issue by key."""
+    ...
+
+# Gateway server aggregates domains under namespaces
+gateway = FastMCP("enterprise-gateway")
+gateway.mount(github_server, namespace="github")
+gateway.mount(jira_server, namespace="jira")
+gateway.mount(slack_server, namespace="slack")
+
+# Clients see:
+#   github_get_latest_release, jira_get_issue, slack_send_message
+#   Resources: github://github/*, jira://jira/*, etc.
+```
+
+**Namespacing transforms:**
+
+- Tools: `get_issue` → `jira_get_issue`
+- Resources: `jira://issues/PROJ-42` → `jira://jira/issues/PROJ-42`
+- Prompts: `create_bug_report` → `jira_create_bug_report`
+
+### Remote Server Proxy
+
+Use `create_proxy()` for servers running as separate processes or on remote hosts:
+
+```python
+from fastmcp import FastMCP, Client
+
+gateway = FastMCP("enterprise-gateway")
+
+# Remote HTTP server (Streamable HTTP transport)
+remote_github = Client("http://github-mcp.internal:8080/mcp")
+gateway.mount(remote_github, namespace="github")
+
+# Subprocess server (stdio transport)
+local_db = Client("./db-mcp-server.py")
+gateway.mount(local_db, namespace="db")
+
+# NPM package server
+from fastmcp.client.transports import NpxStdioTransport
+npm_server = Client(transport=NpxStdioTransport("@company/mcp-analytics"))
+gateway.mount(npm_server, namespace="analytics")
+```
+
+### Static Import
+
+Use `import_server()` when you need a point-in-time snapshot that won't change:
+
+```python
+gateway = FastMCP("enterprise-gateway")
+
+# Static copy — changes to jira_server after this call are NOT reflected
+gateway.import_server(jira_server, namespace="jira")
+```
+
+### Tag-Based Filtering
+
+Expose subsets of a server's capabilities using tag filtering:
+
+```python
+# Expose only read-only tools from the GitHub server
+gateway.mount(
+    github_server,
+    namespace="github",
+    include_tags={"read-only"},    # Only tools/resources tagged "read-only"
+)
+
+# Or exclude admin tools
+gateway.mount(
+    jira_server,
+    namespace="jira",
+    exclude_tags={"admin"},
+)
+```
+
+Tag filtering is applied recursively to tools, resources, and prompts, enabling multi-tenant or role-based capability exposure.
+
+### Direct vs Proxy Mounting
+
+| Mode | Description | Trade-offs |
+|------|------------|------------|
+| **Direct** (default) | Sub-server runs in same process | Low latency, shared memory; single-process failure domain |
+| **Proxy** | Sub-server runs in separate process/host | Process isolation; network overhead; independent scaling |
+
+For production deployments, prefer **proxy mounting** for externally maintained servers and **direct mounting** for tightly coupled internal modules.
+
+### Composition Architecture
+
+```mermaid
+flowchart TB
+    subgraph Gateway["FastMCP Gateway Server"]
+        GW[enterprise-gateway]
+    end
+    
+    subgraph Direct["Direct Mount (in-process)"]
+        D1[github-mcp-server<br/>namespace: github]
+        D2[jira-mcp-server<br/>namespace: jira]
+    end
+    
+    subgraph Proxy["Proxy Mount (remote)"]
+        P1[analytics-mcp-server<br/>HTTP: analytics.internal:8080]
+        P2[db-mcp-server<br/>stdio: ./db-server.py]
+    end
+    
+    GW -->|mount\nnamespace=github| D1
+    GW -->|mount\nnamespace=jira| D2
+    GW -->|create_proxy\nnamespace=analytics| P1
+    GW -->|create_proxy\nnamespace=db| P2
+```
 
 ## Testing Multi-Server Compositions
 
