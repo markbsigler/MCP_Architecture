@@ -3,26 +3,110 @@
 **Navigation**: [Home](../README.md) > Implementation Standards > Security Architecture  
 **Related**: [← Previous: Architecture Decisions](01b-architecture-decisions.md) | [Next: Data Privacy & Compliance →](02a-data-privacy-compliance.md) | [Testing Security](04-testing-strategy.md#security-testing)
 
-**Version:** 2.0.0  
-**Last Updated:** July 19, 2025  
-**Status:** Production Ready
+**Version:** 3.0.0  
+**Last Updated:** February 24, 2026  
+**Status:** Production Ready  
+**Framework:** FastMCP v3.x (ADR-002)
 
 ## Quick Links
 
+- [Zero Trust Principles](#zero-trust-principles)
 - [Authentication Patterns](#authentication-patterns)
+- [FastMCP v3 Security Middleware](#fastmcp-v3-security-middleware)
 - [JWT Token Validation](#jwt-token-validation)
-- [OAuth 2.0 Integration](#oauth-20-integration)
-- [Authorization Frameworks](#role-based-access-control-rbac)
+- [OAuth 2.1 Authorization](#oauth-21-authorization-http-transport)
+- [Authorization Frameworks](#authorization-framework)
 - [Rate Limiting](#rate-limiting)
-- [Input Validation](#input-validation-and-sanitization)
+- [Input Validation](#input-validation)
+- [Cryptographic Standards](#cryptographic-standards)
+- [Secret Management](#secret-management)
+- [Session Management](#session-management)
 - [Audit Logging](#audit-logging)
+- [Supply Chain Security](#supply-chain-security)
 - [Security Checklist](#security-checklist)
 
 ## Introduction
 
-Security is foundational to enterprise MCP servers. This document establishes comprehensive security patterns covering authentication, authorization, rate limiting, input validation, and audit logging.
+Security is foundational to enterprise MCP servers. This document establishes comprehensive security patterns aligned with **FastMCP v3.x** (ADR-002) covering zero trust architecture, authentication, authorization, middleware-based security pipelines, rate limiting, input validation, cryptographic standards, secret management, session management, audit logging, and supply chain security.
+
+> **SRS References:** NFR-SEC-001 through NFR-SEC-081, NFR-CNTR-001 through NFR-CNTR-029  
+> **Architecture Decision References:** ADR-002 (FastMCP v3.x), ADR-003 (JWT/JWKS), ADR-007 (Distroless base images)  
+> **Standards:** OWASP ASVS L2, NIST 800-53 Rev 5, CIS Benchmarks, SLSA Level 3
 
 For guidance on transitioning existing REST authentication flows or rotating identity providers during modernization efforts, see the **Migration Guides (12)**.
+
+## Zero Trust Principles
+
+> **SRS References:** NFR-SEC-001–081
+
+Enterprise MCP servers follow zero trust architecture principles per NIST SP 800-207. No network location, service identity, or prior authentication grants implicit trust.
+
+### Core Tenets
+
+| Principle | MCP Implementation | SRS Requirement |
+|-----------|-------------------|-----------------|
+| **Verify explicitly** | Every request authenticated and authorized via JWT/JWKS + RBAC; no session-only trust | NFR-SEC-001–021 |
+| **Least privilege** | Per-capability scopes (`mcp:tools`, `mcp:resources`, `mcp:prompts`); deny-by-default ACL | NFR-SEC-019 |
+| **Assume breach** | Defense-in-depth layers; immutable audit logs; anomaly detection; network segmentation | NFR-SEC-046–050, NFR-SEC-073–081 |
+| **Micro-segmentation** | K8s NetworkPolicy per pod; firewall between trust zones; mTLS for service-to-service | NFR-SEC-043 |
+| **Continuous validation** | Short-lived tokens (15 min); JWKS rotation (1 hr cache); real-time authorization checks | NFR-SEC-010–016 |
+| **Context-aware access** | IP geolocation, time-of-day, device posture evaluated in authorization decisions | NFR-SEC-017–021 |
+
+### Trust Decision Flow
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
+
+class TrustLevel(Enum):
+    """Zero trust decision levels."""
+    DENY = "deny"               # Explicit deny
+    LOW = "low_trust"           # Read-only, rate-limited
+    MEDIUM = "medium_trust"     # Standard operations
+    HIGH = "high_trust"         # Administrative operations
+    ELEVATED = "elevated_trust" # Break-glass emergency access
+
+@dataclass
+class TrustContext:
+    """Context for zero trust evaluation."""
+    user_id: str
+    role: str
+    ip_address: str
+    geo_location: Optional[str]
+    device_fingerprint: Optional[str]
+    token_age_seconds: int
+    failed_attempts_last_hour: int
+    is_service_account: bool
+
+async def evaluate_trust(ctx: TrustContext) -> TrustLevel:
+    """Evaluate trust level based on multiple signals.
+    
+    Implements continuous trust evaluation per NIST 800-207.
+    No single factor determines access; all signals are weighted.
+    """
+    # Deny: Too many failed attempts (brute force)
+    if ctx.failed_attempts_last_hour > 10:
+        return TrustLevel.DENY
+    
+    # Deny: Token too old for sensitive operations
+    if ctx.token_age_seconds > 900:  # 15 minutes
+        return TrustLevel.DENY
+    
+    # Low trust: Unknown location or device
+    if not ctx.geo_location or not ctx.device_fingerprint:
+        return TrustLevel.LOW
+    
+    # Medium trust: Standard authenticated user
+    if ctx.role in ("viewer", "developer"):
+        return TrustLevel.MEDIUM
+    
+    # High trust: Admin with valid context
+    if ctx.role == "admin" and ctx.failed_attempts_last_hour == 0:
+        return TrustLevel.HIGH
+    
+    return TrustLevel.LOW
+```
 
 ## Defense in Depth
 
@@ -770,24 +854,422 @@ auth_provider = WorkOSProvider(
 For service-to-service communication:
 
 ```python
-@mcp.tool()
-async def service_operation(api_key: str = Header(...)) -> dict:
-    """Tool accessible with API key."""
-    # Validate API key
-    if not await validate_api_key(api_key):
-        raise HTTPException(status_code=401, detail="Invalid API key")
+import hashlib
+import hmac
+import secrets
+from datetime import datetime, timedelta
+
+class SecureAPIKeyManager:
+    """Enterprise API key management with hashing, rotation, and audit.
     
-    # Process request
-    return {"status": "success"}
+    API keys are never stored in plaintext. Only the SHA-256 hash is persisted.
+    Keys support expiration, rotation, and revocation.
+    """
+    
+    KEY_PREFIX = "mcp_"
+    KEY_LENGTH = 32  # 256-bit entropy
+    
+    @staticmethod
+    def generate_key() -> tuple[str, str]:
+        """Generate a new API key and its hash.
+        
+        Returns:
+            (plaintext_key, key_hash) - plaintext shown once to user,
+            hash stored in database.
+        """
+        raw = secrets.token_hex(SecureAPIKeyManager.KEY_LENGTH)
+        plaintext = f"{SecureAPIKeyManager.KEY_PREFIX}{raw}"
+        key_hash = hashlib.sha256(plaintext.encode()).hexdigest()
+        return plaintext, key_hash
+    
+    @staticmethod
+    def verify_key(plaintext_key: str, stored_hash: str) -> bool:
+        """Verify API key against stored hash (constant-time comparison)."""
+        candidate_hash = hashlib.sha256(plaintext_key.encode()).hexdigest()
+        return hmac.compare_digest(candidate_hash, stored_hash)
+    
+    @staticmethod
+    async def rotate_key(db, key_id: str) -> tuple[str, str]:
+        """Rotate an API key. Old key remains valid for grace period.
+        
+        Returns:
+            (new_plaintext_key, new_key_hash)
+        """
+        new_plaintext, new_hash = SecureAPIKeyManager.generate_key()
+        
+        # Mark old key with grace period (24 hours)
+        await db.execute(
+            """UPDATE api_keys 
+               SET expires_at = $1, rotated_at = NOW()
+               WHERE id = $2""",
+            datetime.utcnow() + timedelta(hours=24),
+            key_id
+        )
+        
+        # Insert new key
+        await db.execute(
+            """INSERT INTO api_keys (id, key_hash, created_at, expires_at)
+               VALUES ($1, $2, NOW(), $3)""",
+            f"{key_id}_v2",
+            new_hash,
+            datetime.utcnow() + timedelta(days=90)  # 90-day rotation
+        )
+        
+        return new_plaintext, new_hash
 ```
 
 **API Key Best Practices:**
 
-- Use cryptographically secure random generation
-- Implement key rotation policies (90 days)
-- Store hashed keys (bcrypt, argon2)
-- Support key revocation
-- Audit all API key usage
+- Generate with `secrets.token_hex(32)` (256-bit entropy)
+- Store only SHA-256 hash in database (never plaintext)
+- Enforce 90-day rotation policy with 24-hour grace period
+- Implement key revocation with immediate effect
+- Prefix keys with `mcp_` for identification (`mcp_a1b2c3...`)
+- Audit all API key creation, usage, rotation, and revocation
+- Rate limit per API key independently
+
+## FastMCP v3 Security Middleware
+
+> **ADR Reference:** ADR-002 (FastMCP v3.x)
+
+FastMCP v3.x provides a middleware pipeline that processes all MCP requests bidirectionally. Security controls are implemented as middleware components that execute in a defined order per the defense-in-depth model.
+
+### Security Middleware Stack
+
+The following middleware ordering implements defense-in-depth. Error handling is outermost (catches all exceptions), authentication/authorization next, then operational controls innermost:
+
+```python
+from fastmcp import FastMCP
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
+from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+from fastmcp.server.middleware.logging import StructuredLoggingMiddleware
+from fastmcp.server.middleware.timing import TimingMiddleware
+from fastmcp.server.middleware.response_limiting import ResponseLimitingMiddleware
+from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+# ── Authentication Provider ──────────────────────────────────
+auth = JWTVerifier(
+    jwks_uri=os.getenv("AUTH_JWKS_URI"),
+    issuer=os.getenv("AUTH_ISSUER"),
+    audience=os.getenv("AUTH_AUDIENCE"),
+)
+
+mcp = FastMCP(
+    "Enterprise MCP Server",
+    auth=auth,  # FastMCP v3 built-in auth
+)
+
+# ── Middleware Stack (order matters: first added = outermost) ─
+# Layer 1: Error handling (catches all exceptions from inner layers)
+mcp.add_middleware(ErrorHandlingMiddleware(
+    include_traceback=False,    # Never expose stack traces to clients
+    transform_errors=True,      # Convert to safe MCP error responses
+    error_callback=send_to_siem  # Forward to SIEM for alerting
+))
+
+# Layer 2: Rate limiting (reject before expensive operations)
+mcp.add_middleware(RateLimitingMiddleware(
+    max_requests_per_second=50.0,
+    burst_capacity=100
+))
+
+# Layer 3: Authorization (per-tool RBAC + capability checks)
+mcp.add_middleware(RBACMiddleware(
+    role_capabilities=ROLE_CAPABILITIES,
+    deny_by_default=True
+))
+
+# Layer 4: Audit logging (record all requests/responses)
+mcp.add_middleware(AuditMiddleware(
+    log_requests=True,
+    log_responses=True,
+    redact_sensitive_fields=["password", "token", "api_key", "secret"]
+))
+
+# Layer 5: Input sanitization
+mcp.add_middleware(InputSanitizationMiddleware(
+    max_string_length=10_000,
+    max_nesting_depth=5,
+    max_request_size=1_048_576  # 1 MB
+))
+
+# Layer 6: Response limiting (prevent context window overflow)
+mcp.add_middleware(ResponseLimitingMiddleware(max_size=500_000))
+
+# Layer 7: Timing (performance monitoring, innermost)
+mcp.add_middleware(TimingMiddleware())
+
+# Layer 8: Structured logging (JSON for aggregation)
+mcp.add_middleware(StructuredLoggingMiddleware())
+```
+
+### Custom RBAC Middleware
+
+Implements deny-by-default authorization per NFR-SEC-019 using FastMCP v3 middleware hooks:
+
+```python
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.server.dependencies import get_http_headers
+from fastmcp.exceptions import ToolError
+import jwt
+
+class RBACMiddleware(Middleware):
+    """Role-based access control middleware.
+    
+    Enforces deny-by-default policy: all tool calls, resource reads,
+    and prompt accesses require explicit role + capability grants.
+    Extracts role from JWT claims and validates against capability matrix.
+    """
+    
+    def __init__(self, role_capabilities: dict, deny_by_default: bool = True):
+        self.role_capabilities = role_capabilities
+        self.deny_by_default = deny_by_default
+    
+    def _get_user_role(self, context: MiddlewareContext) -> str:
+        """Extract user role from JWT claims via FastMCP context."""
+        if context.fastmcp_context and context.fastmcp_context.request_context:
+            # Access token claims from FastMCP auth provider
+            token_data = getattr(
+                context.fastmcp_context.request_context, 
+                'token_data', None
+            )
+            if token_data:
+                return token_data.get("role", "viewer")
+        return "viewer"  # Default to least privilege
+    
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        """Authorize tool execution against RBAC matrix."""
+        role = self._get_user_role(context)
+        tool_name = context.message.name
+        
+        # Check capability
+        capabilities = self.role_capabilities.get(role, [])
+        required = f"tools:execute:{tool_name}"
+        
+        if self.deny_by_default and required not in capabilities:
+            # Check wildcard permission
+            if "tools:execute:*" not in capabilities:
+                raise ToolError(
+                    f"Access denied: role '{role}' lacks capability "
+                    f"'{required}'"
+                )
+        
+        # Store role in context for downstream use
+        if context.fastmcp_context:
+            context.fastmcp_context.set_state("user_role", role)
+        
+        return await call_next(context)
+    
+    async def on_read_resource(self, context: MiddlewareContext, call_next):
+        """Authorize resource reads."""
+        role = self._get_user_role(context)
+        capabilities = self.role_capabilities.get(role, [])
+        
+        if "resources:read" not in capabilities:
+            from fastmcp.exceptions import ResourceError
+            raise ResourceError("Access denied: insufficient permissions")
+        
+        return await call_next(context)
+    
+    async def on_get_prompt(self, context: MiddlewareContext, call_next):
+        """Authorize prompt access."""
+        role = self._get_user_role(context)
+        capabilities = self.role_capabilities.get(role, [])
+        
+        if "prompts:get" not in capabilities:
+            from fastmcp.exceptions import PromptError
+            raise PromptError("Access denied: insufficient permissions")
+        
+        return await call_next(context)
+```
+
+### Custom Audit Middleware
+
+Implements immutable audit logging with sensitive data redaction:
+
+```python
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.server.dependencies import get_http_headers
+from datetime import datetime
+import json
+import hashlib
+import structlog
+
+logger = structlog.get_logger("audit")
+
+class AuditMiddleware(Middleware):
+    """Audit logging middleware with redaction and non-repudiation.
+    
+    Logs all security-relevant events with:
+    - Correlation IDs for request tracing
+    - Sensitive field redaction
+    - HMAC signatures for non-repudiation
+    - Structured JSON for SIEM ingestion
+    """
+    
+    SENSITIVE_FIELDS = {"password", "token", "api_key", "secret", "credential"}
+    
+    def __init__(
+        self,
+        log_requests: bool = True,
+        log_responses: bool = True,
+        redact_sensitive_fields: list[str] | None = None,
+        signing_key: str | None = None,
+    ):
+        self.log_requests = log_requests
+        self.log_responses = log_responses
+        if redact_sensitive_fields:
+            self.SENSITIVE_FIELDS.update(redact_sensitive_fields)
+        self.signing_key = signing_key
+    
+    def _redact(self, data: dict) -> dict:
+        """Recursively redact sensitive fields."""
+        redacted = {}
+        for key, value in data.items():
+            if key.lower() in self.SENSITIVE_FIELDS:
+                redacted[key] = "***REDACTED***"
+            elif isinstance(value, dict):
+                redacted[key] = self._redact(value)
+            else:
+                redacted[key] = value
+        return redacted
+    
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        """Audit tool executions (highest security relevance)."""
+        start = datetime.utcnow()
+        user_id = "anonymous"
+        
+        if context.fastmcp_context:
+            user_id = context.fastmcp_context.get_state("user_id") or "anonymous"
+        
+        headers = get_http_headers() or {}
+        
+        try:
+            result = await call_next(context)
+            
+            await logger.ainfo(
+                "tool_execution",
+                event_type="audit",
+                tool_name=context.message.name,
+                arguments=self._redact(context.message.arguments or {}),
+                user_id=user_id,
+                ip_address=headers.get("x-forwarded-for", "unknown"),
+                correlation_id=headers.get("x-correlation-id"),
+                result="success",
+                duration_ms=(datetime.utcnow() - start).total_seconds() * 1000,
+                timestamp=start.isoformat(),
+            )
+            return result
+            
+        except Exception as e:
+            await logger.aerror(
+                "tool_execution_failed",
+                event_type="audit",
+                tool_name=context.message.name,
+                user_id=user_id,
+                ip_address=headers.get("x-forwarded-for", "unknown"),
+                result="failure",
+                error_type=type(e).__name__,
+                duration_ms=(datetime.utcnow() - start).total_seconds() * 1000,
+                timestamp=start.isoformat(),
+            )
+            raise
+
+### Input Sanitization Middleware
+
+Validates all incoming MCP requests against size and complexity limits per NFR-SEC-037–040:
+
+```python
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.exceptions import ToolError
+import re
+
+class InputSanitizationMiddleware(Middleware):
+    """Validate and sanitize all tool inputs.
+    
+    Prevents:
+    - Oversized payloads (DoS)
+    - Deeply nested structures (algorithmic complexity)
+    - Excessively long strings (buffer overflow, ReDoS)
+    - Dangerous patterns (injection attempts)
+    """
+    
+    def __init__(
+        self,
+        max_string_length: int = 10_000,
+        max_nesting_depth: int = 5,
+        max_request_size: int = 1_048_576,
+        max_array_items: int = 1_000,
+    ):
+        self.max_string_length = max_string_length
+        self.max_nesting_depth = max_nesting_depth
+        self.max_request_size = max_request_size
+        self.max_array_items = max_array_items
+    
+    def _validate_depth(self, data, depth: int = 0):
+        """Recursively validate nesting depth and string lengths."""
+        if depth > self.max_nesting_depth:
+            raise ToolError(
+                f"Input nesting exceeds maximum depth ({self.max_nesting_depth})"
+            )
+        
+        if isinstance(data, dict):
+            for key, value in data.items():
+                self._validate_depth(value, depth + 1)
+        elif isinstance(data, list):
+            if len(data) > self.max_array_items:
+                raise ToolError(
+                    f"Array exceeds maximum items ({self.max_array_items})"
+                )
+            for item in data:
+                self._validate_depth(item, depth + 1)
+        elif isinstance(data, str):
+            if len(data) > self.max_string_length:
+                raise ToolError(
+                    f"String exceeds maximum length ({self.max_string_length})"
+                )
+    
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        """Validate tool arguments before execution."""
+        args = context.message.arguments or {}
+        self._validate_depth(args)
+        return await call_next(context)
+```
+
+### Middleware Composition with Mounted Servers
+
+FastMCP v3 server composition enables modular security zones. Parent middleware applies to all mounted servers, while mounted servers can add additional controls:
+
+```python
+from fastmcp import FastMCP
+
+# Public server: minimal auth, read-only
+public_server = FastMCP("Public API")
+public_server.add_middleware(RateLimitingMiddleware(
+    max_requests_per_second=100.0
+))
+
+# Admin server: strict auth, full access
+admin_server = FastMCP("Admin API")
+admin_server.add_middleware(RBACMiddleware(
+    role_capabilities={"admin": ["tools:execute:*"]},
+    deny_by_default=True
+))
+
+# Parent server: global security controls
+app = FastMCP("Enterprise MCP", auth=auth)
+app.add_middleware(ErrorHandlingMiddleware())
+app.add_middleware(AuditMiddleware())
+
+# Mount with namespace isolation
+app.mount(public_server, namespace="public")
+app.mount(admin_server, namespace="admin")
+
+# Request flow:
+# public/tool → ErrorHandling → Audit → RateLimit → tool handler
+# admin/tool → ErrorHandling → Audit → RBAC → tool handler
+```
 
 ## Authorization Framework
 
@@ -1934,25 +2416,514 @@ PGP Fingerprint: XXXX XXXX XXXX XXXX XXXX
 Last Updated: November 20, 2025
 ```
 
+## Cryptographic Standards
+
+> **SRS References:** NFR-SEC-043, NFR-SEC-058–065
+
+All cryptographic operations must use approved algorithms with sufficient key sizes. This section defines the minimum standards for the MCP server implementation.
+
+### Approved Algorithms
+
+| Purpose | Algorithm | Key Size | Standard | Notes |
+|---------|-----------|----------|----------|-------|
+| **JWT Signing** | RS256 (RSA-SHA256) | 2048-bit minimum, 4096-bit recommended | RFC 7518 | Asymmetric; JWKS key rotation every 90 days |
+| **JWT Signing (alt)** | ES256 (ECDSA P-256) | 256-bit | RFC 7518 | Preferred for performance; smaller keys |
+| **Password Hashing** | Argon2id | memory: 64MB, iterations: 3 | RFC 9106 | Preferred over bcrypt for new implementations |
+| **Password Hashing (alt)** | bcrypt | cost factor: 12 | OpenBSD | Acceptable for existing systems |
+| **API Key Hashing** | SHA-256 | 256-bit | FIPS 180-4 | One-way hash; constant-time comparison required |
+| **TLS** | TLS 1.2+ (prefer 1.3) | — | RFC 8446 | ECDHE cipher suites only; no CBC mode |
+| **Symmetric Encryption** | AES-256-GCM | 256-bit | NIST SP 800-38D | Authenticated encryption for data at rest |
+| **Message Signing** | HMAC-SHA256 | 256-bit | RFC 2104 | Audit log non-repudiation |
+| **Random Generation** | `secrets` module | — | Python docs | Never use `random` for security-sensitive values |
+
+### Prohibited Algorithms
+
+| Algorithm | Reason | Replacement |
+|-----------|--------|-------------|
+| MD5 | Collision attacks | SHA-256+ |
+| SHA-1 | Collision attacks | SHA-256+ |
+| DES / 3DES | Insufficient key size | AES-256-GCM |
+| RC4 | Stream cipher weaknesses | AES-256-GCM |
+| RSA < 2048-bit | Factorization risk | RSA-4096 or ECDSA P-256 |
+| TLS 1.0 / 1.1 | Protocol vulnerabilities | TLS 1.2+ |
+| `random` module | Predictable PRNG | `secrets` module |
+| HS256 for JWT | Shared secret risk | RS256 or ES256 |
+
+### TLS Configuration
+
+```python
+# Production TLS configuration
+TLS_CONFIG = {
+    "min_version": "TLSv1.2",
+    "prefer_version": "TLSv1.3",
+    "cipher_suites": [
+        # TLS 1.3 suites (auto-negotiated)
+        "TLS_AES_256_GCM_SHA384",
+        "TLS_CHACHA20_POLY1305_SHA256",
+        "TLS_AES_128_GCM_SHA256",
+        # TLS 1.2 suites (ECDHE only, no CBC)
+        "ECDHE-ECDSA-AES256-GCM-SHA384",
+        "ECDHE-RSA-AES256-GCM-SHA384",
+        "ECDHE-ECDSA-CHACHA20-POLY1305",
+        "ECDHE-RSA-CHACHA20-POLY1305",
+    ],
+    "certificate_rotation_days": 90,
+    "hsts_max_age": 31_536_000,  # 1 year
+    "hsts_include_subdomains": True,
+    "hsts_preload": True,
+}
+```
+
+## Secret Management
+
+> **SRS References:** NFR-SEC-058–065, NFR-CNTR-015
+
+Secrets (credentials, API keys, certificates, encryption keys) must never appear in source code, container layers, logs, or environment variable dumps.
+
+### Secret Lifecycle
+
+```mermaid
+flowchart LR
+    GEN[Generate<br/>secrets.token_hex] -->|Encrypted| STORE[Store<br/>Vault / AWS SM]
+    STORE -->|Injected at runtime| USE[Use<br/>Environment / Mount]
+    USE -->|Scheduled| ROTATE[Rotate<br/>90d / on-demand]
+    ROTATE --> STORE
+    USE -->|Incident| REVOKE[Revoke<br/>Immediate]
+    REVOKE --> GEN
+    
+    style GEN fill:#e8f5e9,stroke:#388e3c
+    style STORE fill:#e3f2fd,stroke:#1976d2
+    style USE fill:#fff3e0,stroke:#f57c00
+    style ROTATE fill:#f3e5f5,stroke:#7b1fa2
+    style REVOKE fill:#ffebee,stroke:#c62828
+```
+
+### Implementation Patterns
+
+```python
+import os
+from typing import Optional
+
+class SecretManager:
+    """Enterprise secret management with Vault integration.
+    
+    Supports:
+    - HashiCorp Vault (production)
+    - AWS Secrets Manager (cloud)
+    - Kubernetes secrets (container)
+    - Environment variables (development fallback)
+    """
+    
+    def __init__(self, backend: str = "env"):
+        self.backend = backend
+        self._cache: dict[str, str] = {}
+        self._cache_ttl = 300  # 5 minutes
+    
+    async def get_secret(self, key: str) -> str:
+        """Retrieve secret with caching and audit.
+        
+        Raises:
+            SecretNotFoundError: Secret does not exist.
+            SecretAccessDeniedError: Caller lacks permission.
+        """
+        # Check cache first
+        if key in self._cache:
+            return self._cache[key]
+        
+        if self.backend == "vault":
+            value = await self._get_from_vault(key)
+        elif self.backend == "aws":
+            value = await self._get_from_aws(key)
+        elif self.backend == "k8s":
+            value = self._get_from_k8s_mount(key)
+        else:
+            value = os.environ.get(key)
+        
+        if value is None:
+            raise SecretNotFoundError(f"Secret '{key}' not found")
+        
+        self._cache[key] = value
+        return value
+    
+    async def _get_from_vault(self, key: str) -> Optional[str]:
+        """Retrieve from HashiCorp Vault via API."""
+        import hvac
+        client = hvac.Client(url=os.environ["VAULT_ADDR"])
+        client.token = os.environ["VAULT_TOKEN"]
+        
+        response = client.secrets.kv.v2.read_secret_version(path=key)
+        return response["data"]["data"].get("value")
+    
+    def _get_from_k8s_mount(self, key: str) -> Optional[str]:
+        """Read from Kubernetes secret volume mount."""
+        secret_path = f"/secrets/{key}"
+        try:
+            with open(secret_path, "r") as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            return None
+
+
+# Usage in FastMCP server
+secrets = SecretManager(backend=os.getenv("SECRET_BACKEND", "env"))
+
+@mcp.tool()
+async def connect_database(ctx: Context) -> str:
+    """Tool that needs database credentials."""
+    db_password = await secrets.get_secret("DB_PASSWORD")
+    # Use password, never log it
+    return "Connected successfully"
+```
+
+### Secret Rotation Policy
+
+| Secret Type | Rotation Period | Grace Period | Automation |
+|-------------|----------------|--------------|------------|
+| JWT signing keys | 90 days | 24 hours (old key valid) | JWKS endpoint auto-updates |
+| API keys | 90 days | 24 hours | Key manager API |
+| Database passwords | 90 days | 1 hour | Vault dynamic secrets |
+| TLS certificates | 90 days | 7 days | cert-manager / Let's Encrypt |
+| OAuth client secrets | 180 days | 48 hours | IdP admin API |
+| Encryption keys | 365 days | 30 days | KMS automatic rotation |
+
+## Session Management
+
+> **SRS References:** NFR-SEC-073–081, FR-PROTO-025–031
+
+MCP sessions over Streamable HTTP transport require secure session lifecycle management that binds sessions to authenticated users and prevents session hijacking.
+
+### Session Security Controls
+
+```python
+import secrets
+import hashlib
+from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from typing import Optional
+
+@dataclass
+class MCPSession:
+    """Secure MCP session with authentication binding.
+    
+    Sessions are bound to:
+    - Authenticated user identity (from JWT claims)
+    - Client IP address (for anomaly detection)
+    - User agent (for fingerprinting)
+    - Creation timestamp (for TTL enforcement)
+    """
+    session_id: str
+    user_id: str
+    role: str
+    client_ip: str
+    user_agent: str
+    created_at: datetime
+    last_active: datetime
+    expires_at: datetime
+    is_revoked: bool = False
+    
+    @staticmethod
+    def create(
+        user_id: str,
+        role: str,
+        client_ip: str,
+        user_agent: str,
+        ttl_minutes: int = 60
+    ) -> "MCPSession":
+        """Create a new session with cryptographic session ID."""
+        now = datetime.utcnow()
+        return MCPSession(
+            session_id=secrets.token_urlsafe(32),
+            user_id=user_id,
+            role=role,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            created_at=now,
+            last_active=now,
+            expires_at=now + timedelta(minutes=ttl_minutes),
+        )
+    
+    def is_valid(self, client_ip: str) -> bool:
+        """Validate session is active and not hijacked."""
+        if self.is_revoked:
+            return False
+        if datetime.utcnow() > self.expires_at:
+            return False
+        # Detect session hijacking: IP change
+        if self.client_ip != client_ip:
+            return False
+        return True
+
+
+class SessionStore:
+    """In-memory session store with TTL and cleanup.
+    
+    Production deployments should use Redis with TLS:
+      redis://session-store:6379/0?ssl=true
+    """
+    
+    def __init__(self):
+        self._sessions: dict[str, MCPSession] = {}
+    
+    async def create(self, **kwargs) -> MCPSession:
+        session = MCPSession.create(**kwargs)
+        self._sessions[session.session_id] = session
+        return session
+    
+    async def get(self, session_id: str) -> Optional[MCPSession]:
+        return self._sessions.get(session_id)
+    
+    async def revoke(self, session_id: str) -> None:
+        """Immediately revoke a session (incident response)."""
+        if session_id in self._sessions:
+            self._sessions[session_id].is_revoked = True
+    
+    async def revoke_all_for_user(self, user_id: str) -> int:
+        """Revoke all sessions for a user (credential compromise)."""
+        count = 0
+        for session in self._sessions.values():
+            if session.user_id == user_id and not session.is_revoked:
+                session.is_revoked = True
+                count += 1
+        return count
+    
+    async def cleanup_expired(self) -> int:
+        """Remove expired sessions. Run periodically."""
+        now = datetime.utcnow()
+        expired = [
+            sid for sid, s in self._sessions.items()
+            if now > s.expires_at
+        ]
+        for sid in expired:
+            del self._sessions[sid]
+        return len(expired)
+```
+
+### Session Security Requirements
+
+| Control | Implementation | SRS |
+|---------|---------------|-----|
+| Session ID entropy | `secrets.token_urlsafe(32)` (256-bit) | NFR-SEC-073 |
+| Session binding | Bound to user ID, IP, user-agent | NFR-SEC-074 |
+| Session timeout | Absolute: 60 min; Idle: 15 min | NFR-SEC-075 |
+| Session revocation | Immediate via `revoke()` API | NFR-SEC-076 |
+| Session hijack detection | IP change triggers re-authentication | NFR-SEC-077 |
+| Concurrent sessions | Max 5 per user; oldest revoked | NFR-SEC-078 |
+| Session storage | Redis with TLS; encrypted at rest | NFR-SEC-079 |
+| Cookie attributes | `Secure; HttpOnly; SameSite=Strict; Path=/` | NFR-SEC-080 |
+
+## Supply Chain Security
+
+> **ADR Reference:** ADR-007 (Distroless base images)  
+> **SRS References:** NFR-CNTR-027–029, NFR-SEC-058–065
+
+### SLSA Framework Compliance
+
+Target **SLSA Level 3** for build integrity:
+
+| SLSA Requirement | Implementation | Level |
+|------------------|---------------|-------|
+| **Source** | Version-controlled (Git), branch protection, signed commits | L3 |
+| **Build** | GitHub Actions (hosted runners), build-as-code (Makefile) | L3 |
+| **Provenance** | Automated provenance generation via `slsa-github-generator` | L3 |
+| **Dependencies** | Pinned with hashes (`pip-compile --generate-hashes`), Dependabot | L3 |
+
+### Container Security (ADR-007)
+
+```dockerfile
+# ── Build Stage (Alpine) ─────────────────────────────────────
+FROM python:3.11-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev libffi-dev
+
+# Create non-root user for build
+RUN addgroup -S build && adduser -S build -G build
+USER build
+WORKDIR /home/build
+
+# Install Python dependencies
+COPY --chown=build:build requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# ── Runtime Stage (Distroless) ───────────────────────────────
+FROM gcr.io/distroless/python3-debian12
+
+# Copy only runtime artifacts (no shell, no package manager)
+COPY --from=builder /home/build/.local /root/.local
+COPY --from=builder /home/build/app /app
+
+WORKDIR /app
+ENV PATH=/root/.local/bin:$PATH
+
+# Read-only filesystem, non-root, minimal capabilities
+USER nonroot:nonroot
+
+ENTRYPOINT ["python", "-m", "fastmcp", "run", "server:mcp"]
+```
+
+### Dependency Scanning Pipeline
+
+```yaml
+# .github/workflows/security-scan.yml
+name: Security Scan
+on: [push, pull_request]
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Pin dependencies with hashes
+      - name: Verify dependency integrity
+        run: pip-compile --generate-hashes -o requirements.lock requirements.in
+      
+      # Scan for known vulnerabilities
+      - name: Safety check
+        run: safety check -r requirements.lock --exit-code
+      
+      # SBOM generation (CycloneDX format)
+      - name: Generate SBOM
+        run: cyclonedx-py requirements -o sbom.json --format json
+      
+      # Container image scan
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
+      
+      # Sign container image
+      - name: Cosign sign
+        run: cosign sign --yes ${{ env.IMAGE }}
+      
+      # Attach SBOM to image
+      - name: Cosign attach SBOM
+        run: cosign attach sbom --sbom sbom.json ${{ env.IMAGE }}
+      
+      # Generate SLSA provenance
+      - uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
+```
+
+### Artifact Verification
+
+```bash
+# Verify container signature before deployment
+cosign verify \
+  --certificate-identity=ci@example.com \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+  ghcr.io/org/mcp-server:latest
+
+# Verify SBOM
+cosign verify-attestation \
+  --type cyclonedx \
+  ghcr.io/org/mcp-server:latest
+
+# Verify SLSA provenance
+slsa-verifier verify-image \
+  --source-uri=github.com/org/mcp-server \
+  --builder-id=https://github.com/slsa-framework/slsa-github-generator \
+  ghcr.io/org/mcp-server:latest
+```
+
 ## Security Checklist
 
 Before deploying an MCP server to production:
 
-- [ ] Authentication enabled and configured
-- [ ] JWT signature validation implemented
-- [ ] RBAC roles defined and enforced
-- [ ] Rate limiting configured (global, per-user, per-API-key)
-- [ ] Input validation on all tool parameters
-- [ ] SQL injection prevention (parameterized queries)
-- [ ] Path traversal prevention
-- [ ] Command injection prevention
-- [ ] Security headers configured
-- [ ] CORS properly restricted
-- [ ] Audit logging for critical events
-- [ ] Sensitive data redaction in logs
-- [ ] TLS/HTTPS enforced
-- [ ] Secrets stored securely (not in code)
-- [ ] Dependencies scanned for vulnerabilities
+### Zero Trust & Architecture
+
+- [ ] Zero trust principles documented and enforced
+- [ ] Trust zones defined with firewall rules between each
+- [ ] Kubernetes NetworkPolicies applied per pod
+- [ ] Defense-in-depth layers verified (network → auth → authz → app → audit)
+
+### Authentication (ADR-003)
+
+- [ ] OAuth 2.1 + PKCE configured (implicit flow prohibited)
+- [ ] JWT signature validation via JWKS (RS256 or ES256)
+- [ ] JWKS cache TTL set (≤ 1 hour)
+- [ ] Token audience binding (RFC 8707) enforced
+- [ ] Protected Resource Metadata at `/.well-known/oauth-protected-resource`
+- [ ] API keys stored as SHA-256 hashes (never plaintext)
+- [ ] API key rotation policy enforced (90 days)
+
+### FastMCP v3 Security Middleware (ADR-002)
+
+- [ ] Error handling middleware outermost (catches all exceptions)
+- [ ] Rate limiting middleware configured (per-user, per-API-key)
+- [ ] RBAC middleware enforcing deny-by-default
+- [ ] Audit middleware logging all tool executions
+- [ ] Input sanitization middleware validating depth/size/length
+- [ ] Response limiting middleware preventing context overflow
+- [ ] Middleware ordering verified (error → rate limit → auth → audit → sanitize → response → timing → logging)
+
+### Authorization
+
+- [ ] RBAC roles defined (admin, developer, viewer, service)
+- [ ] Capability-based ACL per tool/resource/prompt
+- [ ] Deny-by-default policy enforced (NFR-SEC-019)
+- [ ] Authorization checked on every request (NFR-SEC-021)
+
+### Input Validation
+
+- [ ] Pydantic models on all tool inputs
+- [ ] SQL injection prevention (parameterized queries only)
+- [ ] Path traversal prevention (base directory whitelist)
+- [ ] Command injection prevention (subprocess with arg lists)
+- [ ] Request size limit enforced (1 MB max, NFR-SEC-037)
+- [ ] JSON nesting depth limited (5 levels, NFR-SEC-038)
+- [ ] String length limited (10,000 chars, NFR-SEC-039)
+- [ ] Request timeout enforced (30 s, NFR-SEC-040)
+
+### Cryptographic Standards
+
+- [ ] TLS 1.2+ enforced (TLS 1.3 preferred)
+- [ ] Only approved cipher suites (ECDHE, no CBC)
+- [ ] No prohibited algorithms (MD5, SHA-1, DES, RC4)
+- [ ] `secrets` module for all security-sensitive randomness
+- [ ] Argon2id or bcrypt for password hashing
+
+### Secret Management
+
+- [ ] No secrets in source code or container layers
+- [ ] Secrets injected at runtime (Vault / AWS SM / K8s mounts)
+- [ ] Secret rotation automated (90-day policy)
+- [ ] Secret revocation tested and documented
+
+### Session Management
+
+- [ ] Session IDs generated with `secrets.token_urlsafe(32)`
+- [ ] Sessions bound to user identity + IP + user-agent
+- [ ] Session timeout enforced (absolute: 60 min, idle: 15 min)
+- [ ] Session revocation API available for incident response
+- [ ] Cookie attributes set: `Secure; HttpOnly; SameSite=Strict`
+
+### Audit & Monitoring
+
+- [ ] Audit logging for all critical security events
+- [ ] Sensitive data redacted in logs (passwords, tokens, PII)
+- [ ] Structured JSON logs for SIEM ingestion
+- [ ] Anomaly detection for failed auth spikes
+- [ ] Correlation IDs propagated through request chain
+
+### Transport Security
+
+- [ ] Origin header validation on all HTTP requests
+- [ ] Security headers configured (CSP, HSTS, X-Frame-Options)
+- [ ] CORS restricted to specific origins
+- [ ] SSRF mitigation (block private IPs, DNS rebinding protection)
+- [ ] Token passthrough prohibited (NFR-SEC-081)
+
+### Supply Chain Security (ADR-007)
+
+- [ ] Distroless base image for production containers
+- [ ] Multi-stage build (Alpine build → distroless runtime)
+- [ ] Dependencies pinned with hashes (`pip-compile --generate-hashes`)
+- [ ] Container image signed (Cosign)
+- [ ] SBOM generated and attached to image (CycloneDX)
+- [ ] SLSA Level 3 provenance attestation
+- [ ] Trivy scan: zero critical/high vulnerabilities
 - [ ] Error messages don't leak sensitive info
 
 ## MCP Transport Security (2025-11-25)
@@ -2054,15 +3025,18 @@ Local MCP servers (running on `stdio` transport) have a unique threat profile:
 
 ## Summary
 
-Enterprise MCP servers require comprehensive security controls:
+Enterprise MCP servers built with FastMCP v3.x require comprehensive security controls aligned with zero trust principles and defense-in-depth:
 
-- **Multi-layered Defense**: Network, authentication, authorization, application, monitoring
-- **Multiple Auth Providers**: JWT, OAuth 2.0, WorkOS for different use cases
-- **Fine-grained Authorization**: RBAC and capability-based access control
-- **Robust Rate Limiting**: Multi-tier token bucket algorithm
-- **Comprehensive Validation**: Input sanitization and validation
-- **Security Headers**: Standard headers and CORS configuration
-- **Detailed Auditing**: Log all critical security events
+- **Zero Trust Architecture**: Verify explicitly, least privilege, assume breach (NIST 800-207)
+- **FastMCP v3 Middleware Pipeline**: Security controls as ordered middleware (error handling → rate limiting → RBAC → audit → sanitization → response limiting → timing → logging)
+- **Authentication**: OAuth 2.1 + PKCE, JWT/JWKS (RS256/ES256), multi-provider support (GitHub, Google, WorkOS), API key management with SHA-256 hashing
+- **Authorization**: Deny-by-default RBAC with per-tool capability ACL via FastMCP middleware hooks (`on_call_tool`, `on_read_resource`, `on_get_prompt`)
+- **Cryptographic Standards**: Approved algorithms only (AES-256-GCM, Argon2id, TLS 1.3); prohibited list enforced (MD5, SHA-1, DES)
+- **Secret Management**: Vault/AWS SM/K8s mount integration; 90-day rotation policy; never in code or logs
+- **Session Management**: Cryptographic session IDs, user/IP/UA binding, TTL enforcement, immediate revocation
+- **Input Validation**: Pydantic models, depth/size/length limits, 7 attack class mitigations (SQLi, XSS, SSRF, XXE, path traversal, command injection, ReDoS)
+- **Supply Chain Security**: Distroless containers (ADR-007), SLSA Level 3 provenance, Cosign signing, SBOM generation, Trivy scanning
+- **Audit & Monitoring**: Structured JSON logging, SIEM integration, anomaly detection, non-repudiation via HMAC signatures
 
 ---
 
