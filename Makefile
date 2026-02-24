@@ -1,8 +1,12 @@
-# Makefile for building consolidated MCP Architecture markdown only.
-# Pure shell/cat pipeline, no Python venv required.
+# Makefile for MCP Architecture Documentation
+# Purpose: Build, validate, and maintain consolidated markdown documentation
+# Requirements: Python 3.x, Node.js (optional for markdownlint)
 
+# Make configuration
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
+.DEFAULT_GOAL := help
+.SILENT:
 
 # Required tools
 PYTHON := python3
@@ -57,154 +61,304 @@ CONTENT_SECTIONS = \
 	docs/IEEE-42010/ref/99-quick-reference.md
 
 # Preface sections (generated or static)
-PREFIX_SECTIONS = docs/00-title-page.md docs/IEEE-42010/ref/00-table-of-contents.md
+PREFIX_SECTIONS = docs/00-title-page.md $(TOC_FILE)
 
 # All sections in final order
 ALL_SECTIONS = $(PREFIX_SECTIONS) $(CONTENT_SECTIONS)
 
+# Output files
 COMBINED_MD := mcp-architecture.md
+TOC_FILE := docs/IEEE-42010/ref/00-table-of-contents.md
 
-.PHONY: all help toc md clean check-deps install-deps
+#==============================================================================
+# PHONY Targets
+#==============================================================================
 
-all: md
+.PHONY: all help build clean rebuild \
+        toc md \
+        check-deps install-deps \
+        lint fix format validate test \
+        pre-commit watch
+
+#==============================================================================
+# Default & Help
+#==============================================================================
+
+all: build
 
 help:
-	@echo "Markdown-only targets:"; \
-	echo "  make check-deps    # Check for required tools"; \
-	echo "  make install-deps  # Install missing dependencies"; \
-	echo "  make toc           # Generate explicit TOC file"; \
-	echo "  make md            # Concatenate sections to project root"; \
-	echo "  make clean         # Remove output markdown"; \
-	echo "  make lint          # Run linting and link checking";
+	echo ""
+	echo "$(BLUE)MCP Architecture Documentation - Makefile Targets$(NC)"
+	echo ""
+	echo "$(GREEN)Build Targets:$(NC)"
+	echo "  make build         # Build complete markdown documentation (default)"
+	echo "  make md            # Alias for build"
+	echo "  make toc           # Generate table of contents file"
+	echo "  make rebuild       # Clean and rebuild from scratch"
+	echo "  make clean         # Remove generated files"
+	echo ""
+	echo "$(GREEN)Quality Targets:$(NC)"
+	echo "  make validate      # Run all validation checks (lint + links)"
+	echo "  make lint          # Run linting and link checking"
+	echo "  make fix           # Auto-fix linting issues"
+	echo "  make format        # Alias for fix"
+	echo "  make test          # Run all tests and validations"
+	echo "  make pre-commit    # Simulate pre-commit hooks"
+	echo ""
+	echo "$(GREEN)Dependency Targets:$(NC)"
+	echo "  make check-deps    # Check for required tools"
+	echo "  make install-deps  # Install missing dependencies"
+	echo ""
+	echo "$(GREEN)Development Targets:$(NC)"
+	echo "  make watch         # Watch files and rebuild on changes"
+	echo ""
+	echo "$(YELLOW)Current status:$(NC)"
+	if [ -f $(COMBINED_MD) ]; then \
+		echo "  Output file: $(COMBINED_MD) ($$(wc -c < $(COMBINED_MD) | tr -d ' ') bytes)"; \
+	else \
+		echo "  Output file: $(COMBINED_MD) (not built)"; \
+	fi
+	echo ""
+
+#==============================================================================
+# Dependency Management
+#==============================================================================
 
 # Check for required dependencies
 check-deps:
-	@echo -e "$(BLUE)[check-deps] Checking required tools...$(NC)"
-	@missing=0; \
+	echo "$(BLUE)[check-deps] Checking required tools...$(NC)"
+	missing=0; \
 	if ! command -v $(PYTHON) >/dev/null 2>&1; then \
-		echo -e "$(RED)✗ python3 not found$(NC)"; \
+		echo "$(RED)✗ python3 not found$(NC)"; \
 		missing=1; \
 	else \
-		echo -e "$(GREEN)✓ python3 found: $$($(PYTHON) --version)$(NC)"; \
+		echo "$(GREEN)✓ python3 found: $$($(PYTHON) --version)$(NC)"; \
 	fi; \
 	if ! command -v node >/dev/null 2>&1; then \
-		echo -e "$(YELLOW)⚠ node not found (optional for markdownlint)$(NC)"; \
+		echo "$(YELLOW)⚠ node not found (optional for markdownlint)$(NC)"; \
 	else \
-		echo -e "$(GREEN)✓ node found: $$(node --version)$(NC)"; \
+		echo "$(GREEN)✓ node found: $$(node --version)$(NC)"; \
 		if ! command -v npm >/dev/null 2>&1; then \
-			echo -e "$(YELLOW)⚠ npm not found (optional for markdownlint)$(NC)"; \
+			echo "$(YELLOW)⚠ npm not found (optional for markdownlint)$(NC)"; \
 		else \
-			echo -e "$(GREEN)✓ npm found: $$(npm --version)$(NC)"; \
+			echo "$(GREEN)✓ npm found: $$(npm --version)$(NC)"; \
 		fi; \
 	fi; \
 	if [ ! -f scripts/check_links.py ]; then \
-		echo -e "$(RED)✗ scripts/check_links.py not found$(NC)"; \
+		echo "$(RED)✗ scripts/check_links.py not found$(NC)"; \
 		missing=1; \
 	else \
-		echo -e "$(GREEN)✓ scripts/check_links.py found$(NC)"; \
+		echo "$(GREEN)✓ scripts/check_links.py found$(NC)"; \
 	fi; \
 	if [ ! -f scripts/gen_toc.py ]; then \
-		echo -e "$(RED)✗ scripts/gen_toc.py not found$(NC)"; \
+		echo "$(RED)✗ scripts/gen_toc.py not found$(NC)"; \
 		missing=1; \
 	else \
-		echo -e "$(GREEN)✓ scripts/gen_toc.py found$(NC)"; \
+		echo "$(GREEN)✓ scripts/gen_toc.py found$(NC)"; \
 	fi; \
 	if [ ! -f scripts/rewrite_links.py ]; then \
-		echo -e "$(RED)✗ scripts/rewrite_links.py not found$(NC)"; \
+		echo "$(RED)✗ scripts/rewrite_links.py not found$(NC)"; \
 		missing=1; \
 	else \
-		echo -e "$(GREEN)✓ scripts/rewrite_links.py found$(NC)"; \
+		echo "$(GREEN)✓ scripts/rewrite_links.py found$(NC)"; \
 	fi; \
 	if [ $$missing -eq 1 ]; then \
-		echo -e "$(RED)[check-deps] Missing required dependencies!$(NC)"; \
+		echo "$(RED)[check-deps] Missing required dependencies!$(NC)"; \
 		exit 1; \
 	else \
-		echo -e "$(GREEN)[check-deps] All required dependencies found!$(NC)"; \
+		echo "$(GREEN)[check-deps] All required dependencies found!$(NC)"; \
 	fi
 
 # Install missing dependencies
 install-deps:
-	@echo -e "$(BLUE)[install-deps] Installing dependencies...$(NC)"
-	@if ! command -v $(PYTHON) >/dev/null 2>&1; then \
-		echo -e "$(RED)Error: python3 is required but not installed.$(NC)"; \
-		echo -e "$(YELLOW)Please install Python 3.x from https://www.python.org/$(NC)"; \
+	echo "$(BLUE)[install-deps] Installing dependencies...$(NC)"
+	if ! command -v $(PYTHON) >/dev/null 2>&1; then \
+		echo "$(RED)Error: python3 is required but not installed.$(NC)"; \
+		echo "$(YELLOW)Please install Python 3.x from https://www.python.org/$(NC)"; \
 		exit 1; \
 	fi
-	@if command -v npm >/dev/null 2>&1; then \
-		echo -e "$(BLUE)[install-deps] Installing markdownlint-cli...$(NC)"; \
-		npm install -g markdownlint-cli || echo -e "$(YELLOW)Warning: Failed to install markdownlint-cli$(NC)"; \
+	if command -v npm >/dev/null 2>&1; then \
+		echo "$(BLUE)[install-deps] Installing markdownlint-cli...$(NC)"; \
+		npm install -g markdownlint-cli || echo "$(YELLOW)Warning: Failed to install markdownlint-cli$(NC)"; \
 	else \
-		echo -e "$(YELLOW)[install-deps] npm not found. Skipping markdownlint-cli installation.$(NC)"; \
-		echo -e "$(YELLOW)To install markdownlint, first install Node.js from https://nodejs.org/$(NC)"; \
+		echo "$(YELLOW)[install-deps] npm not found. Skipping markdownlint-cli installation.$(NC)"; \
+		echo "$(YELLOW)To install markdownlint, first install Node.js from https://nodejs.org/$(NC)"; \
 	fi
-	@echo -e "$(GREEN)[install-deps] Dependency installation complete!$(NC)"
+	echo "$(GREEN)[install-deps] Dependency installation complete!$(NC)"
 
+#==============================================================================
+# Quality & Validation
+#==============================================================================
+
+# Run all validation checks
+validate: check-deps lint
+	echo "$(GREEN)[validate] All validation checks passed!$(NC)"
+
+# Run linting and link checking
 lint: check-deps
-	@echo -e "$(BLUE)[lint] Running link checker...$(NC)"
-	@if $(PYTHON) scripts/check_links.py; then \
-		echo -e "$(GREEN)[lint] Link checker passed ✓$(NC)"; \
+	echo "$(BLUE)[lint] Running link checker...$(NC)"
+	if $(PYTHON) scripts/check_links.py; then \
+		echo "$(GREEN)[lint] Link checker passed ✓$(NC)"; \
 	else \
-		echo -e "$(RED)[lint] Link checker failed ✗$(NC)"; \
+		echo "$(RED)[lint] Link checker failed ✗$(NC)"; \
 		exit 1; \
 	fi
-	@echo -e "$(BLUE)[lint] Running markdownlint...$(NC)"
-	@if command -v $(NPX) >/dev/null 2>&1; then \
+	echo "$(BLUE)[lint] Running markdownlint...$(NC)"
+	if command -v $(NPX) >/dev/null 2>&1; then \
 		if $(NPX) markdownlint 'docs/**/*.md' 'README.md' --config .markdownlint.json; then \
-			echo -e "$(GREEN)[lint] Markdownlint passed ✓$(NC)"; \
+			echo "$(GREEN)[lint] Markdownlint passed ✓$(NC)"; \
 		else \
-			echo -e "$(RED)[lint] Markdownlint found issues ✗$(NC)"; \
-			echo -e "$(YELLOW)Run 'npx markdownlint --fix docs/**/*.md README.md --config .markdownlint.json' to auto-fix$(NC)"; \
+			echo "$(RED)[lint] Markdownlint found issues ✗$(NC)"; \
+			echo "$(YELLOW)Run 'make fix' to auto-fix linting issues$(NC)"; \
 			exit 1; \
 		fi; \
 	else \
-		echo -e "$(YELLOW)[lint] markdownlint not available (run: make install-deps)$(NC)"; \
+		echo "$(YELLOW)[lint] markdownlint not available (run: make install-deps)$(NC)"; \
 	fi
-	@echo -e "$(GREEN)[lint] Lint check complete!$(NC)"
+	echo "$(GREEN)[lint] Lint check complete!$(NC)"
+
+# Auto-fix linting issues
+fix:
+	echo "$(BLUE)[fix] Auto-fixing linting issues...$(NC)"
+	if command -v $(NPX) >/dev/null 2>&1; then \
+		$(NPX) markdownlint --fix 'docs/**/*.md' 'README.md' --config .markdownlint.json && \
+		echo "$(GREEN)[fix] Auto-fix complete! Run 'make lint' to verify.$(NC)"; \
+	else \
+		echo "$(RED)[fix] markdownlint-cli not available. Run 'make install-deps' first.$(NC)"; \
+		exit 1; \
+	fi
+
+# Alias for fix
+format: fix
+
+# Run all tests and validations
+test: validate
+	echo "$(GREEN)[test] All tests passed!$(NC)"
+
+# Simulate pre-commit hooks
+pre-commit: check-deps
+	echo "$(BLUE)[pre-commit] Running pre-commit checks...$(NC)"
+	echo "$(BLUE)[pre-commit] Checking dependencies...$(NC)"
+	$(MAKE) check-deps
+	echo "$(BLUE)[pre-commit] Checking internal links...$(NC)"
+	if $(PYTHON) scripts/check_links.py; then \
+		echo "$(GREEN)✓ Link checker passed$(NC)"; \
+	else \
+		echo "$(RED)✗ Link checker failed$(NC)"; \
+		exit 1; \
+	fi
+	echo "$(BLUE)[pre-commit] Running markdownlint...$(NC)"
+	if command -v $(NPX) >/dev/null 2>&1; then \
+		if $(NPX) markdownlint 'docs/**/*.md' 'README.md' --config .markdownlint.json; then \
+			echo "$(GREEN)✓ Markdownlint passed$(NC)"; \
+		else \
+			echo "$(RED)✗ Markdownlint failed$(NC)"; \
+			exit 1; \
+		fi; \
+	fi
+	echo "$(BLUE)[pre-commit] Verifying critical files...$(NC)"
+	critical_files="README.md CONTRIBUTING.md LICENSE"; \
+	for f in $$critical_files; do \
+		if [ ! -f "$$f" ]; then \
+			echo "$(RED)✗ Missing critical file: $$f$(NC)"; \
+			exit 1; \
+		fi; \
+	done
+	echo "$(GREEN)✓ All critical files present$(NC)"
+	echo "$(GREEN)[pre-commit] Pre-commit checks passed!$(NC)"
+
+#==============================================================================
+# Build Targets
+#==============================================================================
+
+# Main build target
+build: md
 
 # Generate explicit TOC before concatenating
 md: check-deps toc $(COMBINED_MD)
-$(COMBINED_MD): $(ALL_SECTIONS)
-	@echo -e "$(BLUE)[md] Combining $(words $(ALL_SECTIONS)) sections -> $(COMBINED_MD)$(NC)"
-	@rm -f $(COMBINED_MD)
-	@first=1; \
+	echo "$(GREEN)[md] Documentation build complete!$(NC)"
+$(COMBINED_MD): $(TOC_FILE) $(ALL_SECTIONS)
+	echo "$(BLUE)[md] Combining $(words $(ALL_SECTIONS)) sections -> $(COMBINED_MD)$(NC)"
+	rm -f $(COMBINED_MD)
+	first=1; \
 	for f in $(ALL_SECTIONS); do \
 	  if [ ! -f "$$f" ]; then \
-	    echo -e "$(RED)Error: Missing section file: $$f$(NC)"; \
+	    echo "$(RED)Error: Missing section file: $$f$(NC)"; \
 	    exit 1; \
 	  fi; \
 	  if [ $$first -eq 0 ]; then echo "\n\n<section class=\"section-break\"></section>\n" >> $(COMBINED_MD); fi; \
-	  $(PYTHON) scripts/rewrite_links.py $$f >> $(COMBINED_MD) || { echo -e "$(RED)Error processing $$f$(NC)"; exit 1; }; \
+	  $(PYTHON) scripts/rewrite_links.py $$f >> $(COMBINED_MD) || { echo "$(RED)Error processing $$f$(NC)"; exit 1; }; \
 	  first=0; \
 	done
-	@echo -e "$(GREEN)[md] Generated $(COMBINED_MD) (size: $$(wc -c < $(COMBINED_MD)) bytes) ✓$(NC)"
-
-clean:
-	@if [ -f $(COMBINED_MD) ]; then \
-		rm -f $(COMBINED_MD); \
-		echo -e "$(GREEN)[clean] Removed $(COMBINED_MD) ✓$(NC)"; \
-	else \
-		echo -e "$(YELLOW)[clean] $(COMBINED_MD) does not exist$(NC)"; \
-	fi
-	@if [ -f docs/00-table-of-contents.md ]; then \
-		rm -f docs/00-table-of-contents.md; \
-		echo -e "$(GREEN)[clean] Removed generated TOC ✓$(NC)"; \
-	fi
+	echo "$(GREEN)[md] Generated $(COMBINED_MD) ($$(wc -c < $(COMBINED_MD) | tr -d ' ') bytes) ✓$(NC)"
 
 # Build the explicit table of contents file from headings
-toc: check-deps docs/00-table-of-contents.md
+toc: check-deps $(TOC_FILE)
 
-docs/00-table-of-contents.md: $(CONTENT_SECTIONS) scripts/gen_toc.py
-	@echo -e "$(BLUE)[toc] Generating table of contents...$(NC)"
-	@missing=0; \
+$(TOC_FILE): $(CONTENT_SECTIONS) scripts/gen_toc.py
+	echo "$(BLUE)[toc] Generating table of contents...$(NC)"
+	missing=0; \
 	for f in $(CONTENT_SECTIONS); do \
 	  if [ ! -f "$$f" ]; then \
-	    echo -e "$(RED)Error: Missing content file: $$f$(NC)"; \
+	    echo "$(RED)Error: Missing content file: $$f$(NC)"; \
 	    missing=1; \
 	  fi; \
 	done; \
 	if [ $$missing -eq 1 ]; then \
-	  echo -e "$(RED)[toc] Cannot generate TOC due to missing files$(NC)"; \
+	  echo "$(RED)[toc] Cannot generate TOC due to missing files$(NC)"; \
 	  exit 1; \
 	fi
-	@$(PYTHON) scripts/gen_toc.py $(CONTENT_SECTIONS) || { echo -e "$(RED)[toc] Failed to generate TOC$(NC)"; exit 1; }
-	@echo -e "$(GREEN)[toc] Generated docs/00-table-of-contents.md ✓$(NC)"
+	$(PYTHON) scripts/gen_toc.py $(CONTENT_SECTIONS) || { echo "$(RED)[toc] Failed to generate TOC$(NC)"; exit 1; }
+	echo "$(GREEN)[toc] Generated $(TOC_FILE) ✓$(NC)"
+
+#==============================================================================
+# Cleanup & Rebuild
+#==============================================================================
+
+clean:
+	echo "$(BLUE)[clean] Removing generated files...$(NC)"
+	if [ -f $(COMBINED_MD) ]; then \
+		rm -f $(COMBINED_MD); \
+		echo "$(GREEN)[clean] Removed $(COMBINED_MD) ✓$(NC)"; \
+	else \
+		echo "$(YELLOW)[clean] $(COMBINED_MD) does not exist$(NC)"; \
+	fi
+	if [ -f $(TOC_FILE) ]; then \
+		rm -f $(TOC_FILE); \
+		echo "$(GREEN)[clean] Removed $(TOC_FILE) ✓$(NC)"; \
+	fi
+	# Clean legacy TOC location if exists
+	if [ -f docs/00-table-of-contents.md ]; then \
+		rm -f docs/00-table-of-contents.md; \
+		echo "$(GREEN)[clean] Removed legacy TOC file ✓$(NC)"; \
+	fi
+	echo "$(GREEN)[clean] Cleanup complete!$(NC)"
+
+rebuild: clean build
+	echo "$(GREEN)[rebuild] Rebuild complete!$(NC)"
+
+#==============================================================================
+# Development Targets
+#==============================================================================
+
+# Watch files and rebuild on changes (requires fswatch or inotifywait)
+watch:
+	echo "$(BLUE)[watch] Starting file watcher...$(NC)"
+	if command -v fswatch >/dev/null 2>&1; then \
+		echo "$(GREEN)[watch] Using fswatch. Press Ctrl+C to stop.$(NC)"; \
+		fswatch -o docs/ scripts/ | while read -r event; do \
+			echo "$(YELLOW)[watch] Change detected, rebuilding...$(NC)"; \
+			$(MAKE) build || echo "$(RED)[watch] Build failed!$(NC)"; \
+		done; \
+	elif command -v inotifywait >/dev/null 2>&1; then \
+		echo "$(GREEN)[watch] Using inotifywait. Press Ctrl+C to stop.$(NC)"; \
+		while inotifywait -r -e modify,create,delete docs/ scripts/; do \
+			echo "$(YELLOW)[watch] Change detected, rebuilding...$(NC)"; \
+			$(MAKE) build || echo "$(RED)[watch] Build failed!$(NC)"; \
+		done; \
+	else \
+		echo "$(RED)[watch] No file watcher found. Install fswatch (macOS) or inotify-tools (Linux).$(NC)"; \
+		echo "$(YELLOW)macOS: brew install fswatch$(NC)"; \
+		echo "$(YELLOW)Linux: apt-get install inotify-tools$(NC)"; \
+		exit 1; \
+	fi

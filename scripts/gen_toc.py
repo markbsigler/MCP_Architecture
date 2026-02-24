@@ -5,15 +5,15 @@ Usage:
     python3 scripts/gen_toc.py <section1.md> <section2.md> ...
 
 The script scans provided markdown files for headings (#, ##) and outputs
-`docs/00-table-of-contents.md` with anchor links that match Pandoc's
-identifier generation (basic approximation).
+`docs/IEEE-42010/ref/00-table-of-contents.md` with anchor links that match
+Pandoc's identifier generation (basic approximation).
 """
 from __future__ import annotations
 import re
 import sys
 from pathlib import Path
 
-OUTFILE = Path("docs/00-table-of-contents.md")
+OUTFILE = Path("docs/IEEE-42010/ref/00-table-of-contents.md")
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 
