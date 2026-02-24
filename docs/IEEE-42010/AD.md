@@ -1125,16 +1125,16 @@ Every SRS requirement has at least one realizing element in this AD:
 
 ## 7. Known Issues and Gaps
 
-| ID | Description | Status | Target |
-|----|-------------|--------|--------|
-| GAP-01 | Elicitation patterns not yet documented in detail | Planned | docs/03f-elicitation-patterns.md |
-| GAP-02 | Task patterns not yet documented in detail | Planned | docs/03g-task-patterns.md |
-| GAP-03 | Multi-server orchestration patterns not yet documented | Planned | docs/03h-multi-server-orchestration.md |
-| GAP-04 | AI Service Provider Gateway patterns not yet documented | Planned | docs/03i-ai-service-provider-gateway.md |
-| GAP-05 | Protocol compatibility section requires rewrite (fabricated content) | Planned | docs/15-mcp-protocol-compatibility.md |
-| GAP-06 | OAuth 2.1-specific patterns (PKCE, RFC 9728) need expansion in security docs | Planned | docs/02-security-architecture.md |
-| GAP-07 | Container security hardening (CIS, SBOM, signing) needs expansion | Planned | docs/07-deployment-patterns.md |
-| GAP-08 | Quantitative performance targets need alignment with SRS | Planned | docs/06a-performance-scalability.md |
+| ID | Description | Status | Target | Resolution |
+|----|-------------|--------|--------|------------|
+| GAP-01 | Elicitation patterns not yet documented in detail | Planned | docs/03f-elicitation-patterns.md | — |
+| GAP-02 | Task patterns not yet documented in detail | Planned | docs/03g-task-patterns.md | — |
+| GAP-03 | Multi-server orchestration patterns not yet documented | Planned | docs/03h-multi-server-orchestration.md | — |
+| GAP-04 | AI Service Provider Gateway patterns not yet documented | Planned | docs/03i-ai-service-provider-gateway.md | — |
+| GAP-05 | Protocol compatibility section rewritten with accurate MCP 2024-11-05 through 2025-11-25 coverage | **Closed** | docs/15-mcp-protocol-compatibility.md | v3.0.0: Full feature matrices (core, auth, metadata) for all 4 protocol versions; version negotiation with JSON-RPC initialize examples; capability negotiation reference; migration guidance for all upgrade paths; FastMCP v3 SDK-to-protocol mapping (ADR-002); transport selection guide |
+| GAP-06 | OAuth 2.1 patterns (PKCE, RFC 9728, OIDC, DCR) elaborated in security architecture | **Closed** | docs/02-security-architecture.md | v3.0.0: OAuth 2.1 + PKCE flow with sequence diagram; RFC 9728 Protected Resource Metadata endpoint; OIDC Discovery; Dynamic Client Registration; incremental scope consent; multi-provider support (JWT/JWKS, GitHub, Google, WorkOS); FastMCP v3 OAuthProvider/JWTVerifier integration (ADR-002); NFR-SEC-001–009 traced |
+| GAP-07 | Container security hardening (CIS, SBOM, signing, SLSA L3) addressed across deployment and security docs | **Closed** | docs/07-deployment-patterns.md, docs/02-security-architecture.md | 07-deployment: CIS Docker Benchmark controls table, Cosign keyless signing, Syft SBOM (CycloneDX), SLSA provenance, Trivy scanning, hardened K8s SecurityContext; 02-security v3.0.0: SLSA L3 compliance table, multi-stage Dockerfile (Alpine → distroless per ADR-007), GitHub Actions security pipeline with safety/SBOM/Trivy/Cosign/SLSA; NFR-CNTR-001–012, NFR-CNTR-027–029 traced |
+| GAP-08 | Quantitative performance targets aligned to SRS NFR-PERF-001–023 | **Closed** | docs/06a-performance-scalability.md | v2.0.0: Latency Budget table (9 metrics), Capacity Targets table (6 metrics), Resilience Targets table (7 patterns), all with SRS references; qualitative design requirements (NFR-PERF-010 stateless, NFR-PERF-018 health checks) traced to ADR-004 and Deployment View |
 
 ---
 
@@ -1142,7 +1142,7 @@ Every SRS requirement has at least one realizing element in this AD:
 
 | Role | Name | Date |
 |------|------|------|
-| Author | Mark Sigler | 2026-02-23 |
+| Author | Mark Sigler | 2026-02-24 |
 | Enterprise Architect | | |
 | Security Lead | | |
 | Engineering Lead | | |

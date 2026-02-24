@@ -3,13 +3,18 @@
 **Navigation**: [Home](../README.md) > Metrics & Reference > MCP Protocol Compatibility  
 **Related**: [← Previous: Performance Benchmarks](14-performance-benchmarks.md) | [Migration Guides](10-migration-guides.md#mcp-protocol-version-upgrades) | [Index by Topic](../ref/98-index-by-topic.md)
 
-**Version:** 2.0.0  
-**Last Updated:** July 19, 2025  
-**Status:** Production Ready
+**Version:** 3.0.0  
+**Last Updated:** February 24, 2026  
+**Status:** Production Ready  
+**Framework:** FastMCP v3.x (ADR-002)
 
 ## Introduction
 
 The Model Context Protocol (MCP) evolves through **date-based** versioned releases to add features, improve security, and enhance interoperability. Unlike semver, MCP versions are calendar dates (e.g., `2025-11-25`). This document defines supported protocol versions, feature compatibility, upgrade paths, and version negotiation behavior for the actual MCP specification published at <https://modelcontextprotocol.io>.
+
+> **SRS References:** FR-PROTO-001–034 (protocol requirements), NFR-SEC-001–009 (OAuth/authorization), FR-PROTO-014 (version negotiation)  
+> **ADR References:** ADR-002 (FastMCP v3.x), ADR-006 (Streamable HTTP transport)  
+> **Standards:** [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25), [OAuth 2.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1), [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728)
 
 ## Supported Protocol Versions
 
@@ -388,6 +393,74 @@ Clients should try POST first; if the server returns a non-success response, fal
 3. Add session management (`Mcp-Session-Id`)
 4. Add `MCP-Protocol-Version` header
 5. All of the above feature additions
+
+## FastMCP v3 Framework Mapping
+
+> **ADR Reference:** ADR-002 (FastMCP v3.x)
+
+FastMCP v3.x (per ADR-002) targets MCP specification **2025-11-25** and handles protocol negotiation, session management, and capability declaration automatically.
+
+### SDK Version to Protocol Version
+
+| FastMCP Version | MCP Protocol Version | Key Protocol Features Added |
+|----------------|---------------------|-----------------------------|
+| v1.x | 2024-11-05 | stdio, HTTP+SSE, core primitives (tools, resources, prompts) |
+| v2.0–2.7 | 2025-03-26 | Streamable HTTP, OAuth 2.1 + PKCE, session management |
+| v2.8–2.12 | 2025-06-18 | Elicitation (form), tool annotations, RFC 9728 |
+| v2.13+ | 2025-11-25 | Icons, website URL, OIDC Discovery, pagination |
+| v3.0+ | 2025-11-25 | Tasks, structured output (`outputSchema`), audio content, Client ID Metadata Documents |
+
+### Automatic Protocol Handling
+
+FastMCP abstracts protocol-level details so developers focus on business logic:
+
+```python
+from fastmcp import FastMCP
+
+# FastMCP automatically handles:
+# - Protocol version negotiation during initialize handshake
+# - MCP-Protocol-Version header on all HTTP responses
+# - Mcp-Session-Id generation and validation
+# - Capability declaration based on registered components
+# - Streamable HTTP transport with SSE upgrade
+# - Pagination via list_page_size parameter
+
+mcp = FastMCP(
+    name="Enterprise MCP Server",
+    version="2.0.0",
+    instructions="Production MCP server with full 2025-11-25 support",
+    list_page_size=50,  # Automatic cursor-based pagination
+)
+
+# Capabilities are auto-declared based on what you register
+@mcp.tool
+def search(query: str) -> list[dict]:
+    """Search tool — server auto-declares tools capability."""
+    ...
+
+@mcp.resource("data://config")
+def config() -> dict:
+    """Resource — server auto-declares resources capability."""
+    ...
+```
+
+### Transport Selection
+
+FastMCP supports all MCP transports appropriate to the protocol version:
+
+| Transport | FastMCP API | Protocol Version | Use Case |
+|-----------|------------|-----------------|----------|
+| Streamable HTTP | `mcp.run(transport="http")` | 2025-03-26+ | Production (recommended) |
+| stdio | `mcp.run(transport="stdio")` | All versions | Local development, CLI tools |
+| SSE (deprecated) | `mcp.run(transport="sse")` | 2024-11-05 only | Legacy client compatibility |
+
+### Backward Compatibility in FastMCP
+
+FastMCP servers handle version negotiation gracefully:
+
+- If a client proposes an older protocol version, the server negotiates down to the highest mutually supported version
+- 2025-11-25 features (tasks, icons, pagination) degrade gracefully when the negotiated version does not support them
+- The deprecated SSE transport can be offered alongside Streamable HTTP for clients that have not migrated
 
 ## Security Considerations
 

@@ -3,8 +3,8 @@
 **Navigation**: [Home](../README.md) > Quality & Operations > Performance & Scalability  
 **Related**: [← Previous: Development Lifecycle](06-development-lifecycle.md) | [Next: Deployment Patterns →](07-deployment-patterns.md) | [Performance Benchmarks](14-performance-benchmarks.md)
 
-**Version:** 1.4.0  
-**Last Updated:** November 20, 2025  
+**Version:** 2.0.0  
+**Last Updated:** February 24, 2026  
 **Status:** Production Ready
 
 ## Introduction
@@ -833,6 +833,17 @@ The following quantitative targets are mandated by the [SRS](../../IEEE-29148/SR
 | Failure detection | Within 200 ms | NFR-PERF-022 |
 | Graceful degradation | Continue serving available capabilities | NFR-PERF-015 |
 | Auto-reconnect | On transient failures | NFR-PERF-016 |
+
+### Qualitative Design Requirements
+
+The following SRS performance requirements are architectural constraints addressed in other views rather than quantitative benchmarks:
+
+| Requirement | Description | Realizing Section |
+|-------------|-------------|-------------------|
+| NFR-PERF-010 | Stateless design for horizontal scaling | ADR-004, §4.3 Deployment View |
+| NFR-PERF-018 | Health check endpoints with clear status | [Deployment Patterns § Health Probes](07-deployment-patterns.md), [Observability § Health Checks](05-observability.md) |
+
+> **Coverage:** NFR-PERF-001 through NFR-PERF-023 are fully traced — quantitative targets above, qualitative design constraints in this table.
 
 ## Summary
 
