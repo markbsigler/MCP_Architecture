@@ -68,6 +68,7 @@ The AD covers the architecture of a single MCP server instance and its supportin
 | JSON-RPC 2.0 | <https://www.jsonrpc.org/specification> |
 | OAuth 2.1 | <https://oauth.net/2.1/> |
 | RFC 9728 | <https://datatracker.ietf.org/doc/html/rfc9728> |
+| FastMCP v3.x | <https://gofastmcp.com/> |
 
 **Supporting Architecture Documents:**
 
@@ -1024,7 +1025,7 @@ flowchart LR
 
 #### 4.6.4 Framework Choice
 
-**FastMCP** selected per ADR-001:
+**FastMCP** selected per ADR-002:
 
 - Declarative tool registration (60% less boilerplate)
 - Built-in OAuth, dependency injection, lifecycle hooks
@@ -1039,17 +1040,12 @@ Per IEEE 42010 §5.7, architecture decisions and their rationale are captured in
 
 | ADR | Decision | Rationale | Viewpoints Affected | SRS Requirements |
 |-----|----------|-----------|--------------------|--------------------|
-| ADR-001 | FastMCP as MCP framework | 60% less boilerplate, built-in enterprise features, active maintenance | Functional, Development | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-* |
-| ADR-002 | JWT/JWKS authentication | SSO integration, token lifecycle, proxy-compatible, cloud-native | Security | NFR-SEC-010–016 |
-| ADR-003 | Stateless server design | Horizontal scaling, simple deployment, no session affinity | Deployment, Operational | NFR-PERF-010, DC-012 |
-| ADR-004 | PostgreSQL + SQLite | ACID for audit, JSONB for schemas, SQLite for dev | Information, Development | FR-RSRC-003, NFR-PERF-008 |
-| ADR-005 | Streamable HTTP transport | Proxy-friendly, session management, SSE resumability, standard tooling | Functional, Deployment | FR-PROTO-001, FR-PROTO-025–031, DC-005 |
-
-Full ADR documentation: [01b-architecture-decisions.md](views/01b-architecture-decisions.md)
-
----
-
-## 6. Correspondence Rules
+| ADR-001 | Python 3.11+ as implementation language | Native type hints, rich ecosystem, async/await support, enterprise adoption | Functional, Development | All FR-* |
+| ADR-002 | FastMCP v3.x as MCP framework | 60% less boilerplate, built-in enterprise features, active maintenance | Functional, Development | FR-TOOL-*, FR-RSRC-*, FR-PROMPT-* |
+| ADR-003 | JWT/JWKS authentication | SSO integration, token lifecycle, proxy-compatible, cloud-native | Security | NFR-SEC-010–016 |
+| ADR-004 | Stateless server design | Horizontal scaling, simple deployment, no session affinity | Deployment, Operational | NFR-PERF-010, DC-012 |
+| ADR-005 | PostgreSQL + SQLite | ACID for audit, JSONB for schemas, SQLite for dev | Information, Development | FR-RSRC-003, NFR-PERF-008 |
+| ADR-006 | Streamable HTTP transport | Proxy-friendly, session management, SSE resumability, standard tooling | Functional, Deployment | FR-PROTO-001, FR-PROTO-025–031, DC-005 |
 
 Per IEEE 42010 §5.6, correspondence rules define constraints between views and between the AD and SRS.
 
@@ -1092,11 +1088,12 @@ Every SRS requirement has at least one realizing element in this AD:
 
 | ADR | Realizing View Sections |
 |-----|------------------------|
-| ADR-001 (FastMCP) | §4.1 Functional, §4.6.4 Framework Choice |
-| ADR-002 (JWT/JWKS) | §4.4.2 OAuth 2.1 Flow |
-| ADR-003 (Stateless) | §4.3.6 Scaling, §4.5.4 Performance Budget |
-| ADR-004 (Database) | §4.2.1 Data Model |
-| ADR-005 (Streamable HTTP) | §4.1.3 Request Flow, §4.1.1 Layer Responsibilities |
+| ADR-001 (Python 3.11+) | §4.6 Development View (all implementation sections) |
+| ADR-002 (FastMCP v3.x) | §4.1 Functional, §4.6.4 Framework Choice |
+| ADR-003 (JWT/JWKS) | §4.4.2 OAuth 2.1 Flow |
+| ADR-004 (Stateless) | §4.3.6 Scaling, §4.5.4 Performance Budget |
+| ADR-005 (Database) | §4.2.1 Data Model |
+| ADR-006 (Streamable HTTP) | §4.1.3 Request Flow, §4.1.1 Layer Responsibilities |
 
 ---
 
