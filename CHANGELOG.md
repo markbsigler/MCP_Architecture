@@ -5,6 +5,28 @@ All notable changes to the MCP Architecture Documentation will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-02-24
+
+### Added
+
+- **Diagram Standards and Guidelines** (`docs/IEEE-42010/ref/diagram-standards.md`)
+  - Comprehensive 420-line guide for Mermaid diagram consistency
+  - Diagram type selection matrix (flowchart, sequence, state, ER, mindmap)
+  - Standard color palette for all architectural diagrams:
+    - Blue (#e3f2fd/#1976d2): Network/external systems
+    - Green (#e8f5e9/#388e3c): Services/application components
+    - Red (#ffebee/#c62828): Security/critical paths
+    - Orange (#fff3e0/#f57c00): Monitoring/observability
+    - Purple (#f3e5f5/#7b1fa2): Infrastructure/cloud resources
+  - Size and complexity guidelines (target: <100 lines per diagram)
+  - Best practices for readability and maintainability
+  - Annotation standards for timing, latency, and performance metrics
+
+### Updated
+
+- ROADMAP.md: Marked completed diagram tasks (observability split, decision trees, testing pyramid, diagram standards)
+- README.md: Added diagram-standards.md to Foundation & Reference section
+
 ## [2.1.0] - 2026-02-23
 
 ### Changed
@@ -228,7 +250,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
-- **2.0.0** (2026-02-23): IEEE standards adoption, new pattern docs, legacy file deletion
+- **2.1.1** (2026-02-24): Diagram standards documentation
+- **2.1.0** (2026-02-23): IEEE standards adoption, documentation restructure
+- **2.0.0** (2026-02-23): IEEE 29148 SRS, IEEE 42010 AD, new pattern docs
 - **1.4.0** (2025-11-20): Navigation, terminology, cross-references
 - **1.2.0** (2025-11-19): Enhanced Mermaid diagrams
 - **1.1.0** (2025-11-18): Requirements engineering

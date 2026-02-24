@@ -1,7 +1,7 @@
 # Model Context Protocol (MCP) Server Architecture and Design Guidelines
 
-**Version:** 2.1.0  
-**Last Updated:** February 23, 2026  
+**Version:** 2.1.1  
+**Last Updated:** February 24, 2026  
 **Status:** Production Ready  
 **Repository:** MCP_Architecture  
 **Author:** Mark Sigler
@@ -61,6 +61,14 @@ These guidelines are designed to help engineering teams:
 - Consistent naming conventions across all documentation
 - Code example standards (✅ RECOMMENDED vs ❌ AVOID patterns)
 - Capitalization and abbreviation rules
+
+**[Diagram Standards](docs/IEEE-42010/ref/diagram-standards.md)** ⭐ **NEW**
+
+- Mermaid diagram type selection guide (flowchart, sequence, state, ER, mindmap)
+- Consistent color palette and styling standards
+- Size and complexity guidelines (<100 lines target)
+- Best practices for visual documentation
+- Annotation standards for timing and performance metrics
 
 ### Core Architecture
 
@@ -630,11 +638,18 @@ For detailed planning and upcoming work, see [ROADMAP.md](ROADMAP.md).
 
 **Planned priorities include:**
 
-- Mermaid diagram improvements (request flows, security zones, deployment architecture)
+- Mermaid diagram enhancements (request flow latencies, network security zones)
 - Interactive code examples and templates
 - Security audit checklists (pre-production, compliance, incident response)
 - Performance testing toolkit and benchmarking
 - Migration tooling (REST → MCP, OpenAPI conversion)
+
+**Recently completed (v2.1.1):**
+
+- Diagram standards documentation (420-line comprehensive guide)
+- Observability stack split into 3 focused diagrams
+- Production deployment architecture diagram (120-line K8s visualization)
+- All decision trees converted to Mermaid flowcharts
 
 ## FAQ
 
@@ -686,7 +701,7 @@ A: Follow [Data Privacy & Compliance](docs/IEEE-42010/views/02a-data-privacy-com
 A: Implement encryption (transit/rest), audit logging, access controls, and data retention per [Data Privacy & Compliance](docs/IEEE-42010/views/02a-data-privacy-compliance.md).
 
 **Q: How do I handle security audits?**
-A: Use security checklists (coming in v1.4.0) and review [Security Architecture](docs/IEEE-42010/views/02-security-architecture.md) for hardening measures.
+A: Use security checklists in [Security Architecture](docs/IEEE-42010/views/02-security-architecture.md) for hardening measures and compliance verification.
 
 ## Support
 
