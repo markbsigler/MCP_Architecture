@@ -1,8 +1,8 @@
 # Software Requirements Specification: MCP Server
 
 **Document Identifier:** MCP-SRS-001  
-**Version:** 1.0.0  
-**Date:** 2026-02-23  
+**Version:** 1.1.0  
+**Date:** 2025-07-17  
 **Standard:** ISO/IEC/IEEE 29148:2018  
 **Status:** Approved  
 **Author:** Mark Sigler
@@ -13,6 +13,7 @@
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1.0 | 2025-07-17 | Mark Sigler | Aligned with MCP specification 2025-11-25: elevated Streamable HTTP to MUST, added session management (FR-PROTO-025–031), lifecycle management (FR-PROTO-032–034), resource annotations/list_changed (FR-RSRC-014–016), tool outputSchema/annotations/list_changed (FR-TOOL-023–025), prompt enhancements (FR-PROMPT-007–010), expanded Task requirements (FR-TASK-004–012), MCP security best practices (NFR-SEC-073–081) |
 | 1.0.0 | 2026-02-23 | Mark Sigler | Initial SRS derived from MCP-PRD v2.4, structured per IEEE 29148:2018 |
 
 ---
@@ -215,16 +216,37 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| FR-PROTO-001 | The MCP server shall support HTTP transport with Server-Sent Events (SSE) for production deployments. | MUST |
-| FR-PROTO-002 | The MCP server shall support Streamable HTTP transport with streaming capabilities. | SHOULD |
+| FR-PROTO-001 | The MCP server shall support Streamable HTTP transport as the primary HTTP transport for production deployments, accepting JSON-RPC messages via HTTP POST and optionally upgrading responses to Server-Sent Events (SSE) streams. | MUST |
+| FR-PROTO-002 | The MCP server should support backward compatibility with the deprecated HTTP+SSE transport (separate SSE endpoint) for clients that have not migrated to Streamable HTTP. | SHOULD |
 | FR-PROTO-003 | Where local development is the deployment context, the MCP server shall support stdio transport. | SHOULD |
 | FR-PROTO-004 | The MCP server shall implement JSON-RPC 2.0 as the message protocol over all transports. | MUST |
 | FR-PROTO-005 | While operating with HTTP transport, the MCP server shall require TLS 1.2 or higher encryption. | MUST |
-| FR-PROTO-006 | When receiving an HTTP request with an invalid Origin header, the MCP server shall respond with HTTP 403 Forbidden. | MUST |
+| FR-PROTO-006 | When receiving an HTTP request with an invalid Origin header, the MCP server shall respond with HTTP 403 Forbidden to prevent DNS rebinding attacks. | MUST |
+| FR-PROTO-006a | When operating as a local server, the MCP server shall bind exclusively to the loopback interface (localhost/127.0.0.1). | MUST |
 | FR-PROTO-007 | While operating with stdio transport, the MCP server shall write only JSON-RPC messages to stdout and all other output to stderr. | MUST |
 | FR-PROTO-008 | When a connection is established, the MCP server shall complete the connection handshake within 2 seconds. | MUST |
 | FR-PROTO-009 | When receiving a malformed JSON-RPC message, the MCP server shall return a structured error response without crashing. | MUST |
 | FR-PROTO-010 | When shutting down, the MCP server shall perform clean resource cleanup with no orphaned processes. | MUST |
+
+#### 3.1.1a Streamable HTTP Session Management
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-PROTO-025 | When the MCP server assigns a session, the server shall return an `MCP-Session-Id` header in the initialization response, and the client shall include this header in all subsequent requests. | MUST |
+| FR-PROTO-026 | When the MCP server receives a request with an invalid or expired `MCP-Session-Id`, the server shall respond with HTTP 404 Not Found so the client can re-initialize. | MUST |
+| FR-PROTO-027 | The MCP server shall include the `MCP-Protocol-Version` header (set to the negotiated protocol version) in all HTTP responses after initialization. | MUST |
+| FR-PROTO-028 | When a client reconnects to an SSE stream, the MCP server should support resumability by accepting the `Last-Event-ID` header and redelivering missed events. | SHOULD |
+| FR-PROTO-029 | The MCP server shall support HTTP GET requests on the MCP endpoint for clients to open an SSE stream for server-initiated messages (notifications and requests). | SHOULD |
+| FR-PROTO-030 | The MCP server shall implement timeout handling for all requests, with per-request configurability and optional progress-based timeout reset. | MUST |
+| FR-PROTO-031 | The MCP server shall support `ping` requests from clients for connection keepalive, responding immediately. | MUST |
+
+#### 3.1.1b Lifecycle Management
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-PROTO-032 | The MCP server shall not send any requests to clients until receiving the `initialized` notification from the client. | MUST |
+| FR-PROTO-033 | When the MCP server receives a `notifications/cancelled` message, the server shall stop the referenced request and free associated resources, returning no response for that request. | MUST |
+| FR-PROTO-034 | The MCP server shall not cancel an in-flight `initialize` request. | MUST |
 
 #### 3.1.2 Client Interface
 
@@ -256,7 +278,7 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 | FR-RSRC-002 | The MCP server shall implement the `resources/read` endpoint returning resource content by URI. | MUST |
 | FR-RSRC-003 | When the resource set exceeds 100 items, the MCP server shall support cursor-based pagination. | MUST |
 | FR-RSRC-004 | The MCP server shall support both text and binary (base64-encoded) resource content types. | MUST |
-| FR-RSRC-005 | When an invalid URI is provided to `resources/read`, the MCP server shall return a structured error (not HTTP 500). | MUST |
+| FR-RSRC-005 | When an invalid or nonexistent URI is provided to `resources/read`, the MCP server shall return error code `-32002` (Resource Not Found) with a descriptive message. | MUST |
 | FR-RSRC-006 | The MCP server shall handle resources larger than 10MB efficiently via streaming. | MUST |
 | FR-RSRC-007 | The MCP server shall implement `resources/templates/list` returning URI template definitions with metadata. | SHOULD |
 | FR-RSRC-008 | The MCP server shall support URI template expansion with variable substitution per RFC 6570. | SHOULD |
@@ -265,6 +287,9 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 | FR-RSRC-011 | When a subscribed resource changes, the MCP server shall send `notifications/resources/updated` within 5 seconds. | MAY |
 | FR-RSRC-012 | When a client disconnects, the MCP server shall clean up all associated subscriptions with no memory leaks. | MAY |
 | FR-RSRC-013 | The MCP server shall return resource listing responses within 200ms for typical resource counts. | MUST |
+| FR-RSRC-014 | The MCP server shall support optional `title` and `size` fields on resource definitions for enhanced client display. | SHOULD |
+| FR-RSRC-015 | The MCP server shall support resource `annotations` including `audience` (list of `user` or `assistant`), `priority` (0.0–1.0), and `lastModified` (ISO 8601 timestamp). | SHOULD |
+| FR-RSRC-016 | Where the `listChanged` capability is declared, the MCP server shall send `notifications/resources/list_changed` when the set of available resources changes. | MUST |
 
 #### 3.2.2 Tool Execution
 
@@ -275,19 +300,22 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 | FR-TOOL-003 | The MCP server shall implement the `tools/call` endpoint executing the requested tool with validated arguments. | MUST |
 | FR-TOOL-004 | When tool arguments fail schema validation, the MCP server shall return a Tool Execution Error (result with `isError: true`) rather than a Protocol Error. | MUST |
 | FR-TOOL-005 | The MCP server shall validate all tool inputs against declared schemas before execution. | MUST |
-| FR-TOOL-006 | The MCP server shall support both text and binary result content from tool executions. | MUST |
+| FR-TOOL-006 | The MCP server shall support text, binary (image), audio, and resource link content types in tool results. | MUST |
 | FR-TOOL-007 | The MCP server shall support at least 5 simultaneous tool executions concurrently. | MUST |
-| FR-TOOL-008 | Each tool shall perform a single, well-defined operation following verb_noun naming convention (e.g., `get_forecast`, `create_issue`). | MUST |
+| FR-TOOL-008 | Each tool name shall be 1–128 characters, case-sensitive, using only `[A-Za-z0-9_\-./]`, following verb_noun convention (e.g., `get_forecast`, `create_issue`). | MUST |
 | FR-TOOL-009 | Each tool shall include clear description, argument documentation with types, and at least one usage example. | MUST |
-| FR-TOOL-010 | Where icon support is implemented, the MCP server shall expose optional icon URLs for tools, resources, resource templates, and prompts. | SHOULD |
+| FR-TOOL-010 | Where icon support is implemented, the MCP server shall expose an optional `icons` array (with URI and media type) for tools, resources, resource templates, and prompts. | SHOULD |
 | FR-TOOL-011 | When a tool integrates with an external API, the MCP server shall include a descriptive User-Agent header (e.g., `mcp-server/1.0`). | MUST |
 | FR-TOOL-012 | When a tool integrates with an external API, the MCP server shall enforce an explicit timeout (default 30 seconds, configurable). | MUST |
 | FR-TOOL-013 | When a tool encounters a failure, the MCP server shall return a user-friendly error message without exposing internal details, stack traces, or sensitive data. | MUST |
 | FR-TOOL-014 | When a tool integrates with an external API, the MCP server shall implement exponential backoff for transient failures. | MUST |
 | FR-TOOL-015 | When a tool integrates with an external API, the MCP server shall implement the circuit breaker pattern to prevent cascade failures. | MUST |
 | FR-TOOL-016 | When a tool operation exceeds 5 seconds, the MCP server shall send progress notifications at least every 5 seconds. | SHOULD |
-| FR-TOOL-017 | The MCP server shall support cancellation of in-flight tool executions, stopping execution within 2 seconds. | SHOULD |
+| FR-TOOL-017 | The MCP server shall support cancellation of in-flight tool executions via `notifications/cancelled`, stopping execution within 2 seconds and freeing associated resources. | SHOULD |
 | FR-TOOL-018 | The MCP server shall support configurable per-tool timeout handling. | SHOULD |
+| FR-TOOL-023 | Where the `listChanged` capability is declared, the MCP server shall send `notifications/tools/list_changed` when the set of available tools changes. | MUST |
+| FR-TOOL-024 | Where structured output is required, the MCP server shall support `outputSchema` on tool definitions using JSON Schema 2020-12 and return matching `structuredContent` in tool results alongside backward-compatible `content`. | SHOULD |
+| FR-TOOL-025 | The MCP server shall support tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) to convey tool behavior metadata to clients. | SHOULD |
 
 #### 3.2.3 Tool Consent and Safety
 
@@ -308,6 +336,10 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 | FR-PROMPT-004 | When optional arguments are missing from a `prompts/get` request, the MCP server shall apply graceful defaults. | MUST |
 | FR-PROMPT-005 | The MCP server shall provide parameter completion suggestions for prompt argument values. | SHOULD |
 | FR-PROMPT-006 | Each prompt shall include a clear description and usage examples. | MUST |
+| FR-PROMPT-007 | The MCP server shall support optional `title` and `icons` fields on prompt definitions for enhanced client display. | SHOULD |
+| FR-PROMPT-008 | The MCP server shall support audio content (with `data` and `mimeType`) in prompt messages alongside text and image content. | SHOULD |
+| FR-PROMPT-009 | When an invalid prompt name or missing required arguments are provided, the MCP server shall return error code `-32602` (Invalid Params) with a descriptive message. | MUST |
+| FR-PROMPT-010 | Where the `listChanged` capability is declared, the MCP server shall send `notifications/prompts/list_changed` when the set of available prompts changes. | MUST |
 
 #### 3.2.5 Sampling
 
@@ -333,9 +365,18 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| FR-TASK-001 | Where tasks are supported, the MCP server shall track durable requests with unique task identifiers. | EXPERIMENTAL |
-| FR-TASK-002 | Where tasks are supported, the MCP server shall support polling-based result retrieval with configurable intervals. | EXPERIMENTAL |
-| FR-TASK-003 | Where tasks are supported, the MCP server shall support deferred result delivery and task status monitoring. | EXPERIMENTAL |
+| FR-TASK-001 | Where tasks are supported, the MCP server shall track durable requests with unique task identifiers assigned at request receipt. | EXPERIMENTAL |
+| FR-TASK-002 | Where tasks are supported, the MCP server shall implement `tasks/get` for polling-based task status retrieval with configurable intervals. | EXPERIMENTAL |
+| FR-TASK-003 | Where tasks are supported, the MCP server shall implement `tasks/result` for deferred retrieval of completed task results. | EXPERIMENTAL |
+| FR-TASK-004 | Where tasks are supported, the MCP server shall manage task status through the defined lifecycle: `working` → `completed` / `failed` / `cancelled` / `input_required`. | EXPERIMENTAL |
+| FR-TASK-005 | Where tasks are supported, the MCP server shall include the `task` field (with `id` and `status`) in responses and notifications for task-augmented requests. | EXPERIMENTAL |
+| FR-TASK-006 | Where tasks are supported, the MCP server shall send `notifications/tasks/progress` with current task status and optional `progress` percentage for long-running operations. | EXPERIMENTAL |
+| FR-TASK-007 | Where tasks are supported, the MCP server shall implement `tasks/cancel` allowing clients to request cancellation of in-progress tasks, transitioning status to `cancelled`. | EXPERIMENTAL |
+| FR-TASK-008 | Where tasks are supported, the MCP server shall implement `tasks/list` returning active tasks for the current session. | EXPERIMENTAL |
+| FR-TASK-009 | Where tasks are supported, the MCP server shall enforce a configurable time-to-live (TTL) on task results and free associated resources after expiry. | EXPERIMENTAL |
+| FR-TASK-010 | Where tasks are supported, tool definitions shall declare task behavior via `execution.taskSupport` with values `required`, `optional`, or `forbidden` (default `forbidden`). | EXPERIMENTAL |
+| FR-TASK-011 | Where tasks are supported, the MCP server shall isolate task data between clients and enforce access control so that only the originating client can retrieve or cancel a task. | EXPERIMENTAL |
+| FR-TASK-012 | Where tasks are supported, the MCP server shall log all task lifecycle transitions (creation, status changes, completion, cancellation) for audit purposes. | EXPERIMENTAL |
 
 > **Note:** Task requirements are experimental per MCP specification 2025-11-25 and may change in future versions.
 
@@ -491,6 +532,20 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 | NFR-SEC-064 | When using an enterprise gateway, the system shall inject mandatory headers (`X-Project-ID`, `X-Cost-Center`, `X-Environment`, `X-Request-ID`) that cannot be overridden by client requests. | SHOULD |
 | NFR-SEC-065 | When required enterprise headers are missing, the system shall reject the request with 401 Unauthorized. | SHOULD |
 
+#### 3.3.9a Security — MCP Protocol Security Best Practices
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| NFR-SEC-073 | The MCP server shall mitigate confused deputy attacks by requiring per-client user consent before executing tools or accessing resources on behalf of a user. | MUST |
+| NFR-SEC-074 | The MCP server shall not pass through user access tokens directly to downstream services (token passthrough is explicitly prohibited per MCP security best practices). | MUST |
+| NFR-SEC-075 | The MCP server shall enforce SSRF protections: validate all outbound URLs against an allowlist, block requests to private/internal IP ranges (10.x, 172.16–31.x, 192.168.x, 127.x, ::1), enforce HTTPS for remote resources, and validate redirect targets. | MUST |
+| NFR-SEC-076 | The MCP server shall prevent session hijacking by generating cryptographically secure, non-deterministic session identifiers and binding sessions to the authenticated user. | MUST |
+| NFR-SEC-077 | The MCP server shall not rely on session identity alone for authorization; sessions shall supplement, not replace, proper authentication and authorization checks. | MUST |
+| NFR-SEC-078 | When operating as a local server, the MCP server shall require user consent before executing any tool or exposing resources, and shall support sandboxing of tool execution environments. | MUST |
+| NFR-SEC-079 | The MCP server shall implement scope minimization: request only minimal OAuth scopes initially and use incremental scope elevation when additional permissions are needed. | MUST |
+| NFR-SEC-080 | The MCP server shall validate the `state` parameter and `redirect_uri` in OAuth flows to prevent CSRF and open redirect attacks. | MUST |
+| NFR-SEC-081 | When using consent cookies, the MCP server shall protect them with `Secure`, `HttpOnly`, `SameSite=Strict` attributes and bind them to specific tool/resource/argument combinations. | MUST |
+
 #### 3.3.10 Performance
 
 | ID | Requirement | Priority |
@@ -633,7 +688,7 @@ Priority levels: **MUST** (mandatory), **SHOULD** (expected), **MAY** (optional)
 | DC-002 | The MCP server shall use JSON-RPC 2.0 as its message protocol. | MCP Spec |
 | DC-003 | The MCP server shall use JSON Schema 2020-12 for tool input validation. | MCP Spec (2025-11-25) |
 | DC-004 | The MCP server shall use OAuth 2.1 for HTTP transport authorization. | MCP Authorization Spec |
-| DC-005 | Production deployments shall use HTTP/SSE transport only (not stdio). | Security |
+| DC-005 | Production deployments shall use Streamable HTTP transport only (not stdio). | Security |
 | DC-006 | Production deployments shall be containerized. | Operations |
 
 ### 4.2 Technology Constraints
@@ -664,7 +719,7 @@ Key technical decisions are documented in Architecture Decision Records (ADRs) i
 | ADR-002 | JWT/JWKS authentication method | NFR-SEC-010 through NFR-SEC-016 |
 | ADR-003 | Stateless server design | NFR-PERF-010, DC-012 |
 | ADR-004 | Database for tool metadata | Operational requirements |
-| ADR-005 | HTTP/SSE transport protocol | FR-PROTO-001, DC-005 |
+| ADR-005 | Streamable HTTP transport protocol | FR-PROTO-001, FR-PROTO-025–031, DC-005 |
 
 ---
 
@@ -683,8 +738,8 @@ Each requirement is mapped to a verification method per IEEE 29148:
 
 | Requirement | Method | Verification Description |
 |-------------|--------|--------------------------|
-| FR-PROTO-001 | T | Integration test: HTTP/SSE connection established and messages exchanged |
-| FR-PROTO-002 | T | Integration test: Streamable HTTP transport with streaming verified |
+| FR-PROTO-001 | T | Integration test: Streamable HTTP connection established, POST messages exchanged, SSE upgrade verified |
+| FR-PROTO-002 | T | Integration test: backward compatibility with deprecated HTTP+SSE transport verified |
 | FR-PROTO-003 | T | Integration test: stdio transport functional for local development |
 | FR-PROTO-004 | T | Contract test: all messages conform to JSON-RPC 2.0 |
 | FR-PROTO-005 | T, A | TLS version verified in integration test; certificate analysis |
@@ -707,11 +762,22 @@ Each requirement is mapped to a verification method per IEEE 29148:
 | FR-PROTO-022 | T | Unit test: transient errors include retry guidance |
 | FR-PROTO-023 | T | Unit test: all errors include correlation ID |
 | FR-PROTO-024 | T | Unit test: error log entries contain full context |
+| FR-PROTO-006a | T | Security test: local server bound exclusively to loopback interface |
+| FR-PROTO-025 | T | Contract test: `MCP-Session-Id` header returned during initialization and validated on subsequent requests |
+| FR-PROTO-026 | T | Integration test: invalid/expired session ID returns 404 |
+| FR-PROTO-027 | T | Contract test: `MCP-Protocol-Version` header present in all responses after initialization |
+| FR-PROTO-028 | T | Integration test: SSE reconnection with `Last-Event-ID` redelivers missed events |
+| FR-PROTO-029 | T | Integration test: HTTP GET on MCP endpoint opens SSE stream for server-initiated messages |
+| FR-PROTO-030 | T | Integration test: per-request timeout enforcement and progress-based reset |
+| FR-PROTO-031 | T | Contract test: `ping` request receives immediate response |
+| FR-PROTO-032 | T | Integration test: server does not send requests before receiving `initialized` notification |
+| FR-PROTO-033 | T | Integration test: `notifications/cancelled` stops referenced request and frees resources |
+| FR-PROTO-034 | T | Unit test: `initialize` requests are never cancelled |
 | FR-RSRC-001 | T | Contract test: `resources/list` returns complete descriptors |
 | FR-RSRC-002 | T | Contract test: `resources/read` returns content by URI |
 | FR-RSRC-003 | T | Integration test: pagination with > 100 resources |
 | FR-RSRC-004 | T | Unit test: text and base64 binary content |
-| FR-RSRC-005 | T | Unit test: invalid URI returns structured error |
+| FR-RSRC-005 | T | Unit test: invalid/nonexistent URI returns error code `-32002` |
 | FR-RSRC-006 | T | Performance test: 10MB+ resource via streaming |
 | FR-RSRC-007 | T | Contract test: `resources/templates/list` response |
 | FR-RSRC-008 | T | Unit test: RFC 6570 template expansion |
@@ -720,37 +786,47 @@ Each requirement is mapped to a verification method per IEEE 29148:
 | FR-RSRC-011 | T | Integration test: notification within 5 seconds |
 | FR-RSRC-012 | T | Integration test: subscriptions cleaned on disconnect |
 | FR-RSRC-013 | T | Performance test: listing < 200ms |
+| FR-RSRC-014 | T | Contract test: `title` and `size` fields present in resource definitions |
+| FR-RSRC-015 | T | Contract test: resource annotations (audience, priority, lastModified) validated |
+| FR-RSRC-016 | T | Integration test: `notifications/resources/list_changed` sent when resource set changes |
 | FR-TOOL-001 | T | Contract test: `tools/list` returns definitions with schemas |
 | FR-TOOL-002 | T | Unit test: schemas validate as JSON Schema 2020-12 |
 | FR-TOOL-003 | T | Contract test: `tools/call` executes and returns results |
 | FR-TOOL-004 | T | Unit test: validation error returns `isError: true` |
 | FR-TOOL-005 | T | Unit test: invalid inputs rejected before execution |
-| FR-TOOL-006 | T | Unit test: text and binary result types |
+| FR-TOOL-006 | T | Unit test: text, binary, audio, and resource link result types |
 | FR-TOOL-007 | T | Load test: 5+ concurrent executions |
-| FR-TOOL-008 | I | Code review: naming conventions |
+| FR-TOOL-008 | T, I | Unit test: tool name 1–128 chars with valid characters; code review: naming conventions |
 | FR-TOOL-009 | I | Documentation review: descriptions and examples |
-| FR-TOOL-010 | T | Unit test: icon URLs in tool/resource/prompt definitions |
+| FR-TOOL-010 | T | Unit test: `icons` array (URI + media type) in tool/resource/prompt definitions |
 | FR-TOOL-011 | T | Integration test: User-Agent header present |
 | FR-TOOL-012 | T | Integration test: timeout enforced |
 | FR-TOOL-013 | T | Security test: no internal details in error messages |
 | FR-TOOL-014 | T | Integration test: exponential backoff on failure |
 | FR-TOOL-015 | T | Integration test: circuit breaker opens on failures |
 | FR-TOOL-016 | T | Integration test: progress notifications for long operations |
-| FR-TOOL-017 | T | Integration test: cancellation within 2 seconds |
+| FR-TOOL-017 | T | Integration test: `notifications/cancelled` cancellation within 2 seconds |
 | FR-TOOL-018 | T | Configuration test: per-tool timeouts |
 | FR-TOOL-019 | D | Demonstration: tools visible in client UI |
 | FR-TOOL-020 | T | Integration test: audit log entries for all executions |
 | FR-TOOL-021 | T | Unit test: consent level metadata in tool definitions |
 | FR-TOOL-022 | T | Integration test: per-user enable/disable |
+| FR-TOOL-023 | T | Integration test: `notifications/tools/list_changed` sent when tool set changes |
+| FR-TOOL-024 | T | Contract test: `outputSchema` and `structuredContent` in tool results match JSON Schema 2020-12 |
+| FR-TOOL-025 | T | Unit test: tool annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) present and valid |
 | FR-PROMPT-001 | T | Contract test: `prompts/list` returns templates |
 | FR-PROMPT-002 | T | Contract test: `prompts/get` with argument interpolation |
 | FR-PROMPT-003 | T | Integration test: embedded resource resolution |
 | FR-PROMPT-004 | T | Unit test: default values for missing optional args |
 | FR-PROMPT-005 | D | Demonstration: parameter completion |
 | FR-PROMPT-006 | I | Documentation review: descriptions and examples |
+| FR-PROMPT-007 | T | Contract test: optional `title` and `icons` fields in prompt definitions |
+| FR-PROMPT-008 | T | Unit test: audio content (data + mimeType) in prompt messages |
+| FR-PROMPT-009 | T | Unit test: invalid prompt name/missing args returns `-32602` |
+| FR-PROMPT-010 | T | Integration test: `notifications/prompts/list_changed` sent when prompt set changes |
 | FR-SAMP-001–005 | T | Contract test: sampling request/response flow |
 | FR-ELIC-001–005 | T | Contract test: elicitation create and response |
-| FR-TASK-001–003 | T | Integration test: task lifecycle |
+| FR-TASK-001–012 | T | Integration test: full task lifecycle (creation, polling, result retrieval, cancellation, TTL expiry, access control, audit logging) |
 | FR-ORCH-001–005 | T, D | Multi-server integration test and demonstration |
 | FR-GWWY-001–012 | T | Gateway integration test suite (see UAT-GW groups) |
 
@@ -767,6 +843,7 @@ Each requirement is mapped to a verification method per IEEE 29148:
 | NFR-SEC-046–050 | T | Audit logging integration tests |
 | NFR-SEC-051–057 | T | HTTP response header tests |
 | NFR-SEC-058–065 | T, I | Secret management tests; configuration inspection |
+| NFR-SEC-073–081 | T | MCP protocol security best practices tests: confused deputy, token passthrough, SSRF, session hijacking, scope minimization, consent cookies |
 | NFR-PERF-001–014 | T | Performance and load tests |
 | NFR-PERF-015–023 | T | Reliability and failover tests |
 | NFR-OBS-001–013 | T, I | Observability integration tests; configuration inspection |
@@ -814,16 +891,17 @@ The AI Service Provider Gateway shall be verified through 6 test groups:
 
 | SRS Requirement | Architecture Section | Viewpoint (IEEE 42010) |
 |-----------------|---------------------|------------------------|
-| FR-PROTO-001–010 | [01-architecture-overview.md](../IEEE-42010/views/01-architecture-overview.md) | Functional |
+| FR-PROTO-001–010, 006a | [01-architecture-overview.md](../IEEE-42010/views/01-architecture-overview.md) | Functional |
 | FR-PROTO-011–015 | [01-architecture-overview.md](../IEEE-42010/views/01-architecture-overview.md) | Functional |
 | FR-PROTO-016–018 | [07-deployment-patterns.md](../IEEE-42010/views/07-deployment-patterns.md) | Deployment |
 | FR-PROTO-019–024 | [03-tool-implementation.md](../IEEE-42010/views/03-tool-implementation.md) | Functional |
-| FR-RSRC-001–013 | [03b-resource-implementation.md](../IEEE-42010/views/03b-resource-implementation.md) | Functional |
-| FR-TOOL-001–022 | [03-tool-implementation.md](../IEEE-42010/views/03-tool-implementation.md) | Functional |
-| FR-PROMPT-001–006 | [03a-prompt-implementation.md](../IEEE-42010/views/03a-prompt-implementation.md) | Functional |
+| FR-PROTO-025–034 | [01-architecture-overview.md](../IEEE-42010/views/01-architecture-overview.md) | Functional |
+| FR-RSRC-001–016 | [03b-resource-implementation.md](../IEEE-42010/views/03b-resource-implementation.md) | Functional |
+| FR-TOOL-001–025 | [03-tool-implementation.md](../IEEE-42010/views/03-tool-implementation.md) | Functional |
+| FR-PROMPT-001–010 | [03a-prompt-implementation.md](../IEEE-42010/views/03a-prompt-implementation.md) | Functional |
 | FR-SAMP-001–005 | [03c-sampling-patterns.md](../IEEE-42010/views/03c-sampling-patterns.md) | Functional |
 | FR-ELIC-001–005 | [03f-elicitation-patterns.md](../IEEE-42010/views/03f-elicitation-patterns.md) | Functional |
-| FR-TASK-001–003 | [03g-task-patterns.md](../IEEE-42010/views/03g-task-patterns.md) | Functional |
+| FR-TASK-001–012 | [03g-task-patterns.md](../IEEE-42010/views/03g-task-patterns.md) | Functional |
 | FR-ORCH-001–005 | [03h-multi-server-orchestration.md](../IEEE-42010/views/03h-multi-server-orchestration.md) | Functional |
 | FR-GWWY-001–012 | [03i-ai-service-provider-gateway.md](../IEEE-42010/views/03i-ai-service-provider-gateway.md) | Deployment |
 | NFR-SEC-001–009 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
@@ -836,6 +914,7 @@ The AI Service Provider Gateway shall be verified through 6 test groups:
 | NFR-SEC-051–057 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
 | NFR-SEC-058–065 | [03i-ai-service-provider-gateway.md](../IEEE-42010/views/03i-ai-service-provider-gateway.md) | Security, Deployment |
 | NFR-SEC-066–072 | [02a-data-privacy-compliance.md](../IEEE-42010/views/02a-data-privacy-compliance.md) | Information |
+| NFR-SEC-073–081 | [02-security-architecture.md](../IEEE-42010/views/02-security-architecture.md) | Security |
 | NFR-PERF-001–014 | [06a-performance-scalability.md](../IEEE-42010/views/06a-performance-scalability.md) | Operational |
 | NFR-PERF-015–023 | [06a-performance-scalability.md](../IEEE-42010/views/06a-performance-scalability.md), [03e-integration-patterns.md](../IEEE-42010/views/03e-integration-patterns.md) | Operational |
 | NFR-OBS-001–004 | [05-observability.md](../IEEE-42010/views/05-observability.md) | Operational |
@@ -867,6 +946,7 @@ The AI Service Provider Gateway shall be verified through 6 test groups:
 | NFR-SEC-030–040 | Security, Unit | Pre-commit, PR |
 | NFR-SEC-041–057 | Security, Integration, Inspection | PR, Main |
 | NFR-SEC-058–065 | Integration, Inspection | Main |
+| NFR-SEC-073–081 | Security, Integration | PR, Main |
 | NFR-PERF-* | Performance, Load | Main, Release |
 | NFR-OBS-* | Integration, Inspection | PR, Main |
 | NFR-CNTR-* | Container, Security Scan | Main, Release |
@@ -875,7 +955,7 @@ The AI Service Provider Gateway shall be verified through 6 test groups:
 
 | Principle | Enforcing Requirements |
 |-----------|----------------------|
-| CP-01 Client Portability | FR-PROTO-011, FR-PROTO-014, DC-001 |
+| CP-01 Client Portability | FR-PROTO-011, FR-PROTO-014, FR-PROTO-025–031, DC-001 |
 | CP-02 Registry Distribution | FR-PROTO-016–018, NFR-CNTR-024–030 |
 | CP-03 Provider Agnostic | FR-GWWY-001–012, NFR-SEC-058–065 |
 | CP-04 Separation of Concerns | FR-ORCH-005, FR-TOOL-008 |
