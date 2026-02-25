@@ -8,8 +8,8 @@ def check_links(start_path):
     
     # Files to ignore
     ignored_files = {
-        'mcp-architecture.md', 
-        'CHANGELOG.md', 
+        'MCP-IEEE-42010-AD.md',
+        'CHANGELOG.md',
         'CONTRIBUTING.md' # Has some example links that might be fake, but we fixed the one.
     }
     

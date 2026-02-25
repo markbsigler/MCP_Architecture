@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CONTRIBUTING.md: Updated directory structure documentation
 - Makefile: Updated CONTENT_SECTIONS paths to new locations
 - README.md: All links automatically updated to new structure
-- IEEE-42010/AD.md, IEEE-29148/SRS.md: Cross-references updated
+- MCP-IEEE-42010-AD.md, MCP-IEEE-29148-SRS.md: Cross-references updated
 
 ## [1.0.0] - 2025-11-18
 
@@ -243,8 +243,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **MCP-PRD.md** — Superseded by `docs/IEEE-29148/SRS.md`
-- **MCP-ARCHITECTURE.md** — Superseded by `docs/IEEE-42010/AD.md`
+- **MCP-PRD.md** — Superseded by `docs/MCP-IEEE-29148-SRS.md`
+- **MCP-ARCHITECTURE.md** — Superseded by `docs/MCP-IEEE-42010-AD.md`
 
 ---
 

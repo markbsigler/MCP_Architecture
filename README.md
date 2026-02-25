@@ -359,14 +359,14 @@ make lint
 # Generate table of contents
 make toc
 
-# Build consolidated documentation (creates mcp-architecture.md)
+# Build consolidated documentation (creates MCP-IEEE-42010-AD.md)
 make md
 
 # Clean generated files
 make clean
 ```
 
-**About `mcp-architecture.md`**:
+**About `MCP-IEEE-42010-AD.md`**:
 
 The `make md` command generates a consolidated single-file version of all documentation by concatenating all sections in order. This build artifact is useful for:
 
@@ -615,7 +615,7 @@ We welcome contributions from the community! Here's how you can help:
 - ✅ Security architecture update (OAuth 2.1, RBAC alignment)
 - ✅ Protocol compatibility rewrite (real MCP spec versions)
 - ✅ Legacy file cleanup (MCP-PRD.md removed, uppercase MCP-ARCHITECTURE.md removed)
-- ✅ Build artifact documentation (lowercase mcp-architecture.md explained in README)
+- ✅ Build artifact documentation (lowercase MCP-IEEE-42010-AD.md explained in README)
 
 **Core Documentation (v1.0.0 - v1.4.0)**
 

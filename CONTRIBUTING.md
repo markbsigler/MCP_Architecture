@@ -86,7 +86,7 @@ MCP_Architecture/
 ├── README.md                       # Project overview
 ├── CONTRIBUTING.md                 # This file
 ├── CHANGELOG.md                    # Version history
-└── mcp-architecture.md             # Generated consolidated doc (gitignored)
+└── MCP-IEEE-42010-AD.md            # Generated consolidated doc (gitignored)
 ```
 
 ### Section Naming Convention
@@ -260,7 +260,7 @@ make clean  # Remove generated files
 
 3. **Section Breaks**: A `<section class="section-break"></section>` marker is inserted between sections
 
-4. **Output**: The consolidated document is written to `mcp-architecture.md` (gitignored)
+4. **Output**: The consolidated document is written to `MCP-IEEE-42010-AD.md` (gitignored)
 
 ### TOC Generation Details
 
@@ -292,7 +292,7 @@ The `gen_toc.py` script:
 3. **Review the generated consolidated document:**
 
    ```bash
-   less mcp-architecture.md  # Verify your section appears correctly
+   less MCP-IEEE-42010-AD.md  # Verify your section appears correctly
    ```
 
 4. **Update version metadata:**

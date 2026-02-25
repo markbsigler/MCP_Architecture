@@ -17,8 +17,8 @@ MMDC := mmdc
 # PDF output configuration
 PDF_DIR := .
 DIAGRAM_DIR := docs/diagrams
-SRS_PDF := $(PDF_DIR)/IEEE-29148-SRS.pdf
-AD_PDF := $(PDF_DIR)/IEEE-42010-AD.pdf
+SRS_PDF := $(PDF_DIR)/MCP-IEEE-29148-SRS.pdf
+AD_PDF := $(PDF_DIR)/MCP-IEEE-42010-AD.pdf
 
 # IEEE Standards source files
 SRS_MD := docs/IEEE-29148/SRS.md
@@ -79,7 +79,7 @@ PREFIX_SECTIONS = docs/00-title-page.md $(TOC_FILE)
 ALL_SECTIONS = $(PREFIX_SECTIONS) $(CONTENT_SECTIONS)
 
 # Output files
-COMBINED_MD := docs/mcp-architecture.md
+COMBINED_MD := docs/MCP-IEEE-42010-AD.md
 TOC_FILE := docs/IEEE-42010/ref/00-table-of-contents.md
 
 #==============================================================================
@@ -447,7 +447,7 @@ watch:
 #==============================================================================
 
 # Generate both IEEE standards PDFs
-pdf: pdf-srs pdf-ad
+pdf: md pdf-srs pdf-ad
 	echo "$(GREEN)[pdf] All IEEE standards PDFs generated!$(NC)"
 
 # Generate IEEE 29148 SRS PDF with rendered Mermaid diagrams
