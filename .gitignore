@@ -19,7 +19,6 @@ build/
 dist/
 docs/00-table-of-contents.md
 docs/IEEE-42010/ref/00-table-of-contents.md
-docs/MCP-IEEE-42010-AD.md
 
 # PDF generation artifacts
 docs/diagrams/*_diagram_*.png

@@ -90,7 +90,7 @@ TOC_FILE := docs/IEEE-42010/ref/00-table-of-contents.md
         toc md \
         check-deps install-deps check-pdf-deps install-pdf-deps \
         lint fix format validate test \
-        pre-commit watch \
+        pre-commit watch push \
         pdf pdf-srs pdf-ad clean-pdf
 
 #==============================================================================
@@ -132,6 +132,7 @@ help:
 	echo ""
 	echo "$(GREEN)Development Targets:$(NC)"
 	echo "  make watch         # Watch files and rebuild on changes"
+	echo "  make push          # Git add, commit, and push (MSG=\\\"message\\\")"
 	echo ""
 	echo "$(YELLOW)Current status:$(NC)"
 	if [ -f $(COMBINED_MD) ]; then \
@@ -419,6 +420,24 @@ rebuild: clean build
 #==============================================================================
 # Development Targets
 #==============================================================================
+
+# Git operations: status, stage, commit, and push
+# Usage: make push MSG="your commit message"
+push:
+	echo "$(BLUE)[push] Git status:$(NC)"
+	git status
+	echo ""
+	echo "$(BLUE)[push] Staging all changes...$(NC)"
+	git add -A
+	echo "$(BLUE)[push] Committing changes...$(NC)"
+	if [ -z "$(MSG)" ]; then \
+		git commit -m "Update documentation - $$(date '+%Y-%m-%d %H:%M:%S')"; \
+	else \
+		git commit -m "$(MSG)"; \
+	fi
+	echo "$(BLUE)[push] Pushing to remote...$(NC)"
+	git push
+	echo "$(GREEN)[push] Successfully pushed to remote! ✓$(NC)"
 
 # Watch files and rebuild on changes (requires fswatch or inotifywait)
 watch:
